@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import Landing from './pages/Landing/Landing.jsx'       
-
+import Login from './pages/Login/Login.jsx'
+import Register from './pages/Register/Register.jsx'
 // Placeholders - Aca irian las paginas que tenemos que hacer
 const Placeholder = ({ name }) => (
   <div style={{
@@ -22,8 +23,8 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Placeholder name="Iniciar sesion" />} />
-      <Route path="/register" element={<Placeholder name="Crear cuenta" />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/app" element={<Placeholder name="App principal" />} />
     </Routes>
   )
