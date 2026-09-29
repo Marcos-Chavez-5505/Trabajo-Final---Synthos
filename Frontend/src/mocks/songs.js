@@ -1,6 +1,20 @@
 // Catálogo semilla de canciones mock. Lo consume solo songsService.
 // `audioUrl` apunta a archivos de prueba públicos (MP3) para reproducir audio real.
 // `coverUrl` en null hasta que exista el backend de imágenes.
+//
+// `source` es la línea "Reproduciéndose desde" del reproductor. En el mock se
+// asigna al azar por canción; cuando exista backend vendrá en el payload real.
+const SOURCES = [
+  'Tu biblioteca',
+  'Coexist',
+  'Afterglow',
+  'Northbound',
+  'Slow Motion',
+  'Salas',
+]
+
+const randomSource = () => SOURCES[Math.floor(Math.random() * SOURCES.length)]
+
 export const mockSongs = [
   {
     id: 's1',
@@ -10,6 +24,7 @@ export const mockSongs = [
     duration: 372,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
     coverUrl: null,
+    source: randomSource(),
   },
   {
     id: 's2',
@@ -19,6 +34,7 @@ export const mockSongs = [
     duration: 405,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
     coverUrl: null,
+    source: randomSource(),
   },
   {
     id: 's3',
@@ -28,6 +44,7 @@ export const mockSongs = [
     duration: 338,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
     coverUrl: null,
+    source: randomSource(),
   },
   {
     id: 's4',
@@ -37,6 +54,7 @@ export const mockSongs = [
     duration: 291,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
     coverUrl: null,
+    source: randomSource(),
   },
   {
     id: 's5',
@@ -46,6 +64,7 @@ export const mockSongs = [
     duration: 356,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
     coverUrl: null,
+    source: randomSource(),
   },
   {
     id: 's6',
@@ -55,6 +74,7 @@ export const mockSongs = [
     duration: 324,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
     coverUrl: null,
+    source: randomSource(),
   },
   {
     id: 's7',
@@ -64,6 +84,7 @@ export const mockSongs = [
     duration: 419,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3',
     coverUrl: null,
+    source: randomSource(),
   },
   {
     id: 's8',
@@ -73,5 +94,6 @@ export const mockSongs = [
     duration: 387,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
     coverUrl: null,
+    source: randomSource(),
   },
 ]
