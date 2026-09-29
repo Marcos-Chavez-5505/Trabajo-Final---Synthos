@@ -27,13 +27,17 @@ export default function AppLayout({ children }) {
   }
 
   return (
-    <SidebarProvider className="Surface">
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar />
-        <main className="flex-1 overflow-y-auto">{children}</main>
-        <PlayerBar />
+    <SidebarProvider className="Surface flex-col">
+      <div className="flex min-h-0 flex-1">
+        <Sidebar />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar />
+          <main className="flex-1 overflow-y-auto">{children}</main>
+        </div>
       </div>
+
+      {/* Fuera de la fila: el reproductor ocupa el ancho completo de la ventana. */}
+      <PlayerBar />
     </SidebarProvider>
   )
 }

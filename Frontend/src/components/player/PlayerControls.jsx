@@ -13,7 +13,24 @@ const REPEAT_LABELS = {
   list: 'Repetir lista',
 }
 
-function ControlButton({ label, onClick, active = false, disabled = false, children }) {
+const TONES = {
+  ghost: (active) => (active ? 'Fucsia' : 'Volume hover:opacity-80'),
+  solid: () => 'Lighter hover:opacity-80',
+  soft: () => 'Light hover:opacity-80',
+}
+
+/** Botón circular reutilizable por la barra desktop y el mini reproductor mobile. */
+export function ControlButton({
+  label,
+  onClick,
+  tone = 'ghost',
+  active = false,
+  disabled = false,
+  className = '',
+  children,
+}) {
+  const toneClass = (TONES[tone] ?? TONES.ghost)(active)
+
   return (
     <button
       type="button"
@@ -21,9 +38,7 @@ function ControlButton({ label, onClick, active = false, disabled = false, child
       title={label}
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-full p-2 transition-opacity disabled:opacity-40 ${
-        active ? 'Fucsia' : 'Volume hover:opacity-80'
-      }`}
+      className={`flex shrink-0 items-center justify-center rounded-full p-2 transition-opacity disabled:opacity-40 ${toneClass} ${className}`}
     >
       {children}
     </button>
@@ -64,13 +79,14 @@ export default function PlayerControls() {
       <ControlButton
         label={isPlaying ? 'Pausar' : 'Reproducir'}
         onClick={togglePlay}
+        tone="solid"
         disabled={!hasQueue}
       >
         <img
           src={isPlaying ? pauseIcon : playIcon}
           alt=""
           aria-hidden="true"
-          className="h-7 w-7"
+          className="h-5 w-5 invert"
         />
       </ControlButton>
 
