@@ -1,0 +1,117 @@
+@theme {
+  /* Colores base del proyecto (antes en tailwind.config.js) */
+  --color-accent: #e91e63;
+  --color-surface: #141414;
+}
+
+/* Design tokens — colores */
+.Red {
+  background: #d51639;
+}
+.Salmon {
+  background: #c34b61;
+}
+.Lighter {
+  background: #f4f0f9;
+}
+.Pink {
+  background: #eb84a5;
+}
+.Light {
+  background: #c6bed3;
+}
+.Shadow {
+  background: #453a4a;
+}
+.Plaster {
+  background: #8e7288;
+}
+.Volume {
+  background: #373038;
+}
+.WallGradient {
+  background: linear-gradient(180deg, #605468 0%, rgba(96, 84, 104, 0) 100%);
+}
+.Wall {
+  background: #605468;
+}
+.Surface {
+  background: #1e1e1e;
+}
+.SurfaceLight {
+  background: #2a2a2c;
+}
+.LighterMuted {
+  background: #f9e5ff;
+}
+.LightMuted {
+  background: #b0a4b5;
+}
+.Fucsia {
+  background: #ef2f62;
+}
+/* TODO: falta valor de background en la especificación original */
+/* .BackgroundChat {
+  background: ;
+} */
+
+/* Design tokens — tipografía */
+.Button {
+  font-size: 16px;
+  font-family: Roboto, sans-serif;
+  font-weight: 500;
+  line-height: 24px;
+}
+.TextRegluar {
+  font-size: 16px;
+  font-family: Roboto, sans-serif;
+  font-weight: 400;
+  line-height: 24px;
+}
+.TextLarge {
+  font-size: 18px;
+  font-family: Roboto, sans-serif;
+  font-weight: 400;
+  line-height: 24px;
+}
+.Header4 {
+  font-size: 18px;
+  font-family: Roboto, sans-serif;
+  font-weight: 700;
+  line-height: 24px;
+}
+.Header3 {
+  font-size: 24px;
+  font-family: Roboto, sans-serif;
+  font-weight: 700;
+  line-height: 40px;
+}
+.Header2 {
+  font-size: 36px;
+  font-family: Roboto, sans-serif;
+  font-weight: 700;
+  line-height: 48px;
+}
+.Header1 {
+  font-size: 56px;
+  font-family: Roboto, sans-serif;
+  font-weight: 700;
+  line-height: 64px;
+}
+.TextTiny {
+  font-size: 10px;
+  font-family: Roboto, sans-serif;
+  font-weight: 400;
+  line-height: 14px;
+}
+.TextMedium {
+  font-size: 12px;
+  font-family: Roboto, sans-serif;
+  font-weight: 400;
+  line-height: 18px;
+}
+
+/* Design tokens — elevación */
+.Elevation1 {
+  box-shadow: 0px 4px 8px 2px #605468;
+}

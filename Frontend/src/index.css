@@ -1,5 +1,38 @@
 @import "tailwindcss";
+@import "./styles/styles.css";
+
+/* Puente entre los tokens de shadcn (base-nova) y los del dominio (styles.css).
+   `@theme inline` hace que las utilidades (bg-sidebar, text-foreground, ...)
+   apunten a las variables de :root en vez de duplicar valores. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
 :root {
+  /* Tokens del proyecto */
   --bg: #0a0713;
   --bg-soft: #120b22;
   --surface: rgba(255, 255, 255, 0.04);
@@ -10,7 +43,33 @@
   --accent-2: #22d3ee;
   --accent-glow: rgba(168, 85, 247, 0.5);
 
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Tema shadcn mapeado a tokens del dominio */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: #2a2a2c; /* SurfaceLight */
+  --card-foreground: var(--text);
+  --popover: #2a2a2c; /* SurfaceLight */
+  --popover-foreground: var(--text);
+  --primary: #ef2f62; /* Fucsia */
+  --primary-foreground: #1a0711;
+  --secondary: #373038; /* Volume */
+  --secondary-foreground: var(--text);
+  --muted: #373038; /* Volume */
+  --muted-foreground: var(--text-dim);
+  --destructive: #d51639; /* Red */
+  --destructive-foreground: var(--text);
+  --input: #373038; /* Volume */
+  --ring: #e91e63;
+  --sidebar: #605468; /* Wall */
+  --sidebar-foreground: var(--text);
+  --sidebar-primary: #ef2f62; /* Fucsia */
+  --sidebar-primary-foreground: #1a0711;
+  --sidebar-accent: #373038; /* Volume */
+  --sidebar-accent-foreground: var(--text);
+  --sidebar-border: #373038; /* Volume */
+  --sidebar-ring: #e91e63;
+
+  font-family: Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
   color: var(--text);
   background: var(--bg);
   color-scheme: dark;
