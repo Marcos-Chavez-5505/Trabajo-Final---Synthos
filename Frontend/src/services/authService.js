@@ -1,85 +1,65 @@
-const USERS_KEY = 'users'
-const SESSION_KEY = 'session'
+// Auth mock sobre localStorage. El dueño de los usuarios es `usersService`
+// (que a su vez usa `mocks/users.js`); acá solo se maneja la sesión.
+// La API es async para que coincida con la forma que tendrá el backend real.
+import { createUser, findUserByEmail, getUserById } from './usersService.js'
 
-// ESTO LUEGO SE CAMBIA CON LA BASE DE DATOS
+const SESSION_KEY = 'synthos_mock_session'
 
-const getUsers = () => {
-  const users = localStorage.getItem(USERS_KEY)
-
-  return users ? JSON.parse(users) : []
+function readSessionId() {
+  try {
+    const stored = localStorage.getItem(SESSION_KEY)
+    return stored ? JSON.parse(stored).id : null
+  } catch {
+    return null
+  }
 }
 
-export const registerUser = (userData) => {
-  const users = getUsers()
+function writeSession(user) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ id: user.id }))
+}
 
-  const existingUser = users.find(
-    (user) => user.email.toLowerCase() === userData.email.toLowerCase()
-  )
+export function getCurrentUser() {
+  const id = readSessionId()
 
-  if (existingUser) {
-    return {
+  return Promise.resolve(id ? getUserById(id) : null)
+}
+
+export function registerUser({ email, username, password }) {
+  if (findUserByEmail(email)) {
+    return Promise.resolve({
       success: false,
-      message: 'El email ya está registrado.'
-    }
+      message: 'El email ya está registrado.',
+    })
   }
 
-  const newUser = {
-    id: crypto.randomUUID(),
-    name: userData.name,
-    email: userData.email,
-    password: userData.password
-  }
+  const user = createUser({ email, username, password })
+  writeSession(user)
 
-  users.push(newUser)
-
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
-
-  return {
-    success: true,
-    user: newUser
-  }
+  return Promise.resolve({ success: true, user })
 }
 
-export const loginUser = (email, password) => {
-  const users = getUsers()
+export function loginUser(email, password) {
+  const found = findUserByEmail(email)
 
-  const user = users.find(
-    (user) =>
-      user.email.toLowerCase() === email.toLowerCase() &&
-      user.password === password
-  )
-
-  if (!user) {
-    return {
+  if (!found || found.password !== password) {
+    return Promise.resolve({
       success: false,
-      message: 'Email o contraseña incorrectos.'
-    }
+      message: 'Email o contraseña incorrectos.',
+    })
   }
 
-  const session = {
-    id: user.id,
-    name: user.name,
-    email: user.email
-  }
+  const user = getUserById(found.id)
+  writeSession(user)
 
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session))
-
-  return {
-    success: true,
-    user: session
-  }
+  return Promise.resolve({ success: true, user })
 }
 
-export const getCurrentUser = () => {
-  const session = localStorage.getItem(SESSION_KEY)
-
-  return session ? JSON.parse(session) : null
-}
-
-export const logoutUser = () => {
+export function logoutUser() {
   localStorage.removeItem(SESSION_KEY)
+
+  return Promise.resolve()
 }
 
-export const isAuthenticated = () => {
-  return getCurrentUser() !== null
+export function isAuthenticated() {
+  return readSessionId() !== null
 }
