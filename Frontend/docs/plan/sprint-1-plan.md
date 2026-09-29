@@ -169,6 +169,15 @@ Los shells son `ScreenPlaceholder` local en `AppRoutes.jsx`; cada pantalla se co
 - Cola inicial: hoy es el catálogo mock completo, para que el reproductor sea usable sin pantallas; `playSongs(songs, startIndex)` es el punto de entrada que TS-07/TS-09 van a usar al reproducir desde cards/playlists.
 - Íconos: salen de `src/assets/*.svg` (set de diseño, no de librerías). Se importan como URL (`import playIcon from '../../assets/play.svg'`) y se renderizan con `<img src={...} alt="" aria-hidden="true" className="h-5 w-5" />`. En el reproductor: `play`, `pause`, `next_track`, `previous_track`, `shuffle`, `repeat`, `repeat_only_one` y `music_note` (placeholder de carátula mientras no haya `coverUrl`). **No** usar `?react`: no lo transforma `@vitejs/plugin-react` acá, el import queda como string `data:image/svg+xml` y `<Icon />` revienta con `InvalidCharacterError: The tag name provided ('data:...')`. Los SVG traen `#F4F0F9` hardcodeado (= token `Lighter`), por eso los iconos de estado activo van sobre fondo `Fucsia`/`Volume` y no se recolorean.
 
+**Nota (rediseño de layout).**
+
+- `PlayerBar` desktop ahora ocupa **todo el ancho de la ventana**: se monta como hermano de la fila `Sidebar + contenido` dentro de `SidebarProvider` (que pasó a `flex-col`). Como el sidebar es `fixed h-svh`, su `SidebarContent` lleva `pb-16` para que el reproductor no tape las últimas secciones.
+- Fila superior: carátula (`Light`) + título/artista + línea `TextTiny uppercase` "Reproduciéndose desde: {song.source}"; controles al centro; botón **expandir** a la derecha (`expand.svg`, solo visual, con `TODO` para pantalla completa y alternar `collapse.svg`).
+- Fila inferior: `ProgressBar` a ancho completo **con etiquetas de tiempo** (se mantienen en desktop y mobile).
+- Play/pause va en círculo `Lighter` con el icono `invert` (los SVG son claros); shuffle/repeat activos sobre `Fucsia`. `ControlButton` se exporta desde `PlayerControls.jsx` con tonos `ghost`/`solid`/`soft` y lo reutiliza el mini reproductor.
+- `MiniPlayerBar` (mobile) quedó conectado al `PlayerContext`: `SurfaceLight Elevation1 rounded-t-2xl fixed bottom-14`, sin carátula, título/artista, **Play + Siguiente a la derecha** y progreso con etiquetas.
+- `mocks/songs.js` suma `source` (origen "Reproduciéndose desde"), asignado al azar por canción desde una lista `SOURCES`; el `PlayerContext` no cambió, solo se lee `song.source`.
+
 ---
 
 ## TS-07 — Buscar canciones (feature 13)
