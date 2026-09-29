@@ -1,40 +1,61 @@
 import playIcon from '../../assets/play.svg'
+import pauseIcon from '../../assets/pause.svg'
 import nextIcon from '../../assets/next_track.svg'
+import usePlayer from '../../hooks/usePlayer.js'
+import { ControlButton } from '../player/PlayerControls.jsx'
+import ProgressBar from '../player/ProgressBar.jsx'
 
 /**
- * Shell de UI del mini reproductor mobile (sin estado real).
- * TS-06 lo conecta al PlayerContext global.
+ * Mini reproductor mobile, apoyado sobre el BottomNav. Consume el PlayerContext
+ * global (mismo estado que el reproductor desktop) y muestra tiempo con etiquetas.
  */
 export default function MiniPlayerBar() {
+  const {
+    song,
+    isPlaying,
+    hasQueue,
+    currentTime,
+    duration,
+    togglePlay,
+    next,
+    seek,
+  } = usePlayer()
+
+  if (!hasQueue) return null
+
   return (
     <div className="fixed inset-x-0 bottom-14 z-10 rounded-t-2xl SurfaceLight Elevation1 md:hidden">
       <div className="flex items-center gap-3 px-4 py-2">
         <div className="min-w-0 flex-1">
-          <p className="truncate TextRegluar">Título</p>
-          <p className="truncate TextMedium opacity-70">Artista</p>
+          <p className="truncate TextRegluar">{song?.title ?? 'Nada reproduciendo'}</p>
+          <p className="truncate TextMedium opacity-70">{song?.artist ?? '—'}</p>
         </div>
 
-        <button
-          type="button"
-          aria-label="Reproducir"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full Lighter"
+        <ControlButton
+          label={isPlaying ? 'Pausar' : 'Reproducir'}
+          onClick={togglePlay}
+          tone="solid"
         >
-          <img src={playIcon} alt="" aria-hidden="true" className="h-5 w-5 invert" />
-        </button>
+          <img
+            src={isPlaying ? pauseIcon : playIcon}
+            alt=""
+            aria-hidden="true"
+            className="h-5 w-5 invert"
+          />
+        </ControlButton>
 
-        <button
-          type="button"
-          aria-label="Siguiente"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full Light"
-        >
+        <ControlButton label="Siguiente" onClick={next} tone="soft">
           <img src={nextIcon} alt="" aria-hidden="true" className="h-5 w-5 invert" />
-        </button>
+        </ControlButton>
       </div>
 
-      {/* TODO(agente, TS-06): progreso real y conectado al PlayerContext */}
-      <div className="h-0.5 w-full Volume">
-        <div className="h-0.5 w-1/4 Fucsia" />
-      </div>
+      <ProgressBar
+        currentTime={currentTime}
+        duration={duration}
+        onSeek={seek}
+        size="sm"
+        className="px-4 pb-2"
+      />
     </div>
   )
 }
