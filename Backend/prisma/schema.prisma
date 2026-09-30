@@ -1,0 +1,353 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// ENUMS (reemplazan los CHECK ... IN (...) del SQL)
+// ============================================
+
+enum PlaylistType {
+  personal
+  colab
+
+  @@map("playlist_type")
+}
+
+enum PlaylistRole {
+  creator
+  colaborator
+
+  @@map("playlist_role")
+}
+
+enum RoomRole {
+  host
+  member
+
+  @@map("room_role")
+}
+
+enum RoomStatus {
+  activa
+  cerrada
+
+  @@map("room_status")
+}
+
+// ============================================
+// USER
+// ============================================
+
+model User {
+  id               Int      @id @default(autoincrement())
+  email            String   @unique @db.VarChar(255)
+  username         String   @unique @db.VarChar(50)
+  passwordHash     String   @map("password_hash") @db.VarChar(255)
+  pictureUrl       String?  @map("picture_url")
+  biography        String?
+  registrationDate DateTime @default(now()) @map("registration_date") @db.Timestamp(6)
+
+  playlistsCreated    Playlist[]
+  playlistMemberships PlaylistMember[]
+  playlistSongsAdded  PlaylistSong[]
+  favorites           Favorite[]
+  following           Follow[]           @relation("Follower")
+  followers           Follow[]           @relation("Followed")
+  contents            Content[]
+  contentPlayements   ContentPlayement[]
+  roomMemberships     RoomMember[]
+  ratingsGiven        HostRating[]       @relation("Rater")
+  ratingsReceived     HostRating[]       @relation("Host")
+
+  @@map("user")
+}
+
+// ============================================
+// ARTIST
+// ============================================
+
+model Artist {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(150)
+
+  songs       Song[]
+  songArtists SongArtist[]
+
+  @@map("artist")
+}
+
+// ============================================
+// SONG
+// ============================================
+
+model Song {
+  id          Int       @id @default(autoincrement())
+  title       String    @db.VarChar(200)
+  idArtist    Int       @map("id_artist")
+  releaseDate DateTime? @map("release_date") @db.Date
+  coverUrl    String?   @map("cover_url")
+  duration    Int? // segundos
+  url         String // archivo/URL del audio
+
+  artist        Artist         @relation(fields: [idArtist], references: [id], onDelete: Restrict)
+  songArtists   SongArtist[]
+  songGenres    SongGenre[]
+  songMoods     SongMood[]
+  playlistSongs PlaylistSong[]
+  favorites     Favorite[]
+  contents      Content[]
+
+  @@map("song")
+}
+
+// ============================================
+// SONG_ARTIST (N:M)
+// ============================================
+
+model SongArtist {
+  idSong   Int @map("id_song")
+  idArtist Int @map("id_artist")
+
+  song   Song   @relation(fields: [idSong], references: [id], onDelete: Cascade)
+  artist Artist @relation(fields: [idArtist], references: [id], onDelete: Cascade)
+
+  @@id([idSong, idArtist])
+  @@map("song_artist")
+}
+
+// ============================================
+// GENRE + SONG_GENRE
+// ============================================
+
+model Genre {
+  id   Int    @id @default(autoincrement())
+  name String @unique @db.VarChar(80)
+
+  songGenres SongGenre[]
+
+  @@map("genre")
+}
+
+model SongGenre {
+  idSong  Int @map("id_song")
+  idGenre Int @map("id_genre")
+
+  song  Song  @relation(fields: [idSong], references: [id], onDelete: Cascade)
+  genre Genre @relation(fields: [idGenre], references: [id], onDelete: Cascade)
+
+  @@id([idSong, idGenre])
+  @@map("song_genre")
+}
+
+// ============================================
+// MOOD + SONG_MOOD
+// ============================================
+
+model Mood {
+  id   Int    @id @default(autoincrement())
+  name String @unique @db.VarChar(80)
+
+  songMoods SongMood[]
+
+  @@map("mood")
+}
+
+model SongMood {
+  idSong Int @map("id_song")
+  idMood Int @map("id_mood")
+
+  song Song @relation(fields: [idSong], references: [id], onDelete: Cascade)
+  mood Mood @relation(fields: [idMood], references: [id], onDelete: Cascade)
+
+  @@id([idSong, idMood])
+  @@map("song_mood")
+}
+
+// ============================================
+// PLAYLIST
+// ============================================
+
+model Playlist {
+  id              Int          @id @default(autoincrement())
+  name            String       @db.VarChar(150)
+  description     String?
+  idCreator       Int          @map("id_creator")
+  type            PlaylistType
+  isPublic        Boolean      @default(false) @map("is_public")
+  tokenInvitation String?      @map("token_invitation") @db.VarChar(255)
+  creationDate    DateTime     @default(now()) @map("creation_date") @db.Timestamp(6)
+
+  creator User             @relation(fields: [idCreator], references: [id], onDelete: Cascade)
+  members PlaylistMember[]
+  songs   PlaylistSong[]
+  rooms   Room[]
+
+  @@map("playlist")
+}
+
+// ============================================
+// PLAYLIST_MEMBER (N:M)
+// ============================================
+
+model PlaylistMember {
+  idPlaylist Int          @map("id_playlist")
+  idUser     Int          @map("id_user")
+  role       PlaylistRole
+  joinDate   DateTime     @default(now()) @map("join_date") @db.Timestamp(6)
+
+  playlist Playlist @relation(fields: [idPlaylist], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [idUser], references: [id], onDelete: Cascade)
+
+  @@id([idPlaylist, idUser])
+  @@map("playlist_member")
+}
+
+// ============================================
+// PLAYLIST_SONG (N:M con orden)
+// ============================================
+
+model PlaylistSong {
+  idPlaylist Int      @map("id_playlist")
+  idSong     Int      @map("id_song")
+  position   Int
+  addedDate  DateTime @default(now()) @map("added_date") @db.Timestamp(6)
+  addedBy    Int?     @map("added_by")
+
+  playlist Playlist @relation(fields: [idPlaylist], references: [id], onDelete: Cascade)
+  song     Song     @relation(fields: [idSong], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [addedBy], references: [id], onDelete: SetNull)
+
+  @@id([idPlaylist, idSong])
+  @@map("playlist_song")
+}
+
+// ============================================
+// FAVORITE (N:M User-Song)
+// ============================================
+
+model Favorite {
+  idUser     Int      @map("id_user")
+  idSong     Int      @map("id_song")
+  markedDate DateTime @default(now()) @map("marked_date") @db.Timestamp(6)
+
+  user User @relation(fields: [idUser], references: [id], onDelete: Cascade)
+  song Song @relation(fields: [idSong], references: [id], onDelete: Cascade)
+
+  @@id([idUser, idSong])
+  @@map("favorite")
+}
+
+// ============================================
+// FOLLOW (N:M User-User)
+// CHECK (follower_id <> followed_id) va en la migración (ver instrucciones)
+// ============================================
+
+model Follow {
+  followerId Int      @map("follower_id")
+  followedId Int      @map("followed_id")
+  followDate DateTime @default(now()) @map("follow_date") @db.Timestamp(6)
+
+  follower User @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followed User @relation("Followed", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followedId])
+  @@map("follow")
+}
+
+// ============================================
+// CONTENT
+// ============================================
+
+model Content {
+  id       Int      @id @default(autoincrement())
+  idAuthor Int      @map("id_author")
+  text     String
+  idSong   Int?     @map("id_song")
+  date     DateTime @default(now()) @db.Timestamp(6)
+
+  author     User               @relation(fields: [idAuthor], references: [id], onDelete: Cascade)
+  song       Song?              @relation(fields: [idSong], references: [id], onDelete: Cascade)
+  playements ContentPlayement[]
+
+  @@map("content")
+}
+
+// ============================================
+// CONTENT_PLAYEMENT (N:M Content-User)
+// ============================================
+
+model ContentPlayement {
+  idContent Int @map("id_content")
+  idUser    Int @map("id_user")
+
+  content Content @relation(fields: [idContent], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [idUser], references: [id], onDelete: Cascade)
+
+  @@id([idContent, idUser])
+  @@map("content_playement")
+}
+
+// ============================================
+// ROOM
+// ============================================
+
+model Room {
+  id               Int        @id @default(autoincrement())
+  code             String     @unique @db.VarChar(20)
+  name             String     @db.VarChar(150)
+  description      String?
+  idPlaylistSource Int        @map("id_playlist_source")
+  isPrivate        Boolean    @default(false) @map("is_private")
+  passwordHash     String?    @map("password_hash") @db.VarChar(255)
+  maxCapacity      Int        @map("max_capacity")
+  status           RoomStatus
+  creationDate     DateTime   @default(now()) @map("creation_date") @db.Timestamp(6)
+  expiresAt        DateTime?  @map("expires_at") @db.Timestamp(6)
+
+  playlistSource Playlist     @relation(fields: [idPlaylistSource], references: [id], onDelete: Restrict)
+  members        RoomMember[]
+  ratings        HostRating[]
+
+  @@map("room")
+}
+
+// ============================================
+// ROOM_MEMBER (N:M)
+// ============================================
+
+model RoomMember {
+  idRoom   Int      @map("id_room")
+  idUser   Int      @map("id_user")
+  role     RoomRole
+  joinDate DateTime @default(now()) @map("join_date") @db.Timestamp(6)
+
+  room Room @relation(fields: [idRoom], references: [id], onDelete: Cascade)
+  user User @relation(fields: [idUser], references: [id], onDelete: Cascade)
+
+  @@id([idRoom, idUser])
+  @@map("room_member")
+}
+
+// ============================================
+// HOST_RATING
+// CHECK (rating BETWEEN 1 AND 5) va en la migración (ver instrucciones)
+// ============================================
+
+model HostRating {
+  idRoom     Int      @map("id_room")
+  idRater    Int      @map("id_rater")
+  idHost     Int      @map("id_host")
+  rating     Int      @db.SmallInt
+  ratingDate DateTime @default(now()) @map("rating_date") @db.Timestamp(6)
+
+  room  Room @relation(fields: [idRoom], references: [id], onDelete: Cascade)
+  rater User @relation("Rater", fields: [idRater], references: [id], onDelete: Cascade)
+  host  User @relation("Host", fields: [idHost], references: [id], onDelete: Cascade)
+
+  @@id([idRoom, idRater, idHost])
+  @@map("host_rating")
+}
