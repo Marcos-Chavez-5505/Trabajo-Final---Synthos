@@ -1,0 +1,118 @@
+/* Clases del design system. Son wrappers sobre los tokens de tokens.css:
+   nunca llevan un literal, siempre var(--ds-*).
+   Viven en @layer components para que las utilidades de Tailwind puedan
+   sobrescribirlas (ej. className="Wall bg-red-500"). */
+
+@layer components {
+  /* Colores */
+  .Red {
+    background: var(--ds-red);
+  }
+  .Salmon {
+    background: var(--ds-salmon);
+  }
+  .Lighter {
+    background: var(--ds-lighter);
+  }
+  .Pink {
+    background: var(--ds-pink);
+  }
+  .Light {
+    background: var(--ds-light);
+  }
+  .Shadow {
+    background: var(--ds-shadow);
+  }
+  .Plaster {
+    background: var(--ds-plaster);
+  }
+  .Volume {
+    background: var(--ds-volume);
+  }
+  .WallGradient {
+    background: var(--ds-wall-gradient);
+  }
+  .Wall {
+    background: var(--ds-wall);
+  }
+  .Surface {
+    background: var(--ds-surface);
+  }
+  .SurfaceLight {
+    background: var(--ds-surface-light);
+  }
+  .LighterMuted {
+    background: var(--ds-lighter-muted);
+  }
+  .LightMuted {
+    background: var(--ds-light-muted);
+  }
+  .Fucsia {
+    background: var(--ds-fucsia);
+  }
+  /* TODO: falta valor de background en la especificación original */
+  /* .BackgroundChat {
+    background: ;
+  } */
+
+  /* Tipografía */
+  .Button {
+    font-size: var(--ds-size-button);
+    font-family: var(--ds-font);
+    font-weight: var(--ds-weight-medium);
+    line-height: var(--ds-lh-button);
+  }
+  .TextRegluar {
+    font-size: var(--ds-size-regluar);
+    font-family: var(--ds-font);
+    font-weight: var(--ds-weight-regular);
+    line-height: var(--ds-lh-regluar);
+  }
+  .TextLarge {
+    font-size: var(--ds-size-large);
+    font-family: var(--ds-font);
+    font-weight: var(--ds-weight-regular);
+    line-height: var(--ds-lh-large);
+  }
+  .Header4 {
+    font-size: var(--ds-size-header4);
+    font-family: var(--ds-font);
+    font-weight: var(--ds-weight-bold);
+    line-height: var(--ds-lh-header4);
+  }
+  .Header3 {
+    font-size: var(--ds-size-header3);
+    font-family: var(--ds-font);
+    font-weight: var(--ds-weight-bold);
+    line-height: var(--ds-lh-header3);
+  }
+  .Header2 {
+    font-size: var(--ds-size-header2);
+    font-family: var(--ds-font);
+    font-weight: var(--ds-weight-bold);
+    line-height: var(--ds-lh-header2);
+  }
+  .Header1 {
+    font-size: var(--ds-size-header1);
+    font-family: var(--ds-font);
+    font-weight: var(--ds-weight-bold);
+    line-height: var(--ds-lh-header1);
+  }
+  .TextTiny {
+    font-size: var(--ds-size-tiny);
+    font-family: var(--ds-font);
+    font-weight: var(--ds-weight-regular);
+    line-height: var(--ds-lh-tiny);
+  }
+  .TextMedium {
+    font-size: var(--ds-size-medium);
+    font-family: var(--ds-font);
+    font-weight: var(--ds-weight-regular);
+    line-height: var(--ds-lh-medium);
+  }
+
+  /* Elevación */
+  .Elevation1 {
+    box-shadow: var(--ds-elevation-1);
+  }
+}

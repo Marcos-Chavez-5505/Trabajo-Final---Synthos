@@ -1,0 +1,55 @@
+/* Única fuente de verdad de los design tokens.
+ *
+ * Los valores vienen de la especificación de diseño (antes styles.css) y no se
+ * tocan: acá viven todos los literales de color, tamaño, peso y sombra.
+ * Cualquier otro archivo del proyecto se deriva con var():
+ *   - styles/utilities.css -> clases .Wall, .Fucsia, .TextRegluar, ...
+ *   - styles/base.css       -> resets
+ *   - src/index.css         -> puente semántico de shadcn
+ */
+
+:root {
+  /* Colores */
+  --ds-red: #d51639;
+  --ds-salmon: #c34b61;
+  --ds-lighter: #f4f0f9;
+  --ds-pink: #eb84a5;
+  --ds-light: #c6bed3;
+  --ds-shadow: #453a4a;
+  --ds-plaster: #8e7288;
+  --ds-volume: #373038;
+  --ds-wall: #605468;
+  --ds-wall-gradient: linear-gradient(180deg, #605468 0%, rgba(96, 84, 104, 0) 100%);
+  --ds-surface: #1e1e1e;
+  --ds-surface-light: #2a2a2c;
+  --ds-lighter-muted: #f9e5ff;
+  --ds-light-muted: #b0a4b5;
+  --ds-fucsia: #ef2f62;
+
+  /* Tipografía */
+  --ds-font: Roboto, sans-serif;
+  --ds-weight-regular: 400;
+  --ds-weight-medium: 500;
+  --ds-weight-bold: 700;
+  --ds-size-button: 16px;
+  --ds-lh-button: 24px;
+  --ds-size-tiny: 10px;
+  --ds-lh-tiny: 14px;
+  --ds-size-medium: 12px;
+  --ds-lh-medium: 18px;
+  --ds-size-regluar: 16px;
+  --ds-lh-regluar: 24px;
+  --ds-size-large: 18px;
+  --ds-lh-large: 24px;
+  --ds-size-header4: 18px;
+  --ds-lh-header4: 24px;
+  --ds-size-header3: 24px;
+  --ds-lh-header3: 40px;
+  --ds-size-header2: 36px;
+  --ds-lh-header2: 48px;
+  --ds-size-header1: 56px;
+  --ds-lh-header1: 64px;
+
+  /* Elevación */
+  --ds-elevation-1: 0px 4px 8px 2px var(--ds-wall);
+}
