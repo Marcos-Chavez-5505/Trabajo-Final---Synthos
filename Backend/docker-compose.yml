@@ -1,0 +1,40 @@
+#? Funcionamiento básico para testear en local:
+#?
+#? - docker compose up -d (o abren Docker Desktop)
+#? - npx prisma migrate dev --name nombre_migracion
+#? - npx prisma db seed
+#? - npm run dev
+
+services:
+  db:
+    image: postgres:17
+    container_name: SYNTHOS_POSTGRES
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  #? Entran a localhost:8080 e ingresan las credenciales
+  #? Tambien pueden ejecutar npx prisma studio para tener un modelo mas visual de la BD
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: SYNTHOS_PGADMIN
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
+  pgadmin_data:
