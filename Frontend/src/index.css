@@ -1,10 +1,22 @@
+/* Entry point de CSS: Tailwind + tokens + clases del design system + resets.
+ *
+ * Los valores (colores, tamaños, sombras) viven únicamente en
+ * styles/tokens.css. Este archivo solo cablea las capas.
+ */
 @import "tailwindcss";
-@import "./styles/styles.css";
+@import "./styles/tokens.css";
+@import "./styles/utilities.css";
+@import "./styles/base.css";
 
-/* Puente entre los tokens de shadcn (base-nova) y los del dominio (styles.css).
-   `@theme inline` hace que las utilidades (bg-sidebar, text-foreground, ...)
-   apunten a las variables de :root en vez de duplicar valores. */
+/* Puente entre los design tokens y las utilidades semánticas de shadcn
+   (base-nova). `@theme inline` hace que utilidades como bg-sidebar,
+   text-foreground o ring-destructive apunten a las variables de :root en vez
+   de duplicar valores. */
 @theme inline {
+  /* Colores base del proyecto (antes en tailwind.config.js) */
+  --color-accent: var(--ds-fucsia);
+  --color-surface: var(--ds-surface);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -31,85 +43,33 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Tema shadcn (base-nova) traducido a los design tokens.
+   components.json apunta tailwind.css a este archivo, así que el CLI de shadcn
+   inyecta su propio :root acá: este bloque no debe contener valores literales,
+   solo var(--ds-*). */
 :root {
-  /* Tokens del proyecto */
-  --bg: #0a0713;
-  --bg-soft: #120b22;
-  --surface: rgba(255, 255, 255, 0.04);
-  --border: rgba(255, 255, 255, 0.08);
-  --text: #f2eefb;
-  --text-dim: #a89dc4;
-  --accent: #a855f7;
-  --accent-2: #22d3ee;
-  --accent-glow: rgba(168, 85, 247, 0.5);
-
-  /* Tema shadcn mapeado a tokens del dominio */
-  --background: var(--bg);
-  --foreground: var(--text);
-  --card: #2a2a2c; /* SurfaceLight */
-  --card-foreground: var(--text);
-  --popover: #2a2a2c; /* SurfaceLight */
-  --popover-foreground: var(--text);
-  --primary: #ef2f62; /* Fucsia */
-  --primary-foreground: #1a0711;
-  --secondary: #373038; /* Volume */
-  --secondary-foreground: var(--text);
-  --muted: #373038; /* Volume */
-  --muted-foreground: var(--text-dim);
-  --destructive: #d51639; /* Red */
-  --destructive-foreground: var(--text);
-  --input: #373038; /* Volume */
-  --ring: #e91e63;
-  --sidebar: #605468; /* Wall */
-  --sidebar-foreground: var(--text);
-  --sidebar-primary: #ef2f62; /* Fucsia */
-  --sidebar-primary-foreground: #1a0711;
-  --sidebar-accent: #373038; /* Volume */
-  --sidebar-accent-foreground: var(--text);
-  --sidebar-border: #373038; /* Volume */
-  --sidebar-ring: #e91e63;
-
-  font-family: Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  color: var(--text);
-  background: var(--bg);
-  color-scheme: dark;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  min-height: 100vh;
-  background: var(--bg);
-  overflow-x: hidden;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-  color: inherit;
-}
-
-img {
-  max-width: 100%;
-  display: block;
-}
-
-::selection {
-  background: var(--accent);
-  color: white;
+  --background: var(--ds-surface);
+  --foreground: var(--ds-lighter);
+  --card: var(--ds-surface-light);
+  --card-foreground: var(--ds-lighter);
+  --popover: var(--ds-surface-light);
+  --popover-foreground: var(--ds-lighter);
+  --primary: var(--ds-fucsia);
+  --primary-foreground: var(--ds-surface);
+  --secondary: var(--ds-volume);
+  --secondary-foreground: var(--ds-lighter);
+  --muted: var(--ds-volume);
+  --muted-foreground: var(--ds-light-muted);
+  --destructive: var(--ds-red);
+  --destructive-foreground: var(--ds-lighter);
+  --input: var(--ds-volume);
+  --ring: var(--ds-fucsia);
+  --sidebar: var(--ds-wall);
+  --sidebar-foreground: var(--ds-lighter);
+  --sidebar-primary: var(--ds-fucsia);
+  --sidebar-primary-foreground: var(--ds-surface);
+  --sidebar-accent: var(--ds-volume);
+  --sidebar-accent-foreground: var(--ds-lighter);
+  --sidebar-border: var(--ds-volume);
+  --sidebar-ring: var(--ds-fucsia);
 }

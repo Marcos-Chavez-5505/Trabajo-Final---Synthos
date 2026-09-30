@@ -26,6 +26,14 @@ se ejercitan a mano.
 - `ProgressBar`: click, arrastre (`setPointerCapture`) y teclado (←/→ 5s, `Home`).
 - Que los SVG se vean en `PlayerBar` (desktop) y `MiniPlayerBar` (mobile), y que el mini quede por
   encima de `BottomNav` sin tapar contenido.
+- Que las clases del design system (`Wall`, `Surface`, `Fucsia`, `Volume`, `SurfaceLight`,
+  `TextRegluar`, `TextMedium`, `Elevation1`…) sigan pintando bien: ahora viven en
+  `@layer components`, así que una utilidad Tailwind las puede sobrescribir
+  (`className="Wall bg-red-500"` ya no manda la clase del design system).
+- Los deltas visuales de la centralización de tokens: fondo `body` `#0a0713` → `#1e1e1e` (`Surface`),
+  texto `#f2eefb` → `#f4f0f9` (`Lighter`), muted `#a89dc4` → `#b0a4b5` (`LightMuted`), texto sobre
+  `Fucsia` `#1a0711` → `#1e1e1e` (`Surface`, 4.85:1 → 4.17:1), `ring`/`text-accent` `#e91e63` →
+  `#ef2f62` (`Fucsia`) y `::selection` ahora en `Fucsia`.
 - Responsive: alternar `Sidebar` (desktop) vs `BottomNav` + mini player (mobile).
 
 ---
@@ -75,3 +83,19 @@ dejó `.gitkeep` en las carpetas. No están en el build.
   reproducción entre miembros.
 - **Estado global:** evaluar si `Context` alcanza o conviene un gestor (p. ej. Zustand) cuando
   aparezcan las features que aún faltan.
+
+---
+
+## 6. `pages/Landing/Landing.css` tiene su propia paleta
+
+**Contexto:** el landing (ruta `/`, fuera de `AppRoutes`) trae 660 líneas de CSS con 59 hex
+propios — grises (`#f4f4f5`, `#8b8b96`, `#6b6b76`), violetas (`#8b5cf6`, `#a78bfa`, `#c4b5fd`),
+cian `#22d3ee`, verde `#22c55e` — más 3 hex en `Landing.jsx`. Ninguno pertenece al design system
+de `src/styles/`, así que es la única fuente de estilos que quedó fuera de la centralización de
+tokens (se dejó así a propósito: mezclarla con la reorganización de estilos sin decidir el
+rediseño).
+
+**Qué hacer:** decidir si el landing se migra a los tokens del design system (reescribiendo su CSS
+con `var(--ds-*)` o directamente con clases) o si se descarta por estar fuera del alcance del
+Sprint 1. Recordar la regla 11 de `AGENTS.md`: los literales solo pueden vivir en
+`styles/tokens.css`.
