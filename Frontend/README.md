@@ -1,16 +1,29 @@
-# React + Vite
+# Synthos — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+## Reproductor
 
-Currently, two official plugins are available:
+Un único `PlayerContext` global maneja un `<audio>` HTML5 oculto. `PlayerBar` (desktop) y
+`MiniPlayerBar` (mobile) son solo presentación de ese mismo estado.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Estado
 
-## React Compiler
+- `queue` + `index`: la canción actual es `queue[index]`, derivado para evitar desincronización.
+- `isPlaying`, `currentTime`, `duration`: los maneja el `<audio>`.
+- `shuffle` (on/off) y `repeat` (`off` → `track` → `list`).
+- `playSongs(songs, startIndex)`: punto de entrada para reproducir desde cards o playlists.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Anterior / siguiente
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+- Cada salto apila el índice actual en un historial (`historyRef`, un `useRef` porque no se
+  renderiza). Es una pila unificada: sirve para los dos modos.
+- **Anterior**: si pasaron más de 3 s, reinicia la canción en vez de saltar. Si no, desenpila el
+  historial y vuelve a la última canción realmente escuchada; si el historial está vacío, cae al
+  índice anterior de la lista ordenada con wrap. Como el reinicio tiene prioridad, hay que apretar
+  dos veces para retroceder de verdad. Al retroceder se descarta el historial hacia adelante
+  (no hay botón de avance atrás).
+- **Siguiente**: en aleatorio elige un índice al azar entre los que no son la canción actual ni
+  las últimas 10 (`SHUFFLE_MEMORY`); si no queda ninguno, vuelve a excluir solo la actual. En
+  secuencial avanza un índice, y con `repeat: 'list'` al final vuelve al inicio.
+- `playSongs()` limpia el historial: una cola nueva es una sesión de escucha nueva.
+- El historial vive solo en el cliente, así que no depende del backend: el endpoint solo cambia de
+  dónde viene la cola (`songsService.listSongs()` hoy son mocks). No sobrevive a un refresh.

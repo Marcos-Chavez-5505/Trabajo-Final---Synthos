@@ -4,6 +4,7 @@ import { listSongs } from '../services/songsService.js'
 
 const REPEAT_MODES = ['off', 'track', 'list']
 const RESTART_THRESHOLD_SECONDS = 3
+const SHUFFLE_MEMORY = 10
 
 /**
  * Estado global de reproducción. Un solo <audio> HTML5 manejado acá; PlayerBar
@@ -11,6 +12,9 @@ const RESTART_THRESHOLD_SECONDS = 3
  */
 export default function PlayerProvider({ children }) {
   const audioRef = useRef(null)
+  // Índices ya reproducidos, del más nuevo al más viejo. Es ref y no state porque
+  // no se renderiza: solo lo leen/escriben next(), previous() y playSongs().
+  const historyRef = useRef([])
 
   const [queue, setQueue] = useState([])
   const [index, setIndex] = useState(0)
@@ -80,10 +84,13 @@ export default function PlayerProvider({ children }) {
     if (!queue.length) return
 
     if (shuffle && queue.length > 1) {
-      const candidates = queue
-        .map((_, i) => i)
-        .filter((i) => i !== index)
+      // Evita la actual y las últimas SHUFFLE_MEMORY; si no queda ninguna, cae a
+      // "cualquiera menos la actual" para no dejar la cola sin candidatos.
+      const visited = new Set([index, ...historyRef.current.slice(-SHUFFLE_MEMORY)])
+      const fresh = queue.map((_, i) => i).filter((i) => !visited.has(i))
+      const candidates = fresh.length ? fresh : queue.map((_, i) => i).filter((i) => i !== index)
 
+      historyRef.current.push(index)
       setIndex(candidates[Math.floor(Math.random() * candidates.length)])
       return
     }
@@ -92,6 +99,7 @@ export default function PlayerProvider({ children }) {
 
     if (nextIndex >= queue.length) {
       if (repeat === 'list') {
+        historyRef.current.push(index)
         setIndex(0)
         return
       }
@@ -100,6 +108,7 @@ export default function PlayerProvider({ children }) {
       return
     }
 
+    historyRef.current.push(index)
     setIndex(nextIndex)
   }, [index, queue, repeat, shuffle])
 
@@ -114,6 +123,13 @@ export default function PlayerProvider({ children }) {
 
     if (!queue.length) return
 
+    // Vuelve a la última canción realmente escuchada (importa en aleatorio, donde
+    // el índice salta). Sin historial a qué volver, usa la lista ordenada.
+    if (historyRef.current.length) {
+      setIndex(historyRef.current.pop())
+      return
+    }
+
     setIndex((prev) => (prev - 1 + queue.length) % queue.length)
   }, [queue, seek])
 
@@ -127,6 +143,7 @@ export default function PlayerProvider({ children }) {
     if (!songs?.length) return
 
     setQueue(songs)
+    historyRef.current = []
     setIndex(Math.min(Math.max(startIndex, 0), songs.length - 1))
     setIsPlaying(true)
   }, [])

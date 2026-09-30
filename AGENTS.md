@@ -68,7 +68,11 @@ src/
 │   └── songs.js                # (agregar uno por dominio según haga falta)
 ├── routes/
 │   └── AppRoutes.jsx
-├── index.css                   # entrypoint de Tailwind (convención Vite)
+├── styles/                     # design system (única fuente de verdad de los valores)
+│   ├── tokens.css              #   :root con TODOS los literales (color/tipografía/elevación)
+│   ├── utilities.css           #   clases .Wall/.Fucsia/.TextRegluar… derivadas con var()
+│   └── base.css                #   resets, derivados con var()
+├── index.css                   # entrypoint de Tailwind (convención Vite) + puente semántico de shadcn
 └── App.jsx
 
 docs/
@@ -130,6 +134,8 @@ Ejemplos: `roomsService.js` → `listRooms()`, `getRoomById(id)`, `createRoom(da
 8. Antes de generar una feature nueva, revisar si ya existe folder en `features/` correspondiente.
 9. `docs/plan/` contiene los planes de sprint en formato agente (autocontenidos). Nuevo sprint → nuevo archivo ahí, no sobrescribir los anteriores.
 10. **Íconos: siempre desde `src/assets/*.svg`** (set de diseño propio), nunca de librerías de íconos. Se importan como **URL** (sin sufijo) y se usan con `<img src={...} alt="" aria-hidden="true" className="h-5 w-5" />`, dimensionados con utilidades Tailwind. **No** usar el sufijo `?react`: `@vitejs/plugin-react` no lo transforma en este proyecto, el import queda como string `data:image/svg+xml` y al renderizarlo como componente (`<Icon />`) revienta con `InvalidCharacterError: The tag name provided ('data:...')`. Los SVG traen `#F4F0F9` hardcodeado (= token `Lighter`), así que no se recolorean: para estado activo, jugar con el fondo (`Fucsia`/`Volume`) del botón, no con el color del ícono. Usar `<img>` con `alt` real solo para contenido (fotos, carátulas, avatares).
+11. **Tokens: los literales viven solo en `src/styles/tokens.css`.** `styles/utilities.css` (clases `.Wall`, `.Fucsia`, `.TextRegluar`…) y `styles/base.css` (resets) se derivan con `var(--ds-*)`, y el puente semántico de shadcn en `src/index.css` (`:root` con `--background`, `--primary`, `--sidebar*`… y el `@theme inline`) también: **nunca** escribir un hex, un `px` de fuente o un `box-shadow` en otro archivo CSS ni en estilos inline de un componente. Para un color nuevo: primero el token en `tokens.css`, después su clase (si corresponde al design system) o su mapeo en el `:root` de `index.css` (si es una utilidad semántica de shadcn que lo necesita). Las clases del design system viven en `@layer components`, así que una utilidad Tailwind las sobrescribe (`className="Wall bg-red-500"`). ⚠️ `components.json` apunta `tailwind.css` a `src/index.css`: el CLI de shadcn reinyecta ahí su propio `:root` neutral, que al ir después en la cascada pisa el design system — si se corre `npx shadcn add`, hay que revisar y volver a dejar el bloque en `var(--ds-*)`.
+12. **Git: no subir commits ni crear ramas sin autorización previa.** No ejecutar `git push` (ni `--force`/`--force-with-lease`, ni tags), **no crear ramas o tags**, no abrir PRs, y no hacer `reset --hard`/`rebase` sobre ramas ya publicadas, salvo que el usuario lo pida o lo autorice explícitamente en el mensaje. Sí se pueden hacer lecturas (`status`, `diff`, `log`, `show`) y commits locales. Ante la duda, **preguntar antes**: publicar afecta a otras personas y no se improvisa.
 
 ## 5. Pendiente / decisiones abiertas
 
