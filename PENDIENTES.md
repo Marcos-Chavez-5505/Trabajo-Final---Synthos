@@ -99,3 +99,42 @@ rediseño).
 con `var(--ds-*)` o directamente con clases) o si se descarta por estar fuera del alcance del
 Sprint 1. Recordar la regla 11 de `AGENTS.md`: los literales solo pueden vivir en
 `styles/tokens.css`.
+<<<<<<< Updated upstream
+========================
+
+---
+
+## 7. Opcional: garantía de "no repetir hasta agotar la lista" en shuffle
+
+**Prioridad:** opcional. No está asignado a ningún sprint; queda registrado como posible adición.
+**Estado:** no implementado. El reproductor hoy funciona con una ventana de 10 canciones previas.
+
+**Contexto:** en aleatorio, `next()` (`PlayerContext.jsx`) excluye la canción actual y las últimas
+10 del historial (`SHUFFLE_MEMORY`). Eso garantiza "no repetir dentro de las últimas 10", que no es
+lo mismo que "no repetir hasta agotar la lista": con la ventana quedan fuera 11 índices como máximo,
+así que a partir de **12 canciones** en la cola un tema puede volver a sonar mientras quedan otros
+sin tocar. El caso favorable (cola ≤ 11) es justamente el que muestra el mock, que tiene 8
+canciones, por eso el defecto no se ve en el navegador. Con el backend (playlist de 30, cola de una
+sala, catálogo completo) aparece solo.
+
+**Qué hacer:** reemplazar la ventana por una *shuffle bag* —una bolsa con los índices restantes de
+la pasada actual, barajada con Fisher–Yates al reponerse—, de modo que cada canción suene
+exactamente una vez por pasada y el repeat solo pueda ocurrir al reponer. Encaja en un módulo puro
+nuevo `src/lib/shuffle.js` (crear/reponer bolsa, tomar el siguiente, quitar un índice) para que la
+lógica no viva en el provider y sea testeable. En `PlayerContext.jsx`: reemplazar `SHUFFLE_MEMORY` y
+el bloque `visited`/`fresh` por la bolsa, refonerla al quedar vacía en `next()`, vaciarla en
+`playSongs()` y en cada cambio de `toggleShuffle()`, y **sacarle el índice destino cuando se usa
+`previous()`**, para no repetir la canción a la que se acaba de volver. `nextFromShuffleBag()` toma
+el último elemento de la bolsa ya barajada, así que no hace falta un paso de selection aparte.
+
+**Verificación:** agregar **vitest** al Frontend (la 5.0.3 declara `vite: ^6.4 || ^7 || ^8` en sus
+peerDependencies, compatible con el Vite 8.3.0 del proyecto) con scripts `test` / `test:watch` y
+config `environment: 'node'` —la lógica es pura, no hace falta `jsdom` ni testing-library—. Con un
+PRNG sembrado (mulberry32) como `random` inyectable, testear que: la bolsa inicial es una permutación
+de `0..n-1`; en dos pasadas sobre n = 30 cada índice aparece exactamente una vez antes de cualquier
+repetición; una bolsa no vacía no se re-baraja; al reponer se excluye la canción en reproducción; y
+tras un `previous()` el índice destino no puede volver a salir. Ojo: `npm i -D vitest` modifica
+`package-lock.json`.
+
+**Nota:** el historial de `previous()` y la bolsa son estado de cliente, así que nada de esto depende
+del backend; el endpoint solo cambia de dónde viene la cola.
