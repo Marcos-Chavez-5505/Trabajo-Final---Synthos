@@ -16,9 +16,9 @@ export default function AppLayout({ children }) {
 
   if (isMobile) {
     return (
-      <div className="flex min-h-screen Surface">
+      <div className="flex h-dvh Surface">
         <div className="flex flex-1 flex-col">
-          <main className="flex-1 overflow-y-auto pb-28">{children}</main>
+          <main className="min-h-0 flex-1 overflow-y-auto pb-28">{children}</main>
           <MiniPlayerBar />
           <BottomNav />
         </div>
@@ -27,17 +27,18 @@ export default function AppLayout({ children }) {
   }
 
   return (
-    <SidebarProvider className="Surface flex-col">
+    <SidebarProvider className="Surface h-dvh min-h-0">
       <div className="flex min-h-0 flex-1">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar />
-          <main className="flex-1 overflow-y-auto">{children}</main>
+          <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+          {/* Dentro de la columna de contenido: el sidebar-gap (shadcn) reserva el
+              ancho con transition-[width], así que el reproductor se adapta a su
+              lado derecho y se ensancha al contraerse el sidebar. */}
+          <PlayerBar />
         </div>
       </div>
-
-      {/* Fuera de la fila: el reproductor ocupa el ancho completo de la ventana. */}
-      <PlayerBar />
     </SidebarProvider>
   )
 }

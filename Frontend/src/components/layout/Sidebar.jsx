@@ -63,8 +63,7 @@ export default function Sidebar() {
         </div>
       </SidebarHeader>
 
-      {/* pb-16: deja libre la franja donde el PlayerBar (ancho completo) tapa el sidebar fixed. */}
-      <SidebarContent className="pb-16">
+      <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
             {NAV_ITEMS.map((item) => (
