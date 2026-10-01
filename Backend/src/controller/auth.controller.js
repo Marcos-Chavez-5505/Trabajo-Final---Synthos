@@ -1,3 +1,4 @@
+const jwt = require("jsonwebtoken");
 const authService = require("../services/auth.service");
 const { validateRegisterInput } = require("../utils/validation");
 
@@ -34,4 +35,51 @@ async function register(req, res, next) {
 	}
 }
 
-module.exports = { register };
+async function login(req, res, next) {
+	try {
+		const { email, password } = req.body || {};
+
+		if (typeof email !== "string" || typeof password !== "string") {
+			return res.status(401).json({
+				status: "error",
+				message: "Credenciales inválidas.",
+			});
+		}
+
+		const user = await authService.loginUser(email, password);
+
+		if (!user) {
+			return res.status(401).json({
+				status: "error",
+				message: "Credenciales inválidas.",
+			});
+		}
+
+		const token = jwt.sign(
+			{ sub: user.id, email: user.email, username: user.username },
+			process.env.JWT_SECRET,
+			{ expiresIn: process.env.JWT_EXPIRES_IN || "7d" },
+		);
+
+		return res.status(200).json({
+			status: "success",
+			token,
+			user,
+		});
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function logout(req, res, next) {
+	try {
+		return res.status(200).json({
+			status: "success",
+			message: "Sesión cerrada correctamente.",
+		});
+	} catch (error) {
+		next(error);
+	}
+}
+
+module.exports = { register, login, logout };

@@ -28,4 +28,32 @@ async function registerUser({ email, username, password }) {
 	});
 }
 
-module.exports = { findUserByEmailOrUsername, registerUser };
+async function findUserByEmail(email) {
+	return prisma.user.findUnique({
+		where: { email },
+	});
+}
+
+async function loginUser(email, password) {
+	const user = await findUserByEmail(email);
+
+	if (!user) {
+		return null;
+	}
+
+	const passwordMatches = await bcrypt.compare(password, user.passwordHash);
+
+	if (!passwordMatches) {
+		return null;
+	}
+
+	const { passwordHash, ...userWithoutPassword } = user;
+
+	return userWithoutPassword;
+}
+
+module.exports = {
+	findUserByEmailOrUsername,
+	registerUser,
+	loginUser,
+};
