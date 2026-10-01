@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const songRoutes = require("./routes/song.routes");
 const prismaErrorHandler = require("./middlewares/errorHandler");
+const authRoutes = require("./routes/auth.routes");
 
 const app = express();
 
@@ -10,6 +11,7 @@ app.use(express.json());
 
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 app.use("/api/songs", songRoutes);
+app.use("/api/v1/auth", authRoutes);
 
 app.use(prismaErrorHandler);
 app.use((err, req, res, next) => {
