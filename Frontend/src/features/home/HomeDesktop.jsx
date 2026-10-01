@@ -1,20 +1,55 @@
+import { useEffect, useState } from 'react'
 import useAuth from '../../hooks/useAuth.js'
+import usePlayer from '../../hooks/usePlayer.js'
+import { listSongs } from '../../services/songsService.js'
+import MediaCard from '../../components/cards/MediaCard.jsx'
 
-// TODO(agente, TS-06/TS-07): este es solo el shell para que /home sea navegable.
-// Cuando se implemente el contenido (novedades y salas sugeridas) hay que
-// reincorporar los scaffolds que hoy quedan fuera del arbol y consumir el
-// catalogo via songsService.listSongs():
-// import MediaCard from '../../components/cards/MediaCard.jsx'
-// import SectionCarousel from '../../components/cards/SectionCarousel.jsx'
+// Cuántas canciones muestra la fila de novedades. Es una muestra del catálogo,
+// no la grilla completa: esa vive en /buscar.
+const NOVEDADES_COUNT = 6
+
 export default function HomeDesktop() {
   const { user } = useAuth()
+  const { playSongs } = usePlayer()
+
+  const [songs, setSongs] = useState([])
+
+  useEffect(() => {
+    let active = true
+
+    listSongs().then((catalog) => {
+      if (active) setSongs(catalog.slice(0, NOVEDADES_COUNT))
+    })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   return (
     <div className="p-6 md:p-10">
       <h1 className="Header2">Hola, {user?.username}</h1>
-      <p className="mt-2 TextLarge opacity-70">
-        Tu colección y tus salas aparecen acá.
-      </p>
+
+      <section className="mt-10">
+        <h2 className="Header4 mb-4">Novedades</h2>
+
+        {/* La fila scrollea en vez de encoger las tarjetas (ancho fijo del
+            diseño). La barra se oculta para no quedar pegada al PlayerBar:
+            [scrollbar-width:none] para Firefox y la pseudo-elemento para WebKit. */}
+        <ul className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {songs.map((song, index) => (
+            <li key={song.id}>
+              <MediaCard
+                title={song.title}
+                artist={song.artist}
+                label={song.genre}
+                coverUrl={song.coverUrl}
+                onPlay={() => playSongs(songs, index)}
+              />
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   )
 }

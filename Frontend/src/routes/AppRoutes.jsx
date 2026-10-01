@@ -5,6 +5,7 @@ import Home from '../features/home/Home.jsx'
 import Login from '../features/auth/Login.jsx'
 import Register from '../features/auth/Register.jsx'
 import ProfileView from '../features/profile/ProfileView.jsx'
+import SearchSongs from '../features/search/SearchSongs.jsx'
 import PublicOnly from './PublicOnly.jsx'
 import RequireAuth from './RequireAuth.jsx'
 
@@ -74,10 +75,7 @@ export default function AppRoutes() {
         path="/salas"
         element={<Protected><ScreenPlaceholder title="Salas" /></Protected>}
       />
-      <Route
-        path="/buscar"
-        element={<Protected><ScreenPlaceholder title="Buscar" /></Protected>}
-      />
+      <Route path="/buscar" element={<Protected><SearchSongs /></Protected>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

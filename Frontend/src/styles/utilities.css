@@ -115,4 +115,19 @@
   .Elevation1 {
     box-shadow: var(--ds-elevation-1);
   }
+
+  /* Componentes */
+  .CardRadius {
+    border-radius: var(--ds-radius-card);
+  }
+  .MediaCardWidth {
+    width: var(--ds-size-media-card);
+  }
+  .MiniMediaCardWidth {
+    width: var(--ds-size-mini-media-card);
+  }
+  .MediaCardPlaySize {
+    width: var(--ds-size-media-card-play);
+    height: var(--ds-size-media-card-play);
+  }
 }

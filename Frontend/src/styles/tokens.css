@@ -52,4 +52,10 @@
 
   /* Elevación */
   --ds-elevation-1: 0px 4px 8px 2px var(--ds-wall);
+
+  /* Componentes */
+  --ds-radius-card: 6px;
+  --ds-size-media-card: 180px;
+  --ds-size-mini-media-card: 150px;
+  --ds-size-media-card-play: 36px;
 }
