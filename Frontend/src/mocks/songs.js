@@ -1,6 +1,7 @@
 // Catálogo semilla de canciones mock. Lo consume solo songsService.
 // `audioUrl` apunta a archivos de prueba públicos (MP3) para reproducir audio real.
 // `coverUrl` en null hasta que exista el backend de imágenes.
+// `genre` es buscable desde TS-07 (`songsService.searchSongs`).
 //
 // `source` es la línea "Reproduciéndose desde" del reproductor. En el mock se
 // asigna al azar por canción; cuando exista backend vendrá en el payload real.
@@ -21,6 +22,7 @@ export const mockSongs = [
     title: 'Midnight Waves',
     artist: 'Neon Coast',
     album: 'Afterglow',
+    genre: 'Synth Pop',
     duration: 372,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
     coverUrl: null,
@@ -31,6 +33,7 @@ export const mockSongs = [
     title: 'Paper Lanterns',
     artist: 'Velvet Hours',
     album: 'Slow Motion',
+    genre: 'Indie Rock',
     duration: 405,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
     coverUrl: null,
@@ -41,6 +44,7 @@ export const mockSongs = [
     title: 'Concrete Roses',
     artist: 'The Long Way',
     album: 'Northbound',
+    genre: 'Alternative',
     duration: 338,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
     coverUrl: null,
@@ -51,6 +55,7 @@ export const mockSongs = [
     title: 'Static Bloom',
     artist: 'Neon Coast',
     album: 'Afterglow',
+    genre: 'Synth Pop',
     duration: 291,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
     coverUrl: null,
@@ -61,6 +66,7 @@ export const mockSongs = [
     title: 'Low Tide',
     artist: 'Salt & Signal',
     album: 'Drift',
+    genre: 'Dream Pop',
     duration: 356,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
     coverUrl: null,
@@ -71,6 +77,7 @@ export const mockSongs = [
     title: 'Glass Elevator',
     artist: 'Marina Error',
     album: 'Upside Down',
+    genre: 'Electronic',
     duration: 324,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
     coverUrl: null,
@@ -81,6 +88,7 @@ export const mockSongs = [
     title: 'Fever Dream',
     artist: 'Velvet Hours',
     album: 'Slow Motion',
+    genre: 'Indie Rock',
     duration: 419,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3',
     coverUrl: null,
@@ -91,6 +99,7 @@ export const mockSongs = [
     title: 'Last Train Home',
     artist: 'The Long Way',
     album: 'Northbound',
+    genre: 'Alternative',
     duration: 387,
     audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
     coverUrl: null,
