@@ -1,4 +1,3 @@
-
 TS-06 (reproductor) entregado. Los 4 criterios de aceptación quedaron en [x].
 Estado global — src/context/PlayerContext.jsx (provider global en main.jsx, junto a AuthProvider), con context/playerContext.js + hooks/usePlayer.js siguiendo el mismo patrón que auth:
 
@@ -14,9 +13,6 @@ Estado global — src/context/PlayerContext.jsx (provider global en main.jsx, ju
 - La cola inicial es el catálogo completo para que el reproductor sea usable hoy sin cards; playSongs(songs, startIndex) queda como entrada para TS-07/TS-09. Está anotado con TODO(agente).
 - Verifiqué con smoke test de Node lo que es testeable sin browser (formatDuration en todos los bordes, listSongs/getSongById). La parte que no pude probar es el comportamiento real del  (play, ended, seek por arrastre) — eso hay que abrirlo en el navegador. Build y lint pasan; los 3 warnings siguen siendo los preexistentes de shadcn.
   Siguiente del plan: TS-07 (buscar canciones) o TS-08 (buscar personas), ambos dependen de lo que acabo de dejar listo.
-
-
-
 
 Sí, sirve mucho. src/styles/styles.css tiene los tokens y sus valores coinciden con los del CSS compilado (Volume #373038, Wall #605468, Fucsia #ef2f62, Lighter #f4f0f9, Surface #1e1e1e, SurfaceLight #2a2a2c, Shadow #453a4a, Light #c6bed3, escala TextRegluar/TextMedium/TextTiny/TextLarge/Header1-4/Button, Elevation1). Con eso no necesito reconstruir nada.
 Pero el archivo deja 3 huecos que sí hay que resolver:
@@ -36,3 +32,26 @@ Pero el archivo deja 3 huecos que sí hay que resolver:
 2. Fuente: ¿unifico en Space Grotesk (lo que ya está cargado, cambio los tokens) o agrego el link de Roboto (lo que los tokens declaran)?
 3. Labels de tiempo en mobile: la referencia mobile no los tiene. ¿Solo desktop?
 4. Botón expandir: ¿visual con expand.svg + TODO, o implemento el player expandido/plegado?
+
+
+
+
+TS-07 completo. Build y lint limpios (solo quedan los 3 warnings preexistentes de button.tsx, sidebar.tsx y use-mobile.ts).
+Archivos nuevos
+
+- src/components/cards/MediaCard.jsx — variante overlay del preview: thumb aspect-3/4, overlay Volume con label Fucsia / título / artista, botón play circular que aparece al hover.
+- src/components/cards/MiniMediaCard.jsx — variante plana: carátula cuadrada y texto debajo.
+- src/components/ui/pagination.tsx — registry base-nova adaptado: íconos de src/assets (left_arrow, right_arrow, three_dots) y render de Base UI en vez de <a></a>, para que cada página enchufe un .
+- src/hooks/useDebounce.js
+- src/features/search/SearchSongs.jsx — lee ?q=&page= de la URL, debounce 300 ms, grilla de MiniMediaCard, estado vacío y paginación con elipsis.
+  Archivos modificados
+- src/mocks/songs.js — campo genre en las 8 canciones.
+- src/services/songsService.js:45 — searchSongs(query, page, pageSize) con SEARCHABLE_FIELDS = ['title','artist','album','genre'], normalización sin acentos, y la página acotada a un rango válido. Devuelve {items,total,page,pageSize,totalPages} porque la paginación necesita el total.
+- src/routes/AppRoutes.jsx:78 — /buscar ya no es placeholder.
+- src/components/layout/TopBar.jsx — el input ahora es un  que navega a /buscar?q=, con ícono search.svg y estado sincronizado con la URL.
+  Notas
+- SEARCH_PAGE_SIZE = 4 a propósito: con 8 canciones mock quedan 2 páginas visibles.
+- Reemplacé los setState en efectos por derivación durante el render (clave requestKey en la respuesta, sync de URL en render en TopBar), lo que eliminó los dos warnings nuevos de oxlint.
+- Verifiqué searchSongs y el cálculo de páginas con un script temporal (21 casos: filtros, rangos fuera de borde, elipsis). Lo borré después; el repo no tiene runner de tests.
+- No verifiqué el render en navegador: no hay Playwright ni servidor de pruebas instalado. Podés levantar npm run dev y entrar a /buscar.
+- temp/ y el package-lock.json de la raíz siguen untracked; no los toqué.
