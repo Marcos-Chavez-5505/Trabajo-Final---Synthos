@@ -24,4 +24,16 @@ async function getSongById(req, res, next) {
 	}
 }
 
-module.exports = { getSongs, getSongById };
+async function searchSongs(req, res, next) {
+	try {
+		const { query, cursor } = req.query;
+
+		const result = await songService.searchSongs(query.trim(), Number(cursor));
+
+		res.status(200).json(result);
+	} catch (error) {
+		next(error);
+	}
+}
+
+module.exports = { getSongs, getSongById, searchSongs };

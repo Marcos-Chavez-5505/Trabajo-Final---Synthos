@@ -18,6 +18,7 @@ const adapter = new PrismaPg({
 
 const prisma = new PrismaClient({
 	adapter,
+	errorFormat: "pretty",
 });
 
 module.exports = prisma;

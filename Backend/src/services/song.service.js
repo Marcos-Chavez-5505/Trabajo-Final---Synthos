@@ -1,19 +1,20 @@
 const prisma = require("../prisma/prismaClient");
 
+const LIMIT = 10;
+
 const SONG_INCLUDE = {
-	songArtists: true,
 	songGenres: true,
 	songMoods: true,
+	artist: true,
 };
 
 async function getSongs(cursor = null) {
-	const LIMIT = 10;
-
 	const songs = await prisma.song.findMany({
 		take: LIMIT,
 		skip: cursor ? 1 : 0,
 		cursor: cursor ? { id: cursor } : undefined,
 		include: SONG_INCLUDE,
+		orderBy: { id: "asc" },
 	});
 
 	const nextCursor = songs.length > 0 ? songs[songs.length - 1].id : null;
@@ -31,4 +32,42 @@ async function getSongById(songId) {
 	return song;
 }
 
-module.exports = { getSongs, getSongById };
+async function searchSongs(query, cursor = null) {
+	const where = query
+		? {
+				OR: [
+					{ title: { contains: query, mode: "insensitive" } },
+					{ artist: { name: { contains: query, mode: "insensitive" } } },
+					{
+						songGenres: {
+							some: {
+								genre: { name: { contains: query, mode: "insensitive" } },
+							},
+						},
+					},
+				],
+			}
+		: {};
+
+	const songs = await prisma.song.findMany({
+		where,
+		take: LIMIT + 1,
+		...(cursor && {
+			cursor: { id: cursor },
+			skip: 1,
+		}),
+		include: SONG_INCLUDE,
+		orderBy: { id: "asc" },
+	});
+
+	const hasMore = songs.length > LIMIT;
+	const items = hasMore ? songs.slice(0, -1) : songs;
+	const nextCursor = hasMore ? items[items.length - 1].id : null;
+
+	return {
+		items,
+		nextCursor,
+	};
+}
+
+module.exports = { getSongs, getSongById, searchSongs };
