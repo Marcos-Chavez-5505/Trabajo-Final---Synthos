@@ -105,19 +105,19 @@ docs/
 
 Ejemplos: `roomsService.js` → `listRooms()`, `getRoomById(id)`, `createRoom(data)`, `joinRoom(id, password?)`, `voteSkip(roomId)`.
 
-**Rutas API (REST, backend):** base `/api/v1/`, recursos en plural, minúsculas, sin verbos:
+**Rutas API (REST, backend):** base `/api`, recursos en plural, minúsculas, sin verbos:
 
 ```
-/api/v1/songs
-/api/v1/songs/:id
-/api/v1/playlists
-/api/v1/playlists/:id/songs
-/api/v1/rooms
-/api/v1/rooms/:id/members
-/api/v1/rooms/:id/vote-skip
-/api/v1/users
-/api/v1/users/:id/follow
-/api/v1/recommendations
+/api/songs
+/api/songs/:id
+/api/playlists
+/api/playlists/:id/songs
+/api/rooms
+/api/rooms/:id/members
+/api/rooms/:id/vote-skip
+/api/users
+/api/users/:id/follow
+/api/recommendations
 ```
 
 **Estado global:** un Context por dominio transversal (Player, Auth). Estado de feature específica queda local a esa feature (useState/useReducer dentro de `features/x`).

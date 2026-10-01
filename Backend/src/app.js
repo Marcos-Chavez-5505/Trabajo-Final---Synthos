@@ -9,9 +9,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+//! TODOS LOS ENDPOINTS EMPIEZAN POR /API
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 app.use("/api/songs", songRoutes);
-app.use("/api/v1/auth", authRoutes);
+app.use("/api/auth", authRoutes);
 
 app.use(prismaErrorHandler);
 app.use((err, req, res, next) => {
