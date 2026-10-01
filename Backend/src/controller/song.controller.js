@@ -1,5 +1,5 @@
 const songService = require("../services/song.service");
-const getId = require("../utils/validation");
+const { getId } = require("../utils/validation");
 
 async function getSongs(req, res, next) {
 	try {
@@ -15,8 +15,6 @@ async function getSongs(req, res, next) {
 
 async function getSongById(req, res, next) {
 	try {
-		console.log("llegó");
-
 		const songId = getId(req);
 		const result = await songService.getSongById(songId);
 
