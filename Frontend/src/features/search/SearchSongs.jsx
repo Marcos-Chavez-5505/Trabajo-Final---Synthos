@@ -20,7 +20,7 @@ const DEBOUNCE_MS = 300
 // elipsis. Con un pageSize chico alcanza para ver el comportamiento.
 const SIBLING_PAGES = 1
 
-const EMPTY_RESULTS = { items: [], total: 0, page: 1, totalPages: 1 }
+const EMPTY_RESULTS = { items: [], total: 0, page: 1, pageSize: 1, totalPages: 1 }
 
 /**
  * Rango de páginas a mostrar: primera, última, actual y sus vecinas, con un
@@ -67,24 +67,34 @@ export default function SearchSongs() {
   // deriva comparando keys en vez de setear un booleano, así no hay un render
   // extra en cascada y nunca se muestra un resultado viejo con la query nueva.
   const requestKey = `${debouncedQuery}::${page}`
-  const [response, setResponse] = useState({ key: null, data: null })
+  const [response, setResponse] = useState({ key: null, data: null, error: null })
 
   useEffect(() => {
+    const controller = new AbortController()
     let active = true
 
-    searchSongs(debouncedQuery, page).then((data) => {
-      if (!active) return
+    searchSongs(debouncedQuery, page, undefined, { signal: controller.signal })
+      .then((data) => {
+        if (!active) return
 
-      setResponse({ key: requestKey, data })
-    })
+        setResponse({ key: requestKey, data, error: null })
+      })
+      .catch((cause) => {
+        if (!active) return
+
+        setResponse({ key: requestKey, data: null, error: cause.message })
+      })
 
     return () => {
       active = false
+      controller.abort()
     }
   }, [debouncedQuery, page, requestKey])
 
-  const isLoading = response.key !== requestKey
-  const results = response.key === requestKey ? response.data : EMPTY_RESULTS
+  const isCurrent = response.key === requestKey
+  const isLoading = !isCurrent
+  const error = isCurrent ? response.error : null
+  const results = isCurrent ? (response.data ?? EMPTY_RESULTS) : EMPTY_RESULTS
 
   // El service acota la página a un rango válido. Si la URL pedía una que ya no
   // existe (bajó el total de resultados al cambiar la query), se corrige en la
@@ -116,12 +126,20 @@ export default function SearchSongs() {
   return (
     <section className="px-6 py-4">
       <h1 className="text-foreground Header3 mb-1">Buscar canciones</h1>
+      {/* El backend no tiene columna `album` ni busca por él (ver PENDIENTES.md),
+          así que el copy promete solo lo que el endpoint puede cumplir. Cuando se
+          agregue el filtro por álbum, vuelve "álbumo" acá. */}
       <p className="text-muted-foreground TextMedium mb-6">
-        Buscá por título, artista, álbum o género.
+        Buscá por título, artista o género.
       </p>
 
       {isLoading ? (
         <p className="text-muted-foreground TextRegluar">Buscando…</p>
+      ) : error ? (
+        <div className="py-12 text-center">
+          <p className="text-foreground Header4 mb-1">No pudimos buscar</p>
+          <p className="text-muted-foreground TextRegluar">{error}</p>
+        </div>
       ) : results.items.length === 0 ? (
         <div className="py-12 text-center">
           <p className="text-foreground Header4 mb-1">Sin resultados</p>

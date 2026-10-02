@@ -26,14 +26,22 @@ export default function PlayerProvider({ children }) {
 
   const song = queue[index] ?? null
 
+  // Si el catálogo no llega, la cola queda vacía y el player se oculta
+  // (hasQueue false). No rompe la app: el resto de las pantallas no dependen de
+  // esto para renderizar.
   // TODO(agente): TS-07/TS-09 arman la cola con la selección real del usuario.
-  // Por ahora la cola inicial es el catálogo mock, para que el player sea usable.
+  // Por ahora la cola inicial es la primera tanda del catálogo, para que el
+  // player sea usable.
   useEffect(() => {
     let active = true
 
-    listSongs().then((songs) => {
-      if (active) setQueue(songs)
-    })
+    listSongs()
+      .then((songs) => {
+        if (active) setQueue(songs)
+      })
+      .catch(() => {
+        if (active) setQueue([])
+      })
 
     return () => {
       active = false
