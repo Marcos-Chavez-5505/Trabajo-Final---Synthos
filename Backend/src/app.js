@@ -22,9 +22,9 @@ app.use("/api/users", userRoutes);
 app.use(prismaErrorHandler);
 app.use((err, req, res, next) => {
 	console.error("[Unhandled Error]", err);
-	res.status(500).json({
+	res.status(err.code || 500).json({
 		status: "error",
-		message: "Ha ocurrido un error interno en el servidor.",
+		message: err.message || "Ha ocurrido un error en el servidor",
 	});
 });
 
