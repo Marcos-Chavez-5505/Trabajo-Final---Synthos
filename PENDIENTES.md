@@ -138,3 +138,89 @@ tras un `previous()` el índice destino no puede volver a salir. Ojo: `npm i -D 
 
 **Nota:** el historial de `previous()` y la bolsa son estado de cliente, así que nada de esto depende
 del backend; el endpoint solo cambia de dónde viene la cola.
+
+---
+
+## 8. Conectar el frontend con `/api/songs`
+
+**Estado:** la integración quedó completa. `listSongs()`, `getSongById()` y `searchSongs()` van contra
+el backend real, y el backend se ajustó para el paginado por offset y los nombres de género.
+Contrato en `ESPECIFICACIONES-BACKEND.md` (raíz).
+
+Lo que queda son decisiones de producto y la validación contra la base real (8.4–8.8).
+
+### 8.1 Paginación de `/buscar` — resuelto en backend
+
+**Qué se hizo:** `song.service.js::searchSongs` pasó de cursor a offset (`skip: (page - 1) * pageSize`,
+`take: pageSize`) con `prisma.song.count({ where })` en la misma transacción, y devuelve
+`{ items, total, page, pageSize, totalPages }`. El controller pasa `page`/`pageSize` sin castear y
+`parsePagination` los acota (≥ 1, tope `50`). Página fuera de rango → se sirve la última con contenido
+y se devuelve `page` corregido.
+
+**Por qué no se degradó la pantalla:** se evaluó reescribir `SearchSongs.jsx` a anterior/siguiente con
+cursor, pero se perdía la fila de números y el salto directo.
+
+### 8.2 Etiqueta de género — resuelto
+
+`SONG_INCLUDE` ahora usa `songGenres: { include: { genre: true } }` (idem `songMoods`), así que el
+payload trae el nombre y `songsService.toSong()` lo mapea a `song.genre`. Las cards de `/home` y
+`/buscar` vuelven a mostrar la etiqueta.
+
+### 8.3 La búsqueda por álbum se eliminó del contrato
+
+**Qué pasa:** el catálogo mock tenía `album` y `searchSongs()` mock filtraba por `title`, `artist`,
+`album` y `genre`. El backend no tiene columna `album` en el esquema (`song` es título/artista/
+release_date/cover_url/duration/url) y su filtro cubre título, artista y género.
+
+Por eso se **quitó "álbumo" del copy** de `SearchSongs.jsx`: la pantalla ya no promete algo que el
+backend no cumple. Si más adelante se agrega la columna `album` y su filtro, hay que devolver el
+nombre en el payload y reponer la palabra en el copy.
+
+### 8.4 `album` y `source` no existen en el esquema
+
+`PlayerBar` usaba `song.album` como `alt` de la carátula y `song.source` para la línea
+"Reproduciéndose desde". Con el payload real ambos son `null`:
+
+- `album`: no rompe, el `alt` ya cae a `song.title`.
+- `source`: la línea se oculta sola (el render está guardado con `song?.source ?`).
+
+**Qué hace falta para `source`:** decidir de dónde sale. "Reproduciéndose desde" debería ser el origen
+real de la canción (nombre de playlist o sala), que requiere saber de qué playlist o sala se pidió
+reproducir: o el endpoint lo recibe como query param, o el frontend lo calcula al armar la cola.
+
+### 8.5 Bugs de backend encontrados al conectar — corregidos
+
+- `song.controller.js` hacía `query.trim()` sin guarda: `/api/songs/search` **sin** `?query=` lanzaba
+  `TypeError` → 500. Ahora el service normaliza a `""` y devuelve el catálogo paginado.
+- `Number(cursor)` daba `NaN` si faltaba el cursor. Sin efecto al pasar a offset, pero ya no se castea.
+
+### 8.6 Auth sigue en mocks, a propósito
+
+`authService`/`usersService` quedaron con `mocks/users.js`. El backend ya expone
+`POST /api/auth/register`, `/login` y `/logout` (montados dos veces en `app.js`, en `/api/auth` y
+`/api/v1/auth`), pero conectar eso excede esta entrega y arrastra el manejo de JWT: `logout` requiere
+token (`authenticate` middleware) y `api.js` todavía no manda `Authorization`. Queda para un sprint
+aparte. Nota: `mocks/users.js` genera ids con `crypto.randomUUID()`, que **no** son los enteros
+`SERIAL` de la base, así que al migrar hay que revisar `getUserById`.
+
+### 8.7 `mocks/songs.js` quedó sin uso
+
+Ningún módulo lo importa más. **No se borró**, a propósito y esperando poder validar contra el
+endpoint real con la base conectada. Cuando se borre, también se puede reducir `SEARCH_PAGE_SIZE` y la
+lógica de normalización de acentos de `songsService.js`, que ya no aplican.
+
+### 8.8 Verificación pendiente contra la base real
+
+La **lógica de paginación** sí se verificó: script temporal con Prisma interceptado y 137 canciones
+sintéticas, cubriendo `skip`, clamping de página fuera de rango, última página parcial, defaults para
+valores ausentes/`"0"`/`"abc"`, tope de `pageSize` y recorrido completo de las 14 páginas sin repetidos
+ni saltos. Todas las comprobaciones pasaron; el script se eliminó después.
+
+Lo que **no** se pudo probar es el fetch real: no responde en `localhost:3000`, Docker no está
+levantado y no existe `Backend/.env` (solo `.env.example`, sin `DATABASE_URL`), así que Prisma no tiene
+a qué conectarse. `npm run build` y `npm run lint` pasan (solo los 3 warnings preexistentes), pero eso no
+ejercita la red ni el include anidado de género contra Postgres.
+
+Para cerrar: `docker compose up -d` en `Backend/`, copiar `.env.example` a `.env` con las `POSTGRES_*` y
+`DATABASE_URL`, `npx prisma migrate dev`, `npx prisma db seed`, `npm run dev`, y recién ahí levantar el
+Frontend. Comandos de `curl` en `ESPECIFICACIONES-BACKEND.md` §5.2.
