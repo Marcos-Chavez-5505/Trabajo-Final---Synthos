@@ -5,7 +5,8 @@ import Home from '../features/home/Home.jsx'
 import Login from '../features/auth/Login.jsx'
 import Register from '../features/auth/Register.jsx'
 import ProfileView from '../features/profile/ProfileView.jsx'
-import SearchSongs from '../features/search/SearchSongs.jsx'
+import ProfilePublic from '../features/profile/ProfilePublic.jsx'
+import Search from '../features/search/Search.jsx'
 import PublicOnly from './PublicOnly.jsx'
 import RequireAuth from './RequireAuth.jsx'
 
@@ -75,7 +76,14 @@ export default function AppRoutes() {
         path="/salas"
         element={<Protected><ScreenPlaceholder title="Salas" /></Protected>}
       />
-      <Route path="/buscar" element={<Protected><SearchSongs /></Protected>} />
+      <Route path="/buscar" element={<Protected><Search /></Protected>} />
+      {/* `/profile/:id` es el perfil público de otra persona (TS-08). Va fuera de
+          `Protected` a propósito: es una vista de lectura y no debería depender
+          de que haya sesión. */}
+      <Route
+        path="/profile/:id"
+        element={<AppLayout><ProfilePublic /></AppLayout>}
+      />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

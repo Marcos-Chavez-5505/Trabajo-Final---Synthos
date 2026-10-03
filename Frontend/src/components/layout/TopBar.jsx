@@ -4,8 +4,10 @@ import searchIcon from '../../assets/search.svg'
 
 /**
  * Input de búsqueda global. Escribe en la URL de /buscar (?q=) para que la
- * búsqueda sea compartible y el back del browser funcione. TS-08 va a sumar
- * personas y salas a esta misma pantalla.
+ * búsqueda sea compartible y el back del browser funcione.
+ *
+ * TS-08 ya sumó personas a esa pantalla vía las pestañas de `SearchTabs`; falta
+ * sumar salas, que no tiene endpoint todavía.
  */
 export default function TopBar() {
   const navigate = useNavigate()
@@ -29,6 +31,9 @@ export default function TopBar() {
 
     const query = text.trim()
 
+    // Sin `tipo` explícito la pantalla abre en canciones, que es lo que espera
+    // quien escribe en el input global. `/buscar?tipo=personas` sigue funcionando
+    // si se llega por un link directo.
     navigate(query ? `/buscar?q=${encodeURIComponent(query)}` : '/buscar')
   }
 
@@ -47,8 +52,8 @@ export default function TopBar() {
             type="search"
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder="Buscar canciones"
-            aria-label="Buscar canciones"
+            placeholder="Buscar canciones o personas"
+            aria-label="Buscar canciones o personas"
             className="text-foreground TextRegluar placeholder-muted-foreground/60 w-full bg-transparent outline-none"
           />
         </div>

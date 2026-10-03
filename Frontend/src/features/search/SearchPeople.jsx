@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import useDebounce from '../../hooks/useDebounce.js'
-import usePlayer from '../../hooks/usePlayer.js'
 import buildPageRange from '../../lib/pageRange.js'
-import { searchSongs } from '../../services/songsService.js'
-import MiniMediaCard from '../../components/cards/MiniMediaCard.jsx'
+import { searchUsers, SEARCH_PAGE_SIZE } from '../../services/usersService.js'
+import Avatar from '../../components/ui/Avatar.jsx'
 import SearchTabs from './SearchTabs.jsx'
 import {
   Pagination,
@@ -16,34 +15,29 @@ import {
   PaginationPrevious,
 } from '../../components/ui/pagination'
 
-export const DEBOUNCE_MS = 300
+const DEBOUNCE_MS = 300
 
 const EMPTY_RESULTS = { items: [], total: 0, page: 1, pageSize: 1, totalPages: 1 }
 
-export default function SearchSongs() {
+export default function SearchPeople() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { playSongs } = usePlayer()
 
-  // La query vive en la URL: la búsqueda se puede compartir y el input de
-  // TopBar (/buscar?q=) apunta a esta misma pantalla.
+  // Igual que en SearchSongs: la query y la página viven en la URL para que el
+  // resultado sea compartible y el "atrás" del browser funcione.
   const query = searchParams.get('q') ?? ''
   const page = Math.max(Number(searchParams.get('page')) || 1, 1)
 
-  // Se busca con la query ya debounceada: tipear rápido no dispara una
-  // búsqueda por tecla.
   const debouncedQuery = useDebounce(query, DEBOUNCE_MS)
 
-  // Cada respuesta se guarda junto a la query+página que la pidió. El loading se
-  // deriva comparando keys en vez de setear un booleano, así no hay un render
-  // extra en cascada y nunca se muestra un resultado viejo con la query nueva.
+  // La respuesta se guarda con la key que la pidió: el loading se deriva en vez
+  // de setear un booleano, y nunca se ve un resultado viejo con la query nueva.
   const requestKey = `${debouncedQuery}::${page}`
   const [response, setResponse] = useState({ key: null, data: null, error: null })
 
   useEffect(() => {
-    const controller = new AbortController()
     let active = true
 
-    searchSongs(debouncedQuery, page, undefined, { signal: controller.signal })
+    searchUsers(debouncedQuery, page, SEARCH_PAGE_SIZE)
       .then((data) => {
         if (!active) return
 
@@ -57,7 +51,6 @@ export default function SearchSongs() {
 
     return () => {
       active = false
-      controller.abort()
     }
   }, [debouncedQuery, page, requestKey])
 
@@ -66,21 +59,21 @@ export default function SearchSongs() {
   const error = isCurrent ? response.error : null
   const results = isCurrent ? (response.data ?? EMPTY_RESULTS) : EMPTY_RESULTS
 
-  // El service acota la página a un rango válido. Si la URL pedía una que ya no
-  // existe (bajó el total de resultados al cambiar la query), se corrige en la
-  // URL en vez de mostrar un "sin resultados" engañoso.
+  // Si la URL pedía una página que ya no existe (el total bajó al cambiar la
+  // query), se corrige acá en vez de mostrar un "sin resultados" engañoso.
   useEffect(() => {
     if (results.total > 0 && results.page !== page) {
-      setSearchParams({ q: query, page: String(results.page) }, { replace: true })
+      setSearchParams(
+        { tipo: 'personas', q: query, page: String(results.page) },
+        { replace: true }
+      )
     }
   }, [results, page, query, setSearchParams])
 
-  // Href de cada página. Sin query no se escribe ?q= vacío en la URL, y `tipo` se
-  // arrastra para que la paginación no salte a la pestaña de personas.
   const pageHref = (target) => {
     const params = new URLSearchParams()
 
-    params.set('tipo', 'canciones')
+    params.set('tipo', 'personas')
     if (query) params.set('q', query)
     if (target > 1) params.set('page', String(target))
 
@@ -92,18 +85,15 @@ export default function SearchSongs() {
 
   const pages = useMemo(
     () => buildPageRange(results.page, results.totalPages),
-    [results.page, results.totalPages],
+    [results.page, results.totalPages]
   )
 
   return (
     <section className="px-6 py-4">
       <SearchTabs
-        tipo="canciones"
-        title="Buscar canciones"
-        /* El backend no tiene columna `album` ni busca por él (ver PENDIENTES.md),
-           así que el copy promete solo lo que el endpoint puede cumplir. Cuando se
-           agregue el filtro por álbum, vuelve "álbumo" acá. */
-        subtitle="Buscá por título, artista o género."
+        tipo="personas"
+        title="Buscar personas"
+        subtitle="Buscá por nombre de usuario."
       />
 
       {isLoading ? (
@@ -118,22 +108,30 @@ export default function SearchSongs() {
           <p className="text-foreground Header4 mb-1">Sin resultados</p>
           <p className="text-muted-foreground TextRegluar">
             {query
-              ? `No encontramos canciones para "${query}". Probá con otro término.`
-              : 'No hay canciones para mostrar.'}
+              ? `No encontramos personas para "${query}". Probá con otro término.`
+              : 'No hay personas para mostrar.'}
           </p>
         </div>
       ) : (
         <>
-          <ul className="flex flex-wrap gap-x-4 gap-y-6">
-            {results.items.map((song, index) => (
-              <li key={song.id}>
-                <MiniMediaCard
-                  title={song.title}
-                  artist={song.artist}
-                  label={song.genre}
-                  coverUrl={song.coverUrl}
-                  onPlay={() => playSongs(results.items, index)}
-                />
+          <ul className="flex flex-col gap-3">
+            {results.items.map((person) => (
+              <li key={person.id}>
+                {/* Todo el ítem es el link: con mouse o teclado se llega al
+                    perfil público del mismo modo. */}
+                <Link
+                  to={`/profile/${person.id}`}
+                  className="SurfaceLight CardRadius Elevation1 flex items-center gap-4 p-4 hover:opacity-90"
+                >
+                  <Avatar src={person.avatarUrl} name={person.username} className="h-12 w-12" />
+
+                  <div className="min-w-0">
+                    <p className="text-foreground TextRegluar truncate">{person.username}</p>
+                    <p className="text-muted-foreground TextMedium mt-0.5 truncate">
+                      {person.bio || 'Sin bio todavía.'}
+                    </p>
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>
@@ -163,7 +161,7 @@ export default function SearchSongs() {
                         {entry}
                       </PaginationLink>
                     </PaginationItem>
-                  ),
+                  )
                 )}
 
                 <PaginationItem>
