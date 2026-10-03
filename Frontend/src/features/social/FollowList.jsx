@@ -40,6 +40,7 @@ export default function FollowList({ relation: requested }) {
   // navegar de una persona a otra nunca se ve la lista anterior.
   const requestKey = `${personId ?? 'anon'}::${relation}`
   const [response, setResponse] = useState({ key: null, people: [], error: null })
+  const [personResult, setPersonResult] = useState({ id: null, person: null })
 
   useEffect(() => {
     if (!personId) return undefined
@@ -62,6 +63,29 @@ export default function FollowList({ relation: requested }) {
     }
   }, [personId, relation, requestKey])
 
+  // El encabezado se resuelve contra el backend (id real). Si falla, degrada a
+  // un título sin avatar en vez de romper la pantalla.
+  useEffect(() => {
+    if (!personId) return undefined
+
+    const controller = new AbortController()
+    let active = true
+
+    getUserById(personId, { signal: controller.signal })
+      .then((found) => {
+        if (active) setPersonResult({ id: personId, person: found })
+      })
+      .catch((error) => {
+        if (!active || error.name === 'AbortError') return
+        setPersonResult({ id: personId, person: null })
+      })
+
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [personId])
+
   if (!personId) {
     return (
       <div className="px-6 py-4 md:px-10">
@@ -74,11 +98,11 @@ export default function FollowList({ relation: requested }) {
 
   const isCurrent = response.key === requestKey
   const people = isCurrent ? response.people : []
-  const title = relation === 'seguidores' ? 'Seguidores' : 'Seguidos'
-
   // La persona a la que pertenece la lista. Puede no estar (el id viene de la
   // URL), y en ese caso el encabezado degrada a un título sin avatar.
-  const person = getUserById(personId)
+  const person = personResult.id === personId ? personResult.person : null
+  const title = relation === 'seguidores' ? 'Seguidores' : 'Seguidos'
+
   const backTo = isOwn ? '/perfil' : `/profile/${personId}`
 
   const empty = (() => {

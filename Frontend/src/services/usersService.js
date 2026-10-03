@@ -1,4 +1,5 @@
 import { mockFollows, mockUsers } from '../mocks/users.js'
+import { get, patch, ApiError } from './api.js'
 
 const USERS_KEY = 'synthos_mock_users'
 const FOLLOWS_KEY = 'synthos_mock_follows'
@@ -8,6 +9,32 @@ const FOLLOWS_KEY = 'synthos_mock_follows'
 // ser el `pageSize` de la query.
 export const SEARCH_PAGE_SIZE = 4
 
+/**
+ * Normaliza un usuario del backend al shape que usa el frontend.
+ *
+ * El backend habla `pictureUrl`/`biography` e `id` numérico; la UI usa
+ * `avatarUrl`/`bio` e `id` string. Igual que en `authService`, acepta también un
+ * usuario ya mapeado (lo que guarda el mock de follow y la sesión) chequeando
+ * los dos nombres.
+ */
+function toUser(raw) {
+  if (!raw) return null
+
+  return {
+    id: String(raw.id),
+    email: raw.email ?? null,
+    username: raw.username,
+    avatarUrl: raw.pictureUrl ?? raw.picture_url ?? raw.avatarUrl ?? null,
+    bio: raw.biography ?? raw.bio ?? '',
+  }
+}
+
+// --- usuarios mock, solo para el seguimiento (TS-10) -------------------------
+//
+// El seguimiento sigue sobre el mock (ver REQUERIMIENTOS-BACKEND.md §11 paso 4):
+// mientras eso no migre, las listas y los contadores resuelven contra estos
+// usuarios. Los perfiles reales traen `id` numérico y no van a matchear con el
+// mock, así que sus listas aparecerán vacías hasta migrar follow.
 function getStoredUsers() {
   let parsed = null
   try {
@@ -23,8 +50,10 @@ function getStoredUsers() {
   return seeded
 }
 
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
+function withoutPassword(user) {
+  if (!user) return null
+  const { password: _password, ...safe } = user
+  return safe
 }
 
 /**
@@ -50,120 +79,72 @@ function saveFollows(follows) {
   localStorage.setItem(FOLLOWS_KEY, JSON.stringify(follows))
 }
 
-function withoutPassword(user) {
-  if (!user) return null
-  const { password: _password, ...safe } = user
-  return safe
-}
+// -----------------------------------------------------------------------------
 
 /**
- * Normaliza para comparar sin acentos ni mayúsculas.
+ * Perfil público de una persona.
  *
- * "juan" tiene que encontrar a "Juán", que es como la gente escribe el
- * término. Se usa la forma NFD y se retiran los diacríticos combinantes; el
- * `ñ` no se descompone y se resuelve aparte.
+ * `null` cuando el backend responde 404 se traduce a `null` (no encontrado) en
+ * vez de tirar: la pantalla distingue "no existe" de "falló la red".
+ *
+ * @param {string|number} id
+ * @param {{signal?: AbortSignal}} [options]
+ * @returns {Promise<object|null>}
  */
-function normalize(text) {
-  return String(text ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ñ/g, 'n')
-    .toLowerCase()
-    .trim()
-}
-
-/** Acota la página a un rango que existe, como hace el backend en sus searches. */
-function clampPage(page, totalPages) {
-  const requested = Math.max(Number(page) || 1, 1)
-
-  return Math.min(requested, totalPages)
-}
-
-export function listUsers() {
-  return getStoredUsers().map(withoutPassword)
-}
-
-export function getUserById(id) {
-  return withoutPassword(getStoredUsers().find((u) => u.id === id))
-}
-
-export function findUserByEmail(email) {
-  return getStoredUsers().find(
-    (u) => u.email.toLowerCase() === email.toLowerCase()
-  )
+export async function getUserById(id, { signal } = {}) {
+  try {
+    const data = await get(`/users/${id}`, { signal })
+    return toUser(data)
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null
+    throw error
+  }
 }
 
 /**
- * Busca personas por username, paginadas por número de página.
+ * Busca personas por username o género, paginadas por número de página.
  *
- * Sigue el mismo contrato que `songsService.searchSongs()` ({ items, total,
- * page, pageSize, totalPages }) para que la paginación sea idéntica en las dos
- * pantallas de /buscar y el componente `Pagination` no cambie.
+ * Mismo contrato que `songsService.searchSongs()` ({ items, total, page,
+ * pageSize, totalPages }) para que `Pagination` sea idéntica en las dos
+ * pantallas de /buscar.
  *
- * La API es async aunque hoy resuelva sobre el mock, para que el día que pase a
- * `api.js` el componente no se entere.
- *
- * @param {string} query Texto a buscar. Vacío devuelve todos los usuarios.
+ * @param {string} query Texto a buscar. Vacío devuelve todos.
  * @param {number} [page] Página 1-based.
  * @param {number} [pageSize]
+ * @param {{signal?: AbortSignal}} [options]
  * @returns {Promise<{items: object[], total: number, page: number, pageSize: number, totalPages: number}>}
  */
-export function searchUsers(query, page = 1, pageSize = SEARCH_PAGE_SIZE) {
-  const term = normalize(query)
-
-  const matched = term
-    ? getStoredUsers().filter((user) => normalize(user.username).includes(term))
-    : getStoredUsers()
-
-  const total = matched.length
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const currentPage = clampPage(page, totalPages)
-  const start = (currentPage - 1) * pageSize
-
-  return Promise.resolve({
-    items: matched.slice(start, start + pageSize).map(withoutPassword),
-    total,
-    page: currentPage,
-    pageSize,
-    totalPages,
+export async function searchUsers(query = '', page = 1, pageSize = SEARCH_PAGE_SIZE, { signal } = {}) {
+  const data = await get('/users/search', {
+    params: { query, page, pageSize },
+    signal,
   })
+
+  return {
+    items: (data.items ?? []).map(toUser),
+    total: data.total ?? 0,
+    page: data.page ?? 1,
+    pageSize: data.pageSize ?? pageSize,
+    totalPages: data.totalPages ?? 1,
+  }
 }
 
-export function createUser({ email, username, password }) {
-  const users = getStoredUsers()
-  const user = {
-    id: crypto.randomUUID(),
-    email,
+/**
+ * Edita el perfil de la sesión. No recibe id: el backend lo saca del token.
+ *
+ * Traduce los nombres de la UI a los del backend (`bio`→`biography`,
+ * `avatarUrl`→`pictureUrl`) y devuelve el usuario en el shape del frontend.
+ *
+ * @returns {Promise<object>}
+ */
+export async function updateProfile({ username, bio, avatarUrl }) {
+  const data = await patch('/users/me', {
     username,
-    password,
-    avatarUrl: null,
-    bio: '',
-  }
-  users.push(user)
-  saveUsers(users)
-  return withoutPassword(user)
-}
+    biography: bio,
+    pictureUrl: avatarUrl,
+  })
 
-export function updateProfile(id, { username, bio, avatarUrl }) {
-  const users = getStoredUsers()
-  const index = users.findIndex((u) => u.id === id)
-  if (index === -1) {
-    throw new Error('Usuario no encontrado.')
-  }
-
-  const normalizedUsername = String(username ?? '').trim()
-  if (!normalizedUsername) {
-    throw new Error('El nombre de usuario no puede estar vacío.')
-  }
-
-  users[index] = {
-    ...users[index],
-    username: normalizedUsername,
-    bio: String(bio ?? ''),
-    avatarUrl: avatarUrl ?? null,
-  }
-  saveUsers(users)
-  return withoutPassword(users[index])
+  return toUser(data)
 }
 
 // ---------------------------------------------------------------- seguimiento
@@ -268,15 +249,16 @@ async function relationState(followerId, followingId) {
 /**
  * Valida la pareja y devuelve el estado actual, sin escribir nada.
  *
- * @throws {Error} Si alguien intenta seguirse a sí mismo (mismo CHECK que la
- *   tabla `follow`) o si alguno de los dos usuarios no existe.
+ * Solo chequea que no sea seguirse a sí mismo (mismo CHECK que la tabla
+ * `follow`). La existencia de los usuarios ya no se valida contra el mock: los
+ * perfiles reales vienen del backend con `id` numérico y no están en el store
+ * mock, así que esa comprobación rechazaría gente que sí existe.
+ *
+ * @throws {Error} Si alguien intenta seguirse a sí mismo.
  */
 function assertFollowable(followerId, followingId) {
   if (followerId === followingId) {
     throw new Error('No podés seguirte a vos mismo.')
-  }
-  if (!getUserById(followerId) || !getUserById(followingId)) {
-    throw new Error('Usuario no encontrado.')
   }
 }
 

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AuthContext } from './authContext.js'
+import { setUnauthorizedHandler } from '../services/api.js'
 import {
+  clearSession,
   getCurrentUser,
   loginUser as loginService,
   logoutUser as logoutService,
@@ -11,6 +13,18 @@ import { updateProfile as updateProfileService } from '../services/usersService.
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Cuando un request autenticado recibe 401, el token guardado ya no vale:
+  // se limpia la sesión y `RequireAuth` redirige a /login al ver `user` null.
+  // No se navega desde acá porque el provider está fuera del Router.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      clearSession()
+      setUser(null)
+    })
+
+    return () => setUnauthorizedHandler(null)
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -53,7 +67,7 @@ export default function AuthProvider({ children }) {
       if (!user) {
         throw new Error('No hay sesión activa.')
       }
-      const updated = await updateProfileService(user.id, data)
+      const updated = await updateProfileService(data)
       setUser(updated)
       return updated
     },
