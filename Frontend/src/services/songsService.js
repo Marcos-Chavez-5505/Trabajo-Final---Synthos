@@ -1,63 +1,106 @@
-import { mockSongs } from '../mocks/songs.js'
+import { get } from './api.js'
 
-// ESTO LUEGO SE CAMBIA CON LA BASE DE DATOS
-// GET /api/v1/songs, GET /api/v1/songs/:id
-// GET /api/v1/songs?search=&page=&pageSize=  (TS-07)
+// Contrato de la API real (ver ESPECIFICACIONES-BACKEND.md en la raíz):
+//   GET /api/songs             -> { songs, nextCursor, hasMore }
+//   GET /api/songs/search      -> { items, total, page, pageSize, totalPages }
+//   GET /api/songs/:id         -> song
+//
+// La forma que consume la app (title, artist como string, audioUrl, coverUrl,
+// genre, album) es un contrato del frontend: el backend devuelve la fila cruda de
+// Prisma. El mapeo vive acá y no en los componentes, para que la app no dependa
+// de cómo viene armado el payload (reglas 5 y 6 de AGENTS.md).
 
-export const listSongs = async () => mockSongs
+const SONGS_PATH = '/songs'
 
-export const getSongById = async (id) =>
-  mockSongs.find((song) => song.id === id) ?? null
+// Tamaño de página para búsquedas. Con backend real pasa a ser el `pageSize` de
+// la query, que es lo que el endpoint espera.
+export const SEARCH_PAGE_SIZE = 10
 
-// Tamaño de página para búsquedas. El catálogo mock tiene 8 canciones, así que
-// un valor chico hace visible la paginación. Con backend real pasa a ser el
-// pageSize de la query.
-export const SEARCH_PAGE_SIZE = 4
+/**
+ * Convierte una canción del backend a la forma que usa la app.
+ *
+ * Diferencias que se traducen acá:
+ * - `url` → `audioUrl`: el <audio> del PlayerContext lee `audioUrl`.
+ * - `artist` viene anidado (`{ id, name }`) y la app lo usa como string suelto en
+ *   las cards y el reproductor.
+ * - `coverUrl`, `duration` y `releaseDate` tienen el mismo nombre, pero `duration`
+ *   puede venir `null` y el reproductor lo usa como número.
+ * - `genre` se arma con el primer nombre de `songGenres[].genre.name`. El backend
+ *   anida la entidad en el include, así que hay nombre; si una canción no tuviera
+ *   género queda en `null` y la card muestra la etiqueta vacía.
+ * - `album` y `source` no existen en el esquema (ver PENDIENTES.md). `album` solo
+ *   se usa como `alt` de la carátula, que ya cae a `title`; `source` es la línea
+ *   "Reproduciéndose desde", que se oculta si no viene.
+ */
+function toSong(raw) {
+  if (!raw) return null
 
-// Campos por los que busca `searchSongs`, en el orden de prioridad del mock.
-const SEARCHABLE_FIELDS = ['title', 'artist', 'album', 'genre']
+  const genre = raw.songGenres?.find((entry) => entry.genre?.name)?.genre.name ?? null
 
-// Normaliza a minúsculas y sin acentos, así "electronica" encuentra
-// "Electrónica" y "pape" encuentra "Paper". Mismo criterio que usará el
-// endpoint real cuando exista (la búsqueda del backend no suele ser accent-insensitive).
-function normalize(text) {
-  return String(text ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-}
-
-function songMatches(song, term) {
-  return SEARCHABLE_FIELDS.some((field) => normalize(song[field]).includes(term))
+  return {
+    id: raw.id,
+    title: raw.title,
+    artist: raw.artist?.name ?? null,
+    album: null,
+    genre,
+    duration: raw.duration ?? 0,
+    audioUrl: raw.url,
+    coverUrl: raw.coverUrl ?? null,
+    source: null,
+  }
 }
 
 /**
- * Busca canciones por título, artista, álbum o género, paginadas.
+ * Catálogo de canciones.
  *
- * Con query vacío devuelve el catálogo completo paginado, que es lo que la
- * pantalla muestra antes de que el usuario escriba nada.
+ * El endpoint pagina por cursor, así que devuelve solo la primera tanda
+ * (LIMIT 10 en el backend). Alcanza para la fila de novedades del Home y para la
+ * cola inicial del reproductor.
  *
- * @returns {Promise<{items: object[], total: number, page: number, pageSize: number, totalPages: number}>}
- *   La forma es un objeto y no un array plano porque la paginación necesita
- *   saber el total para dibujar los números de página. Cuando exista backend,
- *   esta es la forma que se espera del endpoint de búsqueda.
+ * @returns {Promise<object[]>} Canciones mapeadas a la forma del frontend.
  */
-export const searchSongs = async (query, page = 1, pageSize = SEARCH_PAGE_SIZE) => {
-  const term = normalize(query).trim()
-  const found = term ? mockSongs.filter((song) => songMatches(song, term)) : mockSongs
+export async function listSongs({ signal } = {}) {
+  const data = await get(SONGS_PATH, { signal })
 
-  const total = found.length
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  // Si piden una página fuera de rango se cae a la última con contenido, para
-  // que el frontend nunca reciba una página vacía sin avisar.
-  const currentPage = Math.min(Math.max(page, 1), totalPages)
-  const start = (currentPage - 1) * pageSize
+  return (data?.songs ?? []).map(toSong)
+}
+
+/**
+ * Una canción por id.
+ *
+ * @param {number|string} id Id de la canción.
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<object|null>} La canción mapeada, o `null` si no existe.
+ * @throws {ApiError} 404 si el backend no la encuentra.
+ */
+export async function getSongById(id, { signal } = {}) {
+  const data = await get(`${SONGS_PATH}/${id}`, { signal })
+
+  return toSong(data)
+}
+
+/**
+	 * Busca canciones por título, artista o género, paginadas por número de página.
+	 *
+	 * @param {string} query Texto a buscar. Vacío devuelve el catálogo paginado.
+	 * @param {number} [page] Página 1-based.
+	 * @param {number} [pageSize]
+	 * @param {AbortSignal} [signal]
+	 * @returns {Promise<{items: object[], total: number, page: number, pageSize: number, totalPages: number}>}
+	 */
+export async function searchSongs(query, page = 1, pageSize = SEARCH_PAGE_SIZE, { signal } = {}) {
+  const term = String(query ?? '').trim()
+
+  const data = await get(`${SONGS_PATH}/search`, {
+    params: { query: term, page, pageSize },
+    signal,
+  })
 
   return {
-    items: found.slice(start, start + pageSize),
-    total,
-    page: currentPage,
-    pageSize,
-    totalPages,
+    items: (data?.items ?? []).map(toSong),
+    total: data?.total ?? 0,
+    page: data?.page ?? page,
+    pageSize: data?.pageSize ?? pageSize,
+    totalPages: data?.totalPages ?? 1,
   }
 }
