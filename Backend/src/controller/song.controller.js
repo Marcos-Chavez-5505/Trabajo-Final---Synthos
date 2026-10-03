@@ -1,9 +1,9 @@
 const songService = require("../services/song.service");
-const { getId } = require("../utils/validation");
+const { getId, validateCursor, validateQuery } = require("../utils/validation");
 
 async function getSongs(req, res, next) {
 	try {
-		const cursor = req.query.cursor ? parseInt(req.query.cursor) : null;
+		const cursor = validateCursor(req.query.cursor);
 
 		const result = await songService.getSongs(cursor);
 

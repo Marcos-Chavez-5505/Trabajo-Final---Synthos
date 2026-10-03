@@ -3,9 +3,33 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function getId(req) {
 	const id = req.params.id;
 	if (isNaN(Number(id)) || Number(id) < 0) {
-		throw new Error("ID INVALIDA, DEBE SER UN NUMERO ENTERO > 0");
+		const error = new Error(
+			`INVALID ID, MUST BE AN INTEGER GREATER THAN 0, RECEIVED ${id} OF TYPE ${typeof id}`,
+		);
+		error.code = 400;
+		throw error;
 	} else {
 		return Number(id);
+	}
+}
+
+function validateQuery(query) {
+	if (typeof query === "string" && query.trim() !== "") {
+		return query.trim();
+	} else {
+		const error = new Error(
+			`EXPECTED NON-EMPTY QUERY STRING RECEIVED ${query.trim()} OF TYPE ${typeof query}`,
+		);
+		error.code = 400;
+		throw error;
+	}
+}
+
+function validateCursor(cursor) {
+	if (isNaN(parseInt(cursor))) {
+		return null;
+	} else {
+		return parseInt(cursor);
 	}
 }
 
@@ -33,4 +57,9 @@ function validateRegisterInput({ email, username, password }) {
 	return errors;
 }
 
-module.exports = { getId, validateRegisterInput };
+module.exports = {
+	getId,
+	validateRegisterInput,
+	validateCursor,
+	validateQuery,
+};
