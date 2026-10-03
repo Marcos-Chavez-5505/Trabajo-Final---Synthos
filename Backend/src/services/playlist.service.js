@@ -32,10 +32,31 @@ async function createPlaylist(userId, { name, description, isPublic }) {
 }
 
 async function getPlaylistById(id) {
-	return prisma.playlist.findUnique({
+	const playlist = await prisma.playlist.findUnique({
 		where: { id },
 		include: PLAYLIST_INCLUDE,
 	});
+
+	if (!playlist) return null;
+
+	if (playlist.type === "favorites") {
+		const favorites = await prisma.favorite.findMany({
+			where: { idUser: playlist.idCreator },
+			orderBy: { markedDate: "desc" },
+			include: { song: { include: SONG_INCLUDE } },
+		});
+
+		playlist.songs = favorites.map((f) => ({
+			idPlaylist: playlist.id,
+			idSong: f.idSong,
+			position: 0,
+			addedDate: f.markedDate,
+			addedBy: null,
+			song: f.song,
+		}));
+	}
+
+	return playlist;
 }
 
 async function getUserPlaylists(userId) {
