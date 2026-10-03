@@ -182,28 +182,87 @@ Los shells son `ScreenPlaceholder` local en `AppRoutes.jsx`; cada pantalla se co
 
 ## TS-07 — Buscar canciones (feature 13)
 
-**Estado:** pendiente.
+**Estado:** hecho.
 **Alcance:** búsqueda por nombre canción, artista o género. Resultados paginados.
 **Archivos:** `src/features/search/SearchSongs.jsx`, extender `songsService.js` con `searchSongs(query, page)`.
 **Criterios de aceptación:**
 
-- [ ] Debounce en input de búsqueda (evitar búsqueda en cada tecla sin pausa).
-- [ ] Paginación funcional sobre datos mock.
-- [ ] Estado vacío ("sin resultados") manejado.
+- [x] Debounce en input de búsqueda (evitar búsqueda en cada tecla sin pausa).
+- [x] Paginación funcional sobre datos mock.
+- [x] Estado vacío ("sin resultados") manejado.
   **Dependencias:** TS-06 (reutiliza `MediaCard` y catálogo mock de canciones).
+
+**Nota (post-entrega): implementación.**
+
+- `SearchSongs.jsx` lee `?q=` y `?page=` de la URL, así la búsqueda se comparte y el botón "atrás" del
+  browser funciona; `TopBar` navega a `/buscar?q=` sobre el mismo input. Debounce de 300 ms con
+  `hooks/useDebounce.js`.
+- Cada respuesta se guarda con la `requestKey` (`query::page`) que la pidió: el loading se **deriva**
+  comparando keys en vez de setear un booleano, así no hay un render en cascada ni se muestra un
+  resultado viejo con la query nueva. El `AbortController` del efecto aborta la petición al limpiar.
+- Paginación con elipsis: `buildPageRange()` devuelve las páginas a dibujar y `null` en los huecos, que
+  es la señal para `<PaginationEllipsis />`. Movida a `src/lib/pageRange.js` al hacer TS-08, que la
+  reutiliza.
+- Estados cubiertos: cargando, error (muestra el mensaje del backend, no uno genérico) y vacío con la
+  query en el texto.
+
+**Nota (migración a backend).** Los criterios se cerraron contra el mock y después la pantalla pasó a la
+API real (`GET /api/songs/search?query=&page=&pageSize=`), así que el segundo criterio se cumple hoy
+sobre datos del servidor y no sobre el mock. Detalle en `ESPECIFICACIONES-BACKEND.md` (raíz):
+
+- La paginación pasó de cursor a offset porque un cursor no puede expresar "la página 7".
+- Se sacó "álbumo" del copy: el backend no tiene columna `album` ni filtra por ella. Cuando se agregue,
+  la palabra vuelve al texto.
+- `mocks/songs.js` quedó sin imports. No se borró hasta poder validar contra el endpoint real.
+- Sigue pendiente probarlo contra Postgres: no hay `Backend/.env` ni base levantada (ver `PENDIENTES.md`).
 
 ---
 
 ## TS-08 — Buscar personas (feature 17)
 
-**Estado:** pendiente.
+**Estado:** hecho.
 **Alcance:** búsqueda por username, resultados paginados, acceso a perfil público.
 **Archivos:** `src/features/search/SearchPeople.jsx`, extender `usersService.js` con `searchUsers(query, page)`.
 **Criterios de aceptación:**
 
-- [ ] Paginación funcional.
-- [ ] Click en resultado navega a perfil público (`/profile/:id`, aunque esa vista sea básica).
+- [x] Paginación funcional.
+- [x] Click en resultado navega a perfil público (`/profile/:id`, aunque esa vista sea básica).
   **Dependencias:** TS-05.
+
+**Nota (post-entrega): implementación.**
+
+- `/buscar` ahora es una pantalla con pestañas: `features/search/Search.jsx` lee `?tipo=` y monta
+  `SearchSongs` o `SearchPeople`. El tipo vive en la URL, no en `useState`, así el enlace es
+  compartible y el "atrás" del browser funciona entre pestañas. Sin `?tipo=` abre en canciones, que es
+  lo que espera el input global de `TopBar`.
+- `SearchTabs.jsx` es el encabezado compartido (h1, bajada y pestañas) para que las dos pantallas no
+  repitan el esqueleto. Cambiar de pestaña vuelve a la página 1: la página 4 de canciones no significa
+  nada en personas.
+- `usersService.searchUsers(query, page, pageSize)` devuelve el **mismo contrato que
+  `songsService.searchSongs()`** (`{ items, total, page, pageSize, totalPages }`), así `Pagination` no
+  cambia entre una pantalla y la otra. Es async aunque hoy resuelva sobre `mocks/users.js`, para que al
+  pasar a `api.js` el componente no se entere.
+- Búsqueda por username con `normalize()` (NFD, sin diacríticos, `ñ`→`n`, minúsculas y `trim`): "juan"
+  encuentra a "Juán". Devuelve `total` de **todas** las coincidencias, no de la página, que es lo que
+  permite dibujar los números.
+- `mocks/users.js` pasó de 1 a 10 usuarios: con `SEARCH_PAGE_SIZE = 4` quedan 3 páginas, así la
+  paginación se ve sin backend. El primero sigue siendo la cuenta de demo de login/register.
+  **Ojo:** `getStoredUsers()` siembra desde el mock solo si no hay nada en `localStorage`, así que quien
+  ya tenga `synthos_mock_users` guardado ve 1 usuario y una sola página. Hay que borrar esa clave (o el
+  storage del sitio) para ver los 10.
+- `buildPageRange()` se movió de `SearchSongs.jsx` a `src/lib/pageRange.js` porque las dos pantallas lo
+  usan; es lógica pura, sin dependencias.
+- Perfil público: `features/profile/ProfilePublic.jsx` en `/profile/:id`. Es **distinto** de
+  `ProfileView.jsx` (el propio, editable, en `/perfil`): este es de lectura, muestra avatar/username/bio y
+  manda a `/perfil` si el usuario es uno mismo. Va **fuera de `Protected`** a propósito, porque una vista
+  de lectura no debería depender de que haya sesión.
+- Cada ítem es un `<Link>` completo, no solo el username: con mouse o teclado se llega al perfil igual.
+- Verificación: script temporal con `localStorage` simulado (14 casos: contrato, primera/última página,
+  página fuera de rango, `page=0`, acentos, `ñ`, espacios, prefijo/subcadena, cero resultados,
+  recorrido completo sin repetidos, y que la contraseña nunca se exponga) y otro para `buildPageRange`
+  (8 casos). Todos pasaron y se borraron después; el repo no tiene runner de tests.
+- No verifiqué el render en navegador: no hay Playwright ni servidor de pruebas. Levantá `npm run dev` y
+  entrá a `/buscar?tipo=personas`.
 
 ---
 
