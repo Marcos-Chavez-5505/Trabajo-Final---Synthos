@@ -6,6 +6,7 @@ const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
 const favoriteRoutes = require("./routes/favorite.routes");
 const playlistRoutes = require("./routes/playlist.routes");
+const roomRoutes = require("./routes/room.routes");
 
 const prismaErrorHandler = require("./middlewares/errorHandler");
 
@@ -21,6 +22,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/playlists", playlistRoutes);
+app.use("/api/rooms", roomRoutes);
 
 app.use(prismaErrorHandler);
 app.use((err, req, res, next) => {

@@ -25,6 +25,23 @@ function validateQuery(query) {
 	}
 }
 
+function validateSortType(sortType) {
+	const validTypes = ["alphabetical", "rating"];
+	if (
+		typeof sortType !== "string" ||
+		sortType.trim() === "" ||
+		!validTypes.includes(sortType.trim())
+	) {
+		const error = new Error(
+			"Unknown sort type, only supported types: alphabetical (default) | rating",
+		);
+		error.code = 400;
+		throw error;
+	} else {
+		return sortType.trim();
+	}
+}
+
 function validateCursor(cursor) {
 	if (isNaN(parseInt(cursor))) {
 		return null;
@@ -62,4 +79,5 @@ module.exports = {
 	validateRegisterInput,
 	validateCursor,
 	validateQuery,
+	validateSortType,
 };
