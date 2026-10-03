@@ -1,11 +1,18 @@
 import { useState } from 'react'
 import Avatar from '../../components/ui/Avatar.jsx'
 import useAuth from '../../hooks/useAuth.js'
+import FollowStats from '../social/FollowStats.jsx'
+import useFollow from '../social/useFollow.js'
 import ProfileEdit from './ProfileEdit.jsx'
 
 export default function ProfileView() {
   const { user, loading } = useAuth()
   const [editing, setEditing] = useState(false)
+
+  // Los contadores del propio perfil. `useFollow` sobre el id propio no muestra
+  // nunca el botón (uno no se sigue a sí mismo), así que acá solo sirven los
+  // números y sus enlaces a las listas.
+  const follow = useFollow(user?.id ?? null)
 
   if (loading) return null
 
@@ -33,6 +40,12 @@ export default function ProfileView() {
         </div>
 
         <p className="mt-4 TextRegluar">{user.bio || 'Sin bio todavía.'}</p>
+
+        <FollowStats
+          basePath="/perfil"
+          followerCount={follow.followerCount}
+          followingCount={follow.followingCount}
+        />
 
         <button
           onClick={() => setEditing(true)}

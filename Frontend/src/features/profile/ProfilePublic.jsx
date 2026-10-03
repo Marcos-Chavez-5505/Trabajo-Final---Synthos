@@ -2,6 +2,9 @@ import { Link, useParams } from 'react-router-dom'
 import Avatar from '../../components/ui/Avatar.jsx'
 import useAuth from '../../hooks/useAuth.js'
 import { getUserById } from '../../services/usersService.js'
+import FollowButton from '../social/FollowButton.jsx'
+import FollowStats from '../social/FollowStats.jsx'
+import useFollow from '../social/useFollow.js'
 
 /**
  * Perfil público de otra persona (TS-08). Es la vista básica del criterio de
@@ -10,11 +13,19 @@ import { getUserById } from '../../services/usersService.js'
  * No confundir con `ProfileView.jsx`, que es el perfil propio y editable
  * (`/perfil`). Esta pantalla es de lectura y no depende de que haya sesión, así
  * que vive fuera de `Protected`.
+ *
+ * TS-10 le agrega el botón seguir/dejar de seguir y los contadores. Ambos salen
+ * de un único `useFollow`, no de dos hooks pegados: seguir a alguien tiene que
+ * mover el botón y el número de seguidores en la misma pantalla.
  */
 export default function ProfilePublic() {
   const { id } = useParams()
   const { user: currentUser } = useAuth()
   const person = getUserById(id)
+
+  // El hook va antes de cualquier return temprano: sin persona no hay sección
+  // que mostrar, pero la lista de hooks tiene que ser estable entre renders.
+  const follow = useFollow(person?.id ?? null)
 
   if (!person) {
     return (
@@ -47,6 +58,23 @@ export default function ProfilePublic() {
         </div>
 
         <p className="TextRegluar mt-4">{person.bio || 'Sin bio todavía.'}</p>
+
+        <FollowStats
+          basePath={`/profile/${person.id}`}
+          followerCount={follow.followerCount}
+          followingCount={follow.followingCount}
+        />
+
+        <FollowButton
+          canFollow={follow.canFollow}
+          isFollowing={follow.isFollowing}
+          onToggle={follow.toggle}
+          pending={follow.pending}
+        />
+
+        {follow.error && (
+          <p className="text-muted-foreground TextTiny mt-2">{follow.error}</p>
+        )}
 
         <Link
           to="/buscar?tipo=personas"

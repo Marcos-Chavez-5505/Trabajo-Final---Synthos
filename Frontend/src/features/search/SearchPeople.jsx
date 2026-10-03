@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import useDebounce from '../../hooks/useDebounce.js'
 import buildPageRange from '../../lib/pageRange.js'
 import { searchUsers, SEARCH_PAGE_SIZE } from '../../services/usersService.js'
-import Avatar from '../../components/ui/Avatar.jsx'
+import UserRow from '../../components/cards/UserRow.jsx'
 import SearchTabs from './SearchTabs.jsx'
 import {
   Pagination,
@@ -117,21 +117,8 @@ export default function SearchPeople() {
           <ul className="flex flex-col gap-3">
             {results.items.map((person) => (
               <li key={person.id}>
-                {/* Todo el ítem es el link: con mouse o teclado se llega al
-                    perfil público del mismo modo. */}
-                <Link
-                  to={`/profile/${person.id}`}
-                  className="SurfaceLight CardRadius Elevation1 flex items-center gap-4 p-4 hover:opacity-90"
-                >
-                  <Avatar src={person.avatarUrl} name={person.username} className="h-12 w-12" />
-
-                  <div className="min-w-0">
-                    <p className="text-foreground TextRegluar truncate">{person.username}</p>
-                    <p className="text-muted-foreground TextMedium mt-0.5 truncate">
-                      {person.bio || 'Sin bio todavía.'}
-                    </p>
-                  </div>
-                </Link>
+                {/* Misma fila que las listas de seguidores y seguidos (TS-10). */}
+                <UserRow person={person} />
               </li>
             ))}
           </ul>
