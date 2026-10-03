@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { Disc3, Flame, Home, ListMusic, Mic2, User } from 'lucide-react'
+import MisPlaylists from '../../features/playlists/MisPlaylists.jsx'
 import {
   Sidebar as SidebarRoot,
   SidebarContent,
@@ -50,8 +51,9 @@ function MenuItem({ item, isActive }) {
   )
 }
 
-// TODO(agente): "Mis Salas" y "Mis Playlists" se completan con datos reales
-// en TS-09 (playlists) y en el sprint de Salas. Por ahora, secciones vacías.
+// "Mis Salas" sigue vacío hasta el sprint de Salas. "Mis Playlists" ya tiene
+// datos reales (TS-09) y se delega en la feature para no meter lógica de
+// playlists ni de fetching dentro de un componente de layout.
 export default function Sidebar() {
   const location = useLocation()
 
@@ -95,6 +97,7 @@ export default function Sidebar() {
 
         <SidebarGroup>
           <SidebarGroupLabel>Mis Playlists</SidebarGroupLabel>
+          <MisPlaylists />
         </SidebarGroup>
       </SidebarContent>
 

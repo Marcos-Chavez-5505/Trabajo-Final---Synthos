@@ -1,6 +1,10 @@
+import { useState } from 'react'
 import musicNoteIcon from '../../assets/music_note.svg'
 import expandIcon from '../../assets/expand.svg'
+import addToPlaylistIcon from '../../assets/add_to_playlist.svg'
 import usePlayer from '../../hooks/usePlayer.js'
+import AddToPlaylistPanel from '../../features/playlists/AddToPlaylistPanel.jsx'
+import FavoriteButton from '../../features/playlists/FavoriteButton.jsx'
 import PlayerControls from './PlayerControls.jsx'
 import ProgressBar from './ProgressBar.jsx'
 
@@ -26,11 +30,12 @@ function SongCover({ song }) {
  */
 export default function PlayerBar() {
   const { song, currentTime, duration, seek, hasQueue } = usePlayer()
+  const [adding, setAdding] = useState(false)
 
   if (!hasQueue) return null
 
   return (
-    <footer className="Surface flex shrink-0 flex-col border-t border-sidebar-border">
+    <footer className="Surface relative flex shrink-0 flex-col border-t border-sidebar-border">
       <div className="flex items-center gap-4 px-4 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <SongCover song={song} />
@@ -48,7 +53,39 @@ export default function PlayerBar() {
 
         <PlayerControls />
 
-        <div className="flex flex-1 items-center justify-end">
+        {/* Favoritos y "agregar a playlist" (TS-09) viven acá porque el
+            reproductor es el único lugar donde ya se sabe qué canción está
+            cargada. */}
+        <div className="flex flex-1 items-center justify-end gap-1">
+          <FavoriteButton songId={song?.id} />
+
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setAdding((prev) => !prev)}
+              aria-expanded={adding}
+              aria-label="Agregar a playlist"
+              title="Agregar a playlist"
+              className={`rounded-full p-2 hover:opacity-80 ${adding ? 'Fucsia' : 'Volume'}`}
+            >
+              <img
+                src={addToPlaylistIcon}
+                alt=""
+                aria-hidden="true"
+                className="h-5 w-5"
+              />
+            </button>
+
+            {adding && (
+              <div className="absolute right-0 bottom-12 z-20">
+                <AddToPlaylistPanel
+                  songId={song?.id}
+                  onClose={() => setAdding(false)}
+                />
+              </div>
+            )}
+          </div>
+
           {/* TODO(agente, TS-06): el botón es solo visual. Falta el estado de
               pantalla completa y alternar expand.svg / collapse.svg. */}
           <button

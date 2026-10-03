@@ -268,14 +268,62 @@ sobre datos del servidor y no sobre el mock. Detalle en `ESPECIFICACIONES-BACKEN
 
 ## TS-09 — Playlists personales + Favoritos (bloqueante de Salas, sprint futuro)
 
-**Estado:** pendiente, agregado fuera de la lista original 25% porque **Crear Sala (feature 10)** requiere una playlist previa existente.
+**Estado:** hecho.
 **Alcance:** crear/editar/eliminar playlist personal, agregar/quitar canciones, marcar favorito (auto-genera playlist "Mis Favoritos").
 **Archivos:** `src/features/playlists/*`, `src/services/playlistsService.js` (mock).
+
 **Criterios de aceptación:**
 
-- [ ] Playlists privadas, solo visibles para su dueño.
-- [ ] "Mis Favoritos" se autogenera al marcar la primera canción favorita.
+- [x] Playlists privadas, solo visibles para su dueño.
+- [x] "Mis Favoritos" se autogenera al marcar la primera canción favorita.
   **Dependencias:** TS-06.
+
+### Decisiones
+
+- **`ownerId` obligatorio en cada operación del service.** La privacidad no se resuelve en la UI: `listPlaylists`,
+  `getPlaylistById`, `updatePlaylist`, `removePlaylist`, `addSongToPlaylist`, `removeSongFromPlaylist` y los dos de
+  favoritos filtran siempre por dueño. `getPlaylistById` devuelve `null` si el id es de otro, y la UI muestra
+  "no encontrada" sin distinguir los casos, para no confirmar que ese id existe.
+- **Los favoritos son una playlist con `isFavorites`, no un estado aparte.** Así el reproductor, la biblioteca y el
+  detalle comparten una sola fuente de verdad y no hay que sincronizar dos estados. El flag va en vez de comparar el
+  nombre para que nadie pueda crear una playlist llamada "Mis Favoritos" y se confunda con la real.
+- **"Mis Favoritos" no se puede renombrar ni borrar** (`updatePlaylist` y `removePlaylist` la rechazan, y la UI
+  esconde los botones). Si se borrara al desmarcar la última canción, el usuario vería desaparecer y reaparecer su
+  colección sin explicación.
+- **La playlist guarda `songIds`, no canciones enteras.** Las canciones son del backend; duplicar el objeto las
+  dejaría viejas en el primer cambio de título o carátula. El detalle las resuelve con `Promise.all` de
+  `getSongById`, uno por id, porque el backend no expone `GET /api/songs?ids=`. Cuando lo tenga, ese bloque es el
+  único que hay que cambiar. Un 404 se lista como "no disponible" en vez de tirar la vista.
+- **`useFavorites` es un hook, no un Context.** No hay Provider de playlists en el árbol; lo consumen pantallas bajo
+  `AppLayout` y el `PlayerBar`, que sí es global, toma el estado de ahí.
+- **Favorito y "agregar a playlist" viven en el reproductor, no en cada card.** Es el único lugar donde ya se sabe
+  qué canción está cargada; ponerlos en `MediaCard`/`MiniMediaCard` obligaría a duplicar el botón en tres
+  componentes. En mobile el mini reproductor lleva solo el corazón, que no necesita panel.
+- **`AddToPlaylistPanel` es un panel inline, no el `Sheet` de shadcn.** Ese componente no se usó nunca en el repo y
+  depende de las animaciones de base-ui, imposibles de verificar sin navegador. Cuando haya E2E se puede migrar.
+- **`MisPlaylists` (la sección del Sidebar) vive en `features/playlists/`**, no dentro de `Sidebar.jsx`, porque
+  consulta un service y los componentes de layout no piden datos. Su dependencia es una firma de ids+nombre: quitar
+  una y agregar otra deja el mismo `length`, así que comparar la cantidad no alcanza.
+- **La siembra es por usuario.** `seededOwners` evita que, si el usuario borra todas sus playlists, la biblioteca
+  vacía se vuelva a llenar sola.
+- Rutas: `/playlists` y `/playlists/:id` (reemplazan el shell "en construcción"), ambas bajo `Protected` porque son
+  datos privados.
+
+### Verificación
+
+- Script temporal sobre `playlistsService` con `localStorage` simulado, 14 casos: siembra por dueño, no re-siembra
+  tras borrar todo, privacidad de lectura y de escritura (agregar/quitar/eliminar sobre una playlist ajena no la
+  modifica), nombre vacío rechazado en crear y editar, favorites no se autogenera al listar ni al consultar
+  `isFavorite`, sí se autogenera al marcar, sigue existiendo al desmarcar la última, `43886` y `"43886"` son la
+  misma canción, favoritos no se mezclan entre dueños, agregar es idempotente, quitar conserva el orden, y las
+  operaciones sin dueño fallan. Todos pasaron y el script se borró.
+- Smoke render con `renderToString` (vite `--ssr`) de las rutas nuevas y de cada pieza presentacional: no tira
+  errores y el markup sale como corresponde (corazón lleno solo cuando `isFavorite`, `bytes=49` —o sea `null`— cuando
+  no hay `songId`). **No** cubre el estado con datos cargados, porque `renderToString` no corre efectos. Se borró.
+- `npm run build` y `npm run lint` pasan con los mismos 3 warnings preexistentes.
+- No verifiqué la interacción en navegador. Levantá `npm run dev`, entrá a `/playlists` y probá: crear, renombrar,
+  eliminar, agregar desde el reproductor, y marcar el corazón con una sesión nueva para ver aparecer "Mis Favoritos".
+  **Ojo:** la library se guarda en `synthos_mock_playlists`; si sembraste antes de este sprint, borrá esa clave.
 
 ---
 
