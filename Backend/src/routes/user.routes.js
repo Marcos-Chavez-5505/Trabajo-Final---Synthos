@@ -4,6 +4,10 @@ const followController = require("../controller/follow.controller");
 const { authenticate } = require("../middlewares/auth.middleware");
 
 router.get("/search", userController.searchUsers);
+// `/me` va antes que `/:id` para que no lo capture la ruta dinámica.
+router.get("/me", authenticate, userController.getMe);
+router.patch("/me", authenticate, userController.updateMe);
+router.get("/:id", userController.getUserById);
 
 router.get("/:id/followers", followController.getFollowers);
 router.get("/:id/following", followController.getFollowing);

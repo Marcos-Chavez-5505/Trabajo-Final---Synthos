@@ -1,38 +1,156 @@
 const prisma = require("../prisma/prismaClient");
 const { Prisma } = require("@prisma/client");
 
+const DEFAULT_PAGE_SIZE = 10;
+const MAX_PAGE_SIZE = 50;
+
+// Campos del `user` que ve cualquiera: sin email ni hash.
+const PUBLIC_USER_SELECT = {
+	id: true,
+	username: true,
+	pictureUrl: true,
+	biography: true,
+	registrationDate: true,
+};
+
+// Campos que solo ve el dueño de la sesión (incluye email, que la UI muestra en
+// el perfil propio).
+const ME_USER_SELECT = {
+	id: true,
+	email: true,
+	username: true,
+	pictureUrl: true,
+	biography: true,
+	registrationDate: true,
+};
+
 async function getTopGenreByUser(userId) {
 	return prisma.userTopGenre.findUnique({
 		where: { idUser: userId },
 	});
 }
 
-const LIMIT = 10;
+function toPage(value, fallback) {
+	const parsed = Number.parseInt(value, 10);
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
 
-async function searchUsers(query, cursor) {
-	const searchTerm = `%${query}%`;
+function toPageSize(value) {
+	return Math.min(toPage(value, DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE);
+}
 
-	const users = await prisma.$queryRaw`
+/**
+ * Busca personas por username o género, paginadas por número de página.
+ *
+ * Devuelve el mismo envelope que `/api/songs/search` ({ items, total, page,
+ * pageSize, totalPages }) para que el frontend use la misma `Pagination` en las
+ * dos pantallas (REQ-USER-1, decisión D11). Query vacía = catálogo completo.
+ */
+async function searchUsers(query, page, pageSize) {
+	const term = typeof query === "string" ? query.trim() : "";
+	const currentPage = toPage(page, 1);
+	const size = toPageSize(pageSize);
+	const offset = (currentPage - 1) * size;
+
+	const filter = term
+		? Prisma.sql`WHERE ("user".username ILIKE ${`%${term}%`} OR user_top_genre.genre_name ILIKE ${`%${term}%`})`
+		: Prisma.empty;
+
+	const items = await prisma.$queryRaw`
 		SELECT
 			"user".id,
 			"user".username,
 			"user".picture_url,
+			"user".biography,
 			user_top_genre.genre_name
 		FROM "user"
 		LEFT JOIN user_top_genre ON user_top_genre.id_user = "user".id
-		WHERE (
-			"user".username ILIKE ${searchTerm}
-			OR user_top_genre.genre_name ILIKE ${searchTerm}
-		)
-		${cursor ? Prisma.sql`AND "user".id > ${cursor}` : Prisma.empty}
+		${filter}
 		ORDER BY "user".id ASC
-		LIMIT ${LIMIT + 1}
+		LIMIT ${size} OFFSET ${offset}
 	`;
 
-	const hasMore = users.length === LIMIT;
-	const nextCursor = users.length > 0 ? users[users.length - 1].id : null;
+	const countRows = await prisma.$queryRaw`
+		SELECT COUNT(*)::int AS total
+		FROM "user"
+		LEFT JOIN user_top_genre ON user_top_genre.id_user = "user".id
+		${filter}
+	`;
 
-	return { users, nextCursor, hasMore };
+	const total = countRows[0]?.total ?? 0;
+	const totalPages = Math.max(1, Math.ceil(total / size));
+
+	return { items, total, page: currentPage, pageSize: size, totalPages };
 }
 
-module.exports = { searchUsers };
+/** Perfil público: sin email. `null` si no existe. */
+async function getUserById(id) {
+	return prisma.user.findUnique({
+		where: { id },
+		select: PUBLIC_USER_SELECT,
+	});
+}
+
+/** Usuario de la sesión: incluye email. `null` si no existe. */
+async function getMe(id) {
+	return prisma.user.findUnique({
+		where: { id },
+		select: ME_USER_SELECT,
+	});
+}
+
+/**
+ * Edita el perfil del usuario del token.
+ *
+ * Solo toca los campos presentes en el body. Valida el largo del username y que
+ * no lo tenga otra persona antes de llamar a Prisma, para devolver un 400 con
+ * mensaje claro en vez del 409 genérico de la constraint.
+ */
+async function updateUser(id, { username, biography, pictureUrl }) {
+	const data = {};
+
+	if (username !== undefined) {
+		const value = String(username).trim();
+
+		if (value.length < 3 || value.length > 50) {
+			const error = new Error("El username debe tener entre 3 y 50 caracteres.");
+			error.code = 400;
+			throw error;
+		}
+
+		const taken = await prisma.user.findFirst({
+			where: { username: value, NOT: { id } },
+			select: { id: true },
+		});
+
+		if (taken) {
+			const error = new Error("Ese nombre de usuario ya está en uso.");
+			error.code = 400;
+			throw error;
+		}
+
+		data.username = value;
+	}
+
+	if (biography !== undefined) {
+		data.biography = biography === null ? null : String(biography);
+	}
+
+	if (pictureUrl !== undefined) {
+		data.pictureUrl = pictureUrl === null ? null : String(pictureUrl);
+	}
+
+	return prisma.user.update({
+		where: { id },
+		data,
+		select: ME_USER_SELECT,
+	});
+}
+
+module.exports = {
+	getTopGenreByUser,
+	searchUsers,
+	getUserById,
+	getMe,
+	updateUser,
+};
