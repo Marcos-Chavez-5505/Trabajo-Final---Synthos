@@ -87,3 +87,37 @@ export const mockUsers = [
     bio: 'Techno y ambient.',
   },
 ]
+
+// Relaciones de seguimiento para TS-10. Es un array de pares planos
+// `{ followerId, followingId }`, que es como la tabla `follow` del esquema
+// Prisma los modela: PK compuesta `[followerId, followedId]` y un CHECK que
+// impide seguirse a uno mismo. Ningún par puede tener los dos ids iguales.
+//
+// La cuenta de demo (`u1`) deja 7 seguidores y 3 seguidos a propósito: con
+// todo en cero los contadores del perfil no muestran nada y no se puede
+// distinguir "no tiene" de "no está calculado".
+export const mockFollows = [
+  { followerId: 'u1', followingId: 'u2' },
+  { followerId: 'u1', followingId: 'u3' },
+  { followerId: 'u1', followingId: 'u6' },
+
+  { followerId: 'u2', followingId: 'u1' },
+  { followerId: 'u2', followingId: 'u4' },
+
+  { followerId: 'u3', followingId: 'u1' },
+
+  { followerId: 'u4', followingId: 'u1' },
+  { followerId: 'u4', followingId: 'u2' },
+
+  { followerId: 'u5', followingId: 'u1' },
+
+  { followerId: 'u6', followingId: 'u1' },
+  { followerId: 'u6', followingId: 'u2' },
+  { followerId: 'u6', followingId: 'u7' },
+
+  { followerId: 'u7', followingId: 'u6' },
+
+  { followerId: 'u8', followingId: 'u1' },
+
+  { followerId: 'u10', followingId: 'u1' },
+]

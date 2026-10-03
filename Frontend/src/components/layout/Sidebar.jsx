@@ -1,9 +1,11 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { Disc3, Flame, Home, ListMusic, Mic2, User } from 'lucide-react'
 import MisPlaylists from '../../features/playlists/MisPlaylists.jsx'
+import ProfileSummary from '../../features/social/ProfileSummary.jsx'
 import {
   Sidebar as SidebarRoot,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,
@@ -51,9 +53,9 @@ function MenuItem({ item, isActive }) {
   )
 }
 
-// "Mis Salas" sigue vacío hasta el sprint de Salas. "Mis Playlists" ya tiene
-// datos reales (TS-09) y se delega en la feature para no meter lógica de
-// playlists ni de fetching dentro de un componente de layout.
+// "Mis Salas" sigue vacío hasta el sprint de Salas. "Mis Playlists" (TS-09) y el
+// resumen del usuario (TS-10) se delegan en la feature para no meter lógica de
+// fetching dentro de un componente de layout.
 export default function Sidebar() {
   const location = useLocation()
 
@@ -100,6 +102,10 @@ export default function Sidebar() {
           <MisPlaylists />
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter>
+        <ProfileSummary />
+      </SidebarFooter>
 
       <SidebarRail />
     </SidebarRoot>

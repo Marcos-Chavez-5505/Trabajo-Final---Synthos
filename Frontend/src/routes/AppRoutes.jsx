@@ -6,6 +6,7 @@ import Login from '../features/auth/Login.jsx'
 import Register from '../features/auth/Register.jsx'
 import ProfileView from '../features/profile/ProfileView.jsx'
 import ProfilePublic from '../features/profile/ProfilePublic.jsx'
+import FollowList from '../features/social/FollowList.jsx'
 import Search from '../features/search/Search.jsx'
 import Playlists from '../features/playlists/Playlists.jsx'
 import PlaylistDetail from '../features/playlists/PlaylistDetail.jsx'
@@ -86,12 +87,32 @@ export default function AppRoutes() {
         element={<Protected><ScreenPlaceholder title="Salas" /></Protected>}
       />
       <Route path="/buscar" element={<Protected><Search /></Protected>} />
+      {/* Listas de seguidores y seguidos (TS-10). Las del propio usuario van
+          dentro de `Protected` porque dependen de la sesión; las de otra persona
+          no, igual que el perfil público del que cuelgan. Cada ruta declara la
+          relación como prop, así `/perfil/cualquiera` no matchea nada. */}
+      <Route
+        path="/perfil/seguidores"
+        element={<Protected><FollowList relation="seguidores" /></Protected>}
+      />
+      <Route
+        path="/perfil/siguiendo"
+        element={<Protected><FollowList relation="siguiendo" /></Protected>}
+      />
       {/* `/profile/:id` es el perfil público de otra persona (TS-08). Va fuera de
           `Protected` a propósito: es una vista de lectura y no debería depender
           de que haya sesión. */}
       <Route
         path="/profile/:id"
         element={<AppLayout><ProfilePublic /></AppLayout>}
+      />
+      <Route
+        path="/profile/:id/seguidores"
+        element={<AppLayout><FollowList relation="seguidores" /></AppLayout>}
+      />
+      <Route
+        path="/profile/:id/siguiendo"
+        element={<AppLayout><FollowList relation="siguiendo" /></AppLayout>}
       />
 
       <Route path="*" element={<Navigate to="/" replace />} />
