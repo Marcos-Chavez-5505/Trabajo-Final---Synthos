@@ -4,6 +4,7 @@ const cors = require("cors");
 const songRoutes = require("./routes/song.routes");
 const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
+const favoriteRoutes = require("./routes/favorite.routes");
 
 const prismaErrorHandler = require("./middlewares/errorHandler");
 
@@ -15,9 +16,9 @@ app.use(express.json());
 //! TODOS LOS ENDPOINTS EMPIEZAN POR /API
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 app.use("/api/songs", songRoutes);
-app.use("/api/v1/auth", authRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/favorites", favoriteRoutes);
 
 app.use(prismaErrorHandler);
 app.use((err, req, res, next) => {
