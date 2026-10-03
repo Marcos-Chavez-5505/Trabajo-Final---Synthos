@@ -7,11 +7,13 @@ import Register from '../features/auth/Register.jsx'
 import ProfileView from '../features/profile/ProfileView.jsx'
 import ProfilePublic from '../features/profile/ProfilePublic.jsx'
 import Search from '../features/search/Search.jsx'
+import Playlists from '../features/playlists/Playlists.jsx'
+import PlaylistDetail from '../features/playlists/PlaylistDetail.jsx'
 import PublicOnly from './PublicOnly.jsx'
 import RequireAuth from './RequireAuth.jsx'
 
 // TODO(agente): las pantallas de abajo son shells navegables. Cada una se
-// implementa en su sprint (playlists TS-09, salas, búsqueda, social).
+// implementa en su sprint (salas, búsqueda, social).
 function ScreenPlaceholder({ title }) {
   return (
     <div className="p-6 md:p-10">
@@ -60,9 +62,16 @@ export default function AppRoutes() {
         path="/populares"
         element={<Protected><ScreenPlaceholder title="Populares" /></Protected>}
       />
+      {/* TS-09: biblioteca personal. react-router rankea los paths, así que el
+          `/playlists/:id` no matchea el `/playlists` exacto sin importar el
+          orden. */}
       <Route
         path="/playlists"
-        element={<Protected><ScreenPlaceholder title="Playlists" /></Protected>}
+        element={<Protected><Playlists /></Protected>}
+      />
+      <Route
+        path="/playlists/:id"
+        element={<Protected><PlaylistDetail /></Protected>}
       />
       <Route
         path="/albums"

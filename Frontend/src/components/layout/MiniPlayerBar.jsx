@@ -2,6 +2,7 @@ import playIcon from '../../assets/play.svg'
 import pauseIcon from '../../assets/pause.svg'
 import nextIcon from '../../assets/next_track.svg'
 import usePlayer from '../../hooks/usePlayer.js'
+import FavoriteButton from '../../features/playlists/FavoriteButton.jsx'
 import { ControlButton } from '../player/PlayerControls.jsx'
 import ProgressBar from '../player/ProgressBar.jsx'
 
@@ -47,6 +48,10 @@ export default function MiniPlayerBar() {
         <ControlButton label="Siguiente" onClick={next} tone="soft">
           <img src={nextIcon} alt="" aria-hidden="true" className="h-5 w-5 invert" />
         </ControlButton>
+
+        {/* El mini reproductor es angosto: solo el favorito, que no necesita
+            panel. "Agregar a playlist" queda en la versión desktop. */}
+        <FavoriteButton songId={song?.id} className="p-1.5" />
       </div>
 
       <ProgressBar
