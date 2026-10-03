@@ -250,6 +250,11 @@ view user_top_genre {
   song_count BigInt?
 }
 
+view RoomAvgRating {
+  id_room    Int
+  avg_rating Decimal?
+}
+
 enum PlaylistType {
   personal
   colab
