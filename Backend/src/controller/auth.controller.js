@@ -2,6 +2,18 @@ const jwt = require("jsonwebtoken");
 const authService = require("../services/auth.service");
 const { validateRegisterInput } = require("../utils/validation");
 
+/**
+ * Firma el JWT de la sesión. `sub` es el id del usuario y en JWT es string:
+ * quien lo consuma tiene que castearlo para Prisma (ver REQUERIMIENTOS §2).
+ */
+function signToken(user) {
+	return jwt.sign(
+		{ sub: user.id, email: user.email, username: user.username },
+		process.env.JWT_SECRET,
+		{ expiresIn: process.env.JWT_EXPIRES_IN || "7d" },
+	);
+}
+
 async function register(req, res, next) {
 	try {
 		const { email, username, password } = req.body || {};
@@ -26,8 +38,11 @@ async function register(req, res, next) {
 
 		const user = await authService.registerUser({ email, username, password });
 
+		// El registro deja la sesión iniciada: el frontend registra e ingresa en
+		// el mismo paso, así que devuelve token igual que `login` (REQ-AUTH-1).
 		return res.status(201).json({
 			status: "success",
+			token: signToken(user),
 			user,
 		});
 	} catch (error) {
@@ -55,11 +70,7 @@ async function login(req, res, next) {
 			});
 		}
 
-		const token = jwt.sign(
-			{ sub: user.id, email: user.email, username: user.username },
-			process.env.JWT_SECRET,
-			{ expiresIn: process.env.JWT_EXPIRES_IN || "7d" },
-		);
+		const token = signToken(user);
 
 		return res.status(200).json({
 			status: "success",
