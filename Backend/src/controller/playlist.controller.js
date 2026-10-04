@@ -16,6 +16,13 @@ async function createPlaylist(req, res, next) {
 			});
 		}
 
+		if (name.trim().length > 50) {
+			return res.status(400).json({
+				status: "error",
+				message: "El nombre no puede superar los 50 caracteres.",
+			});
+		}
+
 		const playlist = await playlistService.createPlaylist(userId, {
 			name: name.trim(),
 			description,
@@ -39,7 +46,7 @@ async function getPlaylistById(req, res, next) {
 		}
 
 		const playlist = await playlistService.getPlaylistById(id);
-		if (!playlist) {
+		if (!playlist || playlist.idCreator !== req.user.sub) {
 			return res.status(404).json({
 				status: "error",
 				message: "La playlist no existe.",
@@ -97,10 +104,27 @@ async function updatePlaylist(req, res, next) {
 			});
 		}
 
-		const { name, addSongs, removeSongs, reorder } = req.body || {};
+		const { name, description, addSongs, removeSongs, reorder } = req.body || {};
+
+		if (name !== undefined) {
+			if (typeof name !== "string" || name.trim().length === 0) {
+				return res.status(400).json({
+					status: "error",
+					message: "El nombre es obligatorio.",
+				});
+			}
+
+			if (name.trim().length > 50) {
+				return res.status(400).json({
+					status: "error",
+					message: "El nombre no puede superar los 50 caracteres.",
+				});
+			}
+		}
 
 		const playlist = await playlistService.updatePlaylist(id, {
-			name,
+			name: name === undefined ? undefined : name.trim(),
+			description,
 			addSongs,
 			removeSongs,
 			reorder,
