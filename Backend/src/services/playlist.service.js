@@ -60,19 +60,49 @@ async function getPlaylistById(id) {
 }
 
 async function getUserPlaylists(userId) {
-	return prisma.playlist.findMany({
+	const playlists = await prisma.playlist.findMany({
 		where: { idCreator: userId },
 		orderBy: { creationDate: "desc" },
 		include: PLAYLIST_INCLUDE,
 	});
+
+	if (!playlists.some((playlist) => playlist.type === "favorites")) {
+		return playlists;
+	}
+
+	const favorites = await prisma.favorite.findMany({
+		where: { idUser: userId },
+		orderBy: { markedDate: "desc" },
+		include: { song: { include: SONG_INCLUDE } },
+	});
+
+	return playlists.map((playlist) => {
+		if (playlist.type !== "favorites") return playlist;
+
+		return {
+			...playlist,
+			songs: favorites.map((f) => ({
+				idPlaylist: playlist.id,
+				idSong: f.idSong,
+				position: 0,
+				addedDate: f.markedDate,
+				addedBy: null,
+				song: f.song,
+			})),
+		};
+	});
 }
 
-async function updatePlaylist(id, { name, addSongs, removeSongs, reorder }) {
+async function updatePlaylist(id, { name, description, addSongs, removeSongs, reorder }) {
 	return prisma.$transaction(async (tx) => {
-		if (name !== undefined) {
+		const data = {};
+		if (name !== undefined) data.name = name;
+		if (description !== undefined) data.description = description;
+
+		if (Object.keys(data).length > 0) {
 			await tx.playlist.update({
 				where: { id },
-				data: { name },
+				data,
 			});
 		}
 
