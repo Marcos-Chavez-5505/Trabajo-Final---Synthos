@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import musicNoteIcon from '../../assets/music_note.svg'
 import expandIcon from '../../assets/expand.svg'
 import addToPlaylistIcon from '../../assets/add_to_playlist.svg'
 import usePlayer from '../../hooks/usePlayer.js'
 import AddToPlaylistPanel from '../../features/playlists/AddToPlaylistPanel.jsx'
 import FavoriteButton from '../../features/playlists/FavoriteButton.jsx'
+import useSongPlaylists from '../../features/playlists/useSongPlaylists.js'
 import PlayerControls from './PlayerControls.jsx'
 import ProgressBar from './ProgressBar.jsx'
 
@@ -31,6 +32,27 @@ function SongCover({ song }) {
 export default function PlayerBar() {
   const { song, currentTime, duration, seek, hasQueue } = usePlayer()
   const [adding, setAdding] = useState(false)
+  const menuRef = useRef(null)
+  // Activo cuando la canción ya está en alguna playlist (sin contar favoritos),
+  // además de mientras el panel está abierto.
+  const { inAnyPlaylist } = useSongPlaylists(song?.id)
+
+  // Cualquier clic fuera del panel (y de su botón) lo cierra. Se usa `pointerdown`
+  // para reaccionar antes que el `click` de los elementos que están debajo. El
+  // listener sólo existe mientras el panel está abierto.
+  useEffect(() => {
+    if (!adding) return undefined
+
+    function handlePointerDown(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setAdding(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [adding])
 
   if (!hasQueue) return null
 
@@ -59,14 +81,16 @@ export default function PlayerBar() {
         <div className="flex flex-1 items-center justify-end gap-1">
           <FavoriteButton songId={song?.id} />
 
-          <div className="relative">
+          <div className="relative" ref={menuRef}>
             <button
               type="button"
               onClick={() => setAdding((prev) => !prev)}
               aria-expanded={adding}
               aria-label="Agregar a playlist"
               title="Agregar a playlist"
-              className={`rounded-full p-2 hover:opacity-80 ${adding ? 'Fucsia' : 'Volume'}`}
+              className={`rounded-full p-2 hover:opacity-80 ${
+                adding || inAnyPlaylist ? 'Fucsia' : 'Volume'
+              }`}
             >
               <img
                 src={addToPlaylistIcon}

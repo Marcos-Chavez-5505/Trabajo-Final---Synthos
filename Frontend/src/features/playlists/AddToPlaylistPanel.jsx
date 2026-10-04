@@ -1,11 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import useAuth from '../../hooks/useAuth.js'
-import { addSongToPlaylist, listPlaylists } from '../../services/playlistsService.js'
+import {
+  addSongToPlaylist,
+  removeSongFromPlaylist,
+} from '../../services/playlistsService.js'
+import useSongPlaylists from './useSongPlaylists.js'
 import playlistIcon from '../../assets/playlist.svg'
 
 /**
- * Lista de playlists del usuario para agregar la canción que está sonando.
+ * Lista de playlists del usuario para agregar o quitar la canción que está sonando.
  *
  * Se abre desde el reproductor, sobre la canción actual, en vez de duplicar un
  * botón "agregar" en cada card: el reproductor es el único lugar donde ya se sabe
@@ -15,48 +19,36 @@ import playlistIcon from '../../assets/playlist.svg'
  * componente no se usó nunca en el repo y depende de las animaciones de base-ui,
  * que son imposibles de verificar sin navegador.
  *
- * Agregar a "Mis Favoritos" crea esa playlist si no existía, que es el
- * comportamiento pedido en TS-09.
+ * Cada fila es un toggle: si la canción ya está en la playlist, el clic la quita.
+ * "Mis Favoritos" se excluye de la lista: los favoritos se marcan con el corazón
+ * del reproductor, no desde acá, así que ofrecerlos duplicaba dos caminos para lo
+ * mismo.
  */
 export default function AddToPlaylistPanel({ songId, onClose }) {
   const { user } = useAuth()
   const userId = user?.id ?? null
+  const { playlists: allPlaylists, loading, error, contains } = useSongPlaylists(songId)
+  const [pendingId, setPendingId] = useState(null)
 
-  const [response, setResponse] = useState({ key: null, playlists: [], error: null })
-  const [addedTo, setAddedTo] = useState(null)
+  const playlists = allPlaylists.filter((playlist) => !playlist.isFavorites)
 
-  const requestKey = userId && songId ? `${userId}:${songId}` : null
+  async function handleToggle(playlist) {
+    // Se bloquea la fila mientras escribe: el toggle no debe correr dos veces
+    // seguidas y anularse.
+    if (pendingId) return
 
-  useEffect(() => {
-    if (!userId || !songId) return undefined
+    setPendingId(playlist.id)
 
-    let active = true
-
-    listPlaylists(userId)
-      .then((playlists) => {
-        if (active) setResponse({ key: `${userId}:${songId}`, playlists, error: null })
-      })
-      .catch((cause) => {
-        if (active) {
-          setResponse({ key: `${userId}:${songId}`, playlists: [], error: cause.message })
-        }
-      })
-
-    return () => {
-      active = false
+    try {
+      if (contains(playlist)) {
+        await removeSongFromPlaylist(userId, playlist.id, songId)
+      } else {
+        await addSongToPlaylist(userId, playlist.id, songId)
+      }
+    } finally {
+      setPendingId(null)
     }
-  }, [userId, songId])
-
-  async function handleAdd(playlistId) {
-    await addSongToPlaylist(userId, playlistId, songId)
-
-    setAddedTo(playlistId)
   }
-
-  const isCurrent = response.key === requestKey
-  const playlists = isCurrent ? response.playlists : []
-  const error = isCurrent ? response.error : null
-  const loading = Boolean(requestKey) && !isCurrent
 
   return (
     <div className="SurfaceLight Elevation1 CardRadius w-72 p-4">
@@ -90,14 +82,16 @@ export default function AddToPlaylistPanel({ songId, onClose }) {
       ) : (
         <ul className="mt-4 flex flex-col gap-1">
           {playlists.map((playlist) => {
-            const already = playlist.songIds.some((id) => String(id) === String(songId))
+            const already = contains(playlist)
+            const pending = pendingId === playlist.id
 
             return (
               <li key={playlist.id}>
                 <button
                   type="button"
-                  onClick={() => handleAdd(playlist.id)}
-                  disabled={already || addedTo === playlist.id}
+                  onClick={() => handleToggle(playlist)}
+                  disabled={pending}
+                  aria-pressed={already}
                   className="flex w-full items-center gap-2 rounded px-2 py-2 text-left TextRegluar hover:opacity-80 disabled:opacity-60"
                 >
                   <img
@@ -107,12 +101,13 @@ export default function AddToPlaylistPanel({ songId, onClose }) {
                     className="h-4 w-4 shrink-0 invert opacity-70"
                   />
                   <span className="min-w-0 flex-1 truncate">{playlist.name}</span>
-                  {already && (
-                    <span className="text-muted-foreground TextTiny shrink-0">Ya está</span>
-                  )}
-                  {addedTo === playlist.id && (
-                    <span className="text-accent TextTiny shrink-0">Agregada</span>
-                  )}
+                  <span
+                    className={`TextTiny shrink-0 ${
+                      already ? 'text-accent' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {pending ? '…' : already ? 'Quitar' : 'Agregar'}
+                  </span>
                 </button>
               </li>
             )
