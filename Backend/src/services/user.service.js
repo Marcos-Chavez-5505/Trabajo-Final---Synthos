@@ -1,5 +1,6 @@
 const prisma = require("../prisma/prismaClient");
 const { Prisma } = require("@prisma/client");
+const followService = require("./follow.service");
 
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
@@ -24,6 +25,12 @@ const ME_USER_SELECT = {
 	registrationDate: true,
 };
 
+const FOLLOW_USER_PREVIEW_SELECT = {
+	id: true,
+	username: true,
+	pictureUrl: true,
+};
+
 async function getTopGenreByUser(userId) {
 	return prisma.userTopGenre.findUnique({
 		where: { idUser: userId },
@@ -44,7 +51,7 @@ function toPageSize(value) {
  *
  * Devuelve el mismo envelope que `/api/songs/search` ({ items, total, page,
  * pageSize, totalPages }) para que el frontend use la misma `Pagination` en las
- * dos pantallas (REQ-USER-1, decisión D11). Query vacía = catálogo completo.
+ * dos pantallas. Query vacía = catálogo completo.
  */
 async function searchUsers(query, page, pageSize) {
 	const term = typeof query === "string" ? query.trim() : "";
@@ -85,10 +92,31 @@ async function searchUsers(query, page, pageSize) {
 
 /** Perfil público: sin email. `null` si no existe. */
 async function getUserById(id) {
-	return prisma.user.findUnique({
+	const user = await prisma.user.findUnique({
 		where: { id },
-		select: PUBLIC_USER_SELECT,
+		select: {
+			...PUBLIC_USER_SELECT,
+			followers: {
+				select: { follower: { select: FOLLOW_USER_PREVIEW_SELECT } },
+			},
+			following: {
+				select: { followed: { select: FOLLOW_USER_PREVIEW_SELECT } },
+			},
+		},
 	});
+
+	if (!user) return null;
+
+	const followers = user.followers.map((f) => f.follower);
+	const following = user.following.map((f) => f.followed);
+
+	return {
+		...user,
+		followers,
+		following,
+		followerCount: followers.length,
+		followingCount: following.length,
+	};
 }
 
 /** Usuario de la sesión: incluye email. `null` si no existe. */
@@ -113,7 +141,9 @@ async function updateUser(id, { username, biography, pictureUrl }) {
 		const value = String(username).trim();
 
 		if (value.length < 3 || value.length > 50) {
-			const error = new Error("El username debe tener entre 3 y 50 caracteres.");
+			const error = new Error(
+				"El username debe tener entre 3 y 50 caracteres.",
+			);
 			error.code = 400;
 			throw error;
 		}
