@@ -4,6 +4,7 @@ import {
   followUser,
   getFollowCounts,
   isFollowing,
+  subscribeToFollow,
   unfollowUser,
 } from '../../services/usersService.js'
 
@@ -45,6 +46,13 @@ export default function useFollow(personId) {
     pending: false,
     error: null,
   })
+  const [version, setVersion] = useState(0)
+
+  // Otra vista (o el Sidebar) puede seguir/dejar de seguir a esta misma persona:
+  // al avisar el service, se vuelve a pedir la relación y los contadores. Un
+  // `version` en las deps dispara el fetch y deja que el cleanup corte el
+  // anterior.
+  useEffect(() => subscribeToFollow(() => setVersion((prev) => prev + 1)), [])
 
   useEffect(() => {
     if (!requestKey) return undefined
@@ -86,7 +94,7 @@ export default function useFollow(personId) {
     return () => {
       active = false
     }
-  }, [requestKey, canFollow, viewerId, personId])
+  }, [requestKey, canFollow, viewerId, personId, version])
 
   const isCurrent = response.key === requestKey
   const loading = requestKey !== null && !isCurrent

@@ -271,7 +271,13 @@ en la migración aplicada.
 | `GET` | `/api/users/:id/following` | Paginado. |
 | `GET` | `/api/users/:id` | Idealmente con `isFollowing` y los contadores ya resueltos para el usuario del token, para no pedir tres endpoints al abrir un perfil. |
 
-- [ ] `ProfileView` consume `listFollowers`/`listFollowing`; hoy son arrays completos en el mock.
+- [x] Rutas de follow implementadas: `POST`/`DELETE /api/users/:id/follow` (`follow.controller.js`) y
+      `GET /api/users/:id/followers|following`, con preview `{ id, username, pictureUrl }`
+      (`follow.service.js`). El frontend ya las consume (`usersService.js`, `useFollow`). Las listas
+      todavía **no** están paginadas (devuelven el array completo).
+- [x] `GET /api/users/:id` devuelve `followerCount`/`followingCount` y las listas `followers`/`following`
+      (agregado en `f48a224`). Todavía **no** devuelve `isFollowing`; el frontend lo deriva de la lista de
+      seguidores. Ver `PENDIENTES.md` §9.
 
 ---
 

@@ -196,6 +196,9 @@ reproducir: o el endpoint lo recibe como query param, o el frontend lo calcula a
 
 ### 8.6 Auth sigue en mocks, a propósito
 
+**Desactualizado.** Auth, edición de perfil y seguimiento ya se migraron al backend (PR #20/#21 y la
+migración de follow). Ver §9. Se conserva el texto original como registro.
+
 `authService`/`usersService` quedaron con `mocks/users.js`. El backend ya expone
 `POST /api/auth/register`, `/login` y `/logout` (montados dos veces en `app.js`, en `/api/auth` y
 `/api/v1/auth`), pero conectar eso excede esta entrega y arrastra el manejo de JWT: `logout` requiere
@@ -224,3 +227,31 @@ ejercita la red ni el include anidado de género contra Postgres.
 Para cerrar: `docker compose up -d` en `Backend/`, copiar `.env.example` a `.env` con las `POSTGRES_*` y
 `DATABASE_URL`, `npx prisma migrate dev`, `npx prisma db seed`, `npm run dev`, y recién ahí levantar el
 Frontend. Comandos de `curl` en `ESPECIFICACIONES-BACKEND.md` §5.2.
+
+---
+
+## 9. Seguimiento migrado al backend
+
+**Estado:** migrado. Auth y edición de perfil van contra el backend desde PR #20/#21; el seguimiento
+(TS-10) también, sobre `POST`/`DELETE /api/users/:id/follow` y `GET /api/users/:id/followers|following`.
+
+### 9.1 Qué se conectó
+
+- `usersService.js`: `followUser`, `unfollowUser`, `getFollowCounts`, `isFollowing`, `listFollowing` y
+  `listFollowers` contra el backend real. Se eliminó el mock de follow (`synthos_mock_follows`) y el
+  contenedor de usuarios mock que sólo servía para resolverlo.
+- `getFollowCounts` usa `GET /api/users/:id` (`followerCount`/`followingCount`, agregados en `f48a224`).
+- `isFollowing` no tiene endpoint directo: se deriva de `GET /api/users/:id/followers`.
+- `subscribeToFollow` avisa a `useFollow` (y desde ahí al `ProfileSummary` del Sidebar, `ProfileView` y
+  `ProfilePublic`) para que contadores y listas se refresquen al seguir/dejar de seguir desde otra vista.
+- `FollowList` ya resuelve `listFollowers`/`listFollowing` contra la base, así que las listas de
+  seguidores/seguidos muestran usuarios reales.
+
+### 9.2 Lo que queda pendiente
+
+1. **Listas sin paginar:** `GET /users/:id/followers|following` devuelven el array completo, no un envelope
+   con `page`/`total`.
+2. **`isFollowing` en `GET /users/:id`:** hoy el perfil público hace dos llamadas (contadores + relación).
+   Incluir `isFollowing` para el usuario del token lo dejaría en una sola.
+3. **Respuesta de `follow`/`unfollow`:** sigue siendo `{ status, message }`, así que `useFollow` re-consulta
+   el estado (`relationState`).
