@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { ListMusic } from 'lucide-react'
 import useAuth from '../../hooks/useAuth.js'
-import { listPlaylists } from '../../services/playlistsService.js'
+import { listPlaylists, subscribeToPlaylists } from '../../services/playlistsService.js'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '../../components/ui/sidebar.tsx'
 
 /**
@@ -13,9 +13,10 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '../../component
  * (AGENTS.md, regla 5).
  *
  * El Sidebar sobrevive a la navegación (vive en `AppLayout`, arriba de la ruta),
- * así que para que "quitar canción" se refleje sin recargar hay que volver a
- * pedir la lista. La firma de ids+nombre es la dependencia: comparar el `length`
- * no alcanza, porque quitar una y agregar otra deja el mismo número.
+ * así que sus datos no se remontan al crear, renombrar o borrar desde una
+ * pantalla. Por eso se suscribe a `subscribeToPlaylists`: cada mutación avisa y
+ * acá se vuelve a pedir la lista. Un `version` en las deps dispara el fetch sin
+ * que el callback de la suscripción toque el estado del fetch anterior.
  */
 export default function MisPlaylists() {
   const { user } = useAuth()
@@ -23,11 +24,7 @@ export default function MisPlaylists() {
   const userId = user?.id ?? null
 
   const [response, setResponse] = useState({ key: null, playlists: [] })
-
-  // Firma de lo que se muestra: cambia solo si cambia el nombre o el contenido.
-  const signature = response.playlists
-    .map((playlist) => `${playlist.id}:${playlist.name}:${playlist.songIds.join('.')}`)
-    .join('|')
+  const [version, setVersion] = useState(0)
 
   useEffect(() => {
     if (!userId) return undefined
@@ -45,7 +42,9 @@ export default function MisPlaylists() {
     return () => {
       active = false
     }
-  }, [userId, signature])
+  }, [userId, version])
+
+  useEffect(() => subscribeToPlaylists(() => setVersion((prev) => prev + 1)), [])
 
   if (response.key !== userId || response.playlists.length === 0) return null
 

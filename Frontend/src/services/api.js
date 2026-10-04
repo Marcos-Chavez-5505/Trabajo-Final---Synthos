@@ -134,6 +134,11 @@ export function patch(path, body, { params, signal } = {}) {
   return request('PATCH', path, { body, params, signal })
 }
 
+/** PUT contra la API. */
+export function put(path, body, { params, signal } = {}) {
+  return request('PUT', path, { body, params, signal })
+}
+
 /** DELETE contra la API. */
 export function del(path, { params, signal } = {}) {
   return request('DELETE', path, { params, signal })

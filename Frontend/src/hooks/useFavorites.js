@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import useAuth from './useAuth.js'
-import { listFavoriteSongIds, toggleFavorite as toggleFavoriteService } from '../services/playlistsService.js'
+import {
+  listFavoriteSongIds,
+  subscribeToPlaylists,
+  toggleFavorite as toggleFavoriteService,
+} from '../services/playlistsService.js'
 
 // Referencia estable para cuando todavía no hay respuesta: si se creara un `[]`
 // literal en cada render, el `useCallback` de `isFavorite` se invalidaría siempre.
@@ -10,10 +14,12 @@ const NO_IDS = []
  * Favoritos del usuario actual.
  *
  * Los favoritos son una playlist con `isFavorites`, no un estado aparte (ver
- * `playlistsService`), pero alcanza con leer `localStorage` en cada render solo
- * para el que pregunta: el reproductor, las filas de playlist y el panel de
- * "agregar a" necesitan la misma respuesta y actualizarse al marcar. Este hook
- * es el único que guarda ese estado.
+ * `playlistsService`). Cada consumidor tiene su propia instancia del hook (el
+ * `FavoriteButton` del reproductor, las filas y el panel de "agregar a"), así
+ * que para que todas coincidan el hook se suscribe a `subscribeToPlaylists`:
+ * cualquier alta/baja de favoritos, venga de donde venga, dispara un refetch de
+ * los ids. Sin eso, quitar una canción desde el detalle dejaba al reproductor
+ * mostrándola como favorita hasta recargar.
  *
  * No es un Context porque no hay un Provider global de playlists en el árbol:
  * lo consumen pantallas bajo `AppLayout`, y el `PlayerBar`, que sí es global,
@@ -36,6 +42,9 @@ export default function useFavorites() {
     ids: [],
     loading: true,
   })
+  const [version, setVersion] = useState(0)
+
+  useEffect(() => subscribeToPlaylists(() => setVersion((prev) => prev + 1)), [])
 
   useEffect(() => {
     if (!userId) return undefined
@@ -53,7 +62,7 @@ export default function useFavorites() {
     return () => {
       active = false
     }
-  }, [userId])
+  }, [userId, version])
 
   const isCurrent = response.key === userId
   const favoriteIds = isCurrent ? response.ids : NO_IDS
