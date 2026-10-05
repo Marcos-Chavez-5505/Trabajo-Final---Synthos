@@ -144,19 +144,38 @@ async function upsertUser(tx, { email, username }, passwordHash) {
 	return user;
 }
 
+// `playlist.name` NO es único en el schema: dos personas pueden tener playlists
+// con el mismo nombre sin que sea un problema, así que el nombre no sirve como
+// clave.
 async function upsertPlaylist(tx, { name, creatorId, songIds }) {
-	const playlist = await tx.playlist.upsert({
-		where: { name },
-		update: {},
-		create: {
-			name,
-			description: "Playlist fuente de una sala de prueba (TS-17).",
-			idCreator: creatorId,
-			type: "colab",
-			isPublic: true,
-		},
+	// Por eso `upsert` no sirve acá: `PlaylistWhereUniqueInput` solo acepta
+	// `id`, no `name`. La clave lógica del seed es (nombre + creador), que es
+	// única entre los anfitriones del `ROOMS`. Va `findFirst` + `create`/`update`.
+	const existente = await tx.playlist.findFirst({
+		where: { name, idCreator: creatorId },
 		select: { id: true },
 	});
+
+	const playlist = existente
+		? await tx.playlist.update({
+				where: { id: existente.id },
+				data: {
+					description: "Playlist fuente de una sala de prueba (TS-17).",
+					type: "colab",
+					isPublic: true,
+				},
+				select: { id: true },
+			})
+		: await tx.playlist.create({
+				data: {
+					name,
+					description: "Playlist fuente de una sala de prueba (TS-17).",
+					idCreator: creatorId,
+					type: "colab",
+					isPublic: true,
+				},
+				select: { id: true },
+			});
 
 	// `playlist_song` tiene PK [id_playlist, id_song] y `position` es NOT NULL:
 	// hay que upsertear las canciones una por una para poderles dar posición.
