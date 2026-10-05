@@ -6,6 +6,7 @@ import Login from '../features/auth/Login.jsx'
 import Register from '../features/auth/Register.jsx'
 import ProfileView from '../features/profile/ProfileView.jsx'
 import ProfilePublic from '../features/profile/ProfilePublic.jsx'
+import Rooms from '../features/rooms/Rooms.jsx'
 import FollowList from '../features/social/FollowList.jsx'
 import Search from '../features/search/Search.jsx'
 import Playlists from '../features/playlists/Playlists.jsx'
@@ -82,10 +83,8 @@ export default function AppRoutes() {
         path="/artistas"
         element={<Protected><ScreenPlaceholder title="Artistas" /></Protected>}
       />
-      <Route
-        path="/salas"
-        element={<Protected><ScreenPlaceholder title="Salas" /></Protected>}
-      />
+      {/* TS-17: listado de salas ordenable por calificación del anfitrión. */}
+      <Route path="/salas" element={<Protected><Rooms /></Protected>} />
       <Route path="/buscar" element={<Protected><Search /></Protected>} />
       {/* Listas de seguidores y seguidos (TS-10). Las del propio usuario van
           dentro de `Protected` porque dependen de la sesión; las de otra persona
