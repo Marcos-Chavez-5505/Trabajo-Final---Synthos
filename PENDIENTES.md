@@ -99,8 +99,6 @@ rediseño).
 con `var(--ds-*)` o directamente con clases) o si se descarta por estar fuera del alcance del
 Sprint 1. Recordar la regla 11 de `AGENTS.md`: los literales solo pueden vivir en
 `styles/tokens.css`.
-<<<<<<< Updated upstream
-========================
 
 ---
 
@@ -255,3 +253,47 @@ Frontend. Comandos de `curl` en `ESPECIFICACIONES-BACKEND.md` §5.2.
    Incluir `isFollowing` para el usuario del token lo dejaría en una sola.
 3. **Respuesta de `follow`/`unfollow`:** sigue siendo `{ status, message }`, así que `useFollow` re-consulta
    el estado (`relationState`).
+
+---
+
+## 10. La foto de perfil se guarda como base64 dentro de una columna de texto
+
+**Estado:** la edición de perfil sí conecta con el backend de punta a punta — `ProfileEdit.jsx` →
+`useAuth().updateProfile()` → `usersService.updateProfile()` → `PATCH /api/users/me` →
+`userController.updateMe` → `userService.updateUser`. El service traduce los nombres de la UI a los del
+backend (`bio`→`biography`, `avatarUrl`→`pictureUrl`), valida username (3-50 caracteres, no tomado) y
+persiste con un `update` parcial: solo toca los campos que llegan definidos. Devuelve con
+`ME_USER_SELECT`, que incluye justo los campos que `toUser` necesita, así que `setUser` actualiza
+sidebar, header y perfil sin recargar.
+
+Lo que queda mal es el trato de la foto.
+
+**Contexto:** `ProfileEdit.jsx` lee el archivo con `FileReader.readAsDataURL()` y manda el data URI
+completo dentro del `PATCH` JSON. El backend lo acepta sin límite de tamaño ni validar que sea una
+imagen, y `prisma.user.pictureUrl` es un `String?`, o sea lo escribe tal cual. Un JPEG de 2 MB produce
+un body de ~2.7 MB contra una columna de texto: funciona, pero es lo que revienta en cuanto alguien
+suba una foto de un celular moderno. Además, cuando el username está tomado,
+`Backend/src/services/user.service.js` lanza `"Ese nombre de usuario ya está en uso."` con
+`error.code = 400` y el frontend lo pinta tal cual.
+
+**Qué hacer:** mover la foto a un upload real —endpoint de multipart en el backend que guarde el binario
+y devuelva una URL— y mandar solo esa URL en `pictureUrl`. Si el proyecto no va a sumar almacenamiento de
+archivos todavía, el arreglo barato es al menos acotar tamaño y tipo en ambos lados, para que la columna no
+reciba un data URI arbitrario.
+
+**Verificación:** subir una imagen de tamaño realista y confirmar que el `PATCH` pesa kilobytes y no
+megabytes. Levantar la base real primero (§8.8), porque sin `Backend/.env` no hay contra qué probar.
+
+### 10.1 Feedback y validación de la edición de perfil
+
+Menor, va junto con lo anterior:
+
+- `ProfileEdit.jsx:86` deshabilita el botón Guardar con `loading`, que es el flag de carga de la sesión
+  (`AuthContext`), no un estado de submit. Mientras guardás no se bloquea nada, así que un doble click
+  manda dos PATCH. Le falta un `saving` propio.
+- El error de username tomado se muestra crudo desde el service. Hoy coincide porque los dos textos
+  están en español, pero es acoplamiento por coincidencia; conviene un mapa de errores o un `code`
+  estable que el frontend pueda traducir.
+- `ProfileEdit.jsx:79` tiene un `TODO: falta token de color para placeholder` que es deuda de la regla 11
+  (los literales solo viven en `styles/tokens.css`); de paso el `placeholder` está hardcodeado a
+  `placeholder-neutral-500` en los inputs.
