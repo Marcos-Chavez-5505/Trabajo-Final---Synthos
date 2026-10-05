@@ -137,6 +137,19 @@ Ejemplos: `roomsService.js` → `listRooms()`, `getRoomById(id)`, `createRoom(da
 11. **Tokens: los literales viven solo en `src/styles/tokens.css`.** `styles/utilities.css` (clases `.Wall`, `.Fucsia`, `.TextRegluar`…) y `styles/base.css` (resets) se derivan con `var(--ds-*)`, y el puente semántico de shadcn en `src/index.css` (`:root` con `--background`, `--primary`, `--sidebar*`… y el `@theme inline`) también: **nunca** escribir un hex, un `px` de fuente o un `box-shadow` en otro archivo CSS ni en estilos inline de un componente. Para un color nuevo: primero el token en `tokens.css`, después su clase (si corresponde al design system) o su mapeo en el `:root` de `index.css` (si es una utilidad semántica de shadcn que lo necesita). Las clases del design system viven en `@layer components`, así que una utilidad Tailwind las sobrescribe (`className="Wall bg-red-500"`). ⚠️ `components.json` apunta `tailwind.css` a `src/index.css`: el CLI de shadcn reinyecta ahí su propio `:root` neutral, que al ir después en la cascada pisa el design system — si se corre `npx shadcn add`, hay que revisar y volver a dejar el bloque en `var(--ds-*)`.
 12. **Git: no subir commits ni crear ramas sin autorización previa.** No ejecutar `git push` (ni `--force`/`--force-with-lease`, ni tags), **no crear ramas o tags**, no abrir PRs, y no hacer `reset --hard`/`rebase` sobre ramas ya publicadas, salvo que el usuario lo pida o lo autorice explícitamente en el mensaje. Sí se pueden hacer lecturas (`status`, `diff`, `log`, `show`) y commits locales. Ante la duda, **preguntar antes**: publicar afecta a otras personas y no se improvisa.
 
+### 12.1 Criterio para ramas desprendidas de `dev`
+
+Una vez que el usuario autoriza, cada cambio viaja en su propia rama saliendo de `dev`. Reglas:
+
+- **Origen:** siempre `dev`, nunca desde otra rama de trabajo ni desde `main`. `dev` queda como rama de integración y no se commitea trabajo sin terminar.
+- **Prefijo por tipo:** `feat/` funcionalidad nueva, `fix/` corrección de algo roto, `docs/` solo documentación o archivos `.md`. El prefijo va en el nombre de la rama, en minúsculas y con guiones.
+- **Un cambio por rama.** Si en una misma tanda hay cosas de dominios distintos (por ejemplo una feature y una corrección de `AGENTS.md`), son ramas separadas, no un commit mixto.
+- **Commits en español**, con el estilo de la regla 12 y cuerpo que explique el porqué, no el qué. Mensaje en imperativo, primera línea corta.
+- **Nada ajeno por accidente.** Revisar `git status` antes de `git add` y stagear con rutas explícitas archivo por archivo, nunca con `git add .` ni `git add -A`. Archivos frequentemente no deseados: `ESTRUCTURA.md` y el `package-lock.json` de la raíz (es un artefacto vacío, sin `package.json` que lo justifique; los locks reales viven en `Backend/` y `Frontend/`).
+- **Verificar antes de pushear:** correr el lint y el build de `Frontend` (o el test que aplique). Recién con eso en verde se hace `git push -u origin <rama>`.
+- **El PR lo abre el usuario.** El agente pushea la rama y pasa el link que devuelve GitHub (`.../pull/new/<rama>`), sin abrirlo.
+- Al terminar, volver a `dev` para que el repo quede limpio y listo para el siguiente cambio.
+
 ## 5. Pendiente / decisiones abiertas
 
 - Definir librería HTTP (axios vs fetch nativo) en `services/api.js`.
