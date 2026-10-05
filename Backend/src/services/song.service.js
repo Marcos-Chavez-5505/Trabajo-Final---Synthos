@@ -2,27 +2,16 @@ const prisma = require("../prisma/prismaClient");
 
 const LIMIT = 10;
 
-// Los joins (songGenres/songMoods) vienen anidados con su entidad para que el
-// payload traiga el nombre, no solo el id. Antes devolvian { idSong, idGenre } y el
-// frontend no podia mostrar el genero en las cards.
 const SONG_INCLUDE = {
 	songGenres: { include: { genre: true } },
 	songMoods: { include: { mood: true } },
 	artist: true,
 };
 
-// Paginacion por offset: la pantalla /buscar dibuja numeros de pagina y permite
-// saltar a cualquiera, asi que no alcanza con un cursor.
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
 
-/**
- * Acota page/pageSize a valores utilizables.
- *
- * Devuelve strings corregidos para que el service no tenga que volver a
- * castearlos: page queda >= 1 y pageSize dentro de [1, MAX_PAGE_SIZE].
- */
 function parsePagination({ page, pageSize }) {
 	const parsedPage = Number.parseInt(page, 10);
 	const parsedPageSize = Number.parseInt(pageSize, 10);
@@ -36,17 +25,6 @@ function parsePagination({ page, pageSize }) {
 	};
 }
 
-/**
- * Busca canciones por titulo, artista o genero, paginadas por numero de pagina.
- *
- * Devuelve { items, total, page, pageSize, totalPages }. El `total` es el de todas
- * las coincidencias (no el de la pagina) y es lo que permite al frontend dibujar
- * la fila de numeros; por eso va con un count aparte.
- *
- * Si la pagina pedida queda fuera de rango se sirve la ultima con contenido y se
- * devuelve `page` ya corregido, para que el frontend no muestre un "sin
- * resultados" enganoso.
- */
 async function searchSongs(query, pagination = {}) {
 	const { page: rawPage, pageSize: rawPageSize } = pagination;
 	const { page: requestedPage, pageSize } = parsePagination({
@@ -72,8 +50,6 @@ async function searchSongs(query, pagination = {}) {
 			}
 		: {};
 
-	// El count va primero en la transaccion para que el destructuring siga el orden
-	// de las promises: [total, items].
 	const [total, items] = await prisma.$transaction([
 		prisma.song.count({ where }),
 		prisma.song.findMany({
@@ -88,8 +64,6 @@ async function searchSongs(query, pagination = {}) {
 	const totalPages = Math.max(1, Math.ceil(total / pageSize));
 	const page = Math.min(requestedPage, totalPages);
 
-	// Con el clamp la pagina corregida puede necesitar otra consulta: el skip se
-	// calculo con la pagina pedida.
 	const finalItems =
 		page === requestedPage
 			? items
