@@ -70,6 +70,22 @@ Aplican a **todos** los endpoints nuevos. Si se cumple esto, el frontend migra s
 | Nombres de campos | El frontend mapea en `services/`, así que no hace falta que el backend use nombres de UI, pero sí ser **consistente**. Ojo con este mapeo: el frontend usa `avatarUrl` y `bio`; la base tiene `picture_url` y `biography`. |
 | CORS | `app.use(cors())` abierto sirve para el dev con proxy, pero el APK (Capacitor) le pega a la API desde otro origen. En producción hay que fijar la lista. |
 
+### 2.1 Contexto que estaba en comentarios del código
+
+Los comentarios de `Backend/` se eliminaron para que el código se lea sin ruido. **Excepción: los de `prisma/migrations/`**, que no se tocan (ver la primera fila). Lo que era contexto y no queda explícito ni en el código ni en esta hoja:
+
+| Tema | Contexto |
+| --- | --- |
+| Migraciones inmutables | Prisma guarda el SHA256 de cada `migration.sql` aplicado en `_prisma_migrations.checksum`. Editar uno ya aplicado —aunque sea para borrarle un comentario— hace que `migrate dev` lo marque como modificado. Los `migration.sql` son historia: no se editan. |
+| Vistas SQL | `room_avg_rating`, `user_top_genre` y `user_genre_counts` las crea una migración a mano. Si falta alguna, `/api/rooms` y `/api/users/search` devuelven `500` (`P2010`/`42P01`) aunque `prisma migrate status` diga que el schema está al día. `room_avg_rating` además necesita `@@map("room_avg_rating")` en el bloque `view RoomAvgRating` del schema: sin eso Prisma la busca con el nombre del modelo y el query falla. |
+| Índice único de favoritos | `20261003141706` agrega un índice único parcial que garantiza **un solo** playlist de tipo `favorites` por usuario. Esa es la garantía de "Mis Favoritos", y no se lee en el código. |
+| Orden de rutas | En `user.routes.js`, `/me` se declara **antes** que `/:id`. Al revés, la ruta dinámica se come `/me` y responde `404`. |
+| Visibilidad de `user` | Hay dos `select`: el público (sin `email` ni hash) y el del dueño de la sesión (agrega `email`, que la UI muestra en el perfil propio). El `passwordHash` no se devuelve en ninguno de los dos. |
+| Cliente Prisma | Los services toman la instancia compartida con `require("../prisma/prismaClient")`. No se crea un `PrismaClient` por archivo. |
+| Seed | `prisma/seed.js` puebla solo `artist`, `song`, `genre`, `mood`, `song_artist`, `song_genre` y `song_mood` desde `prisma/data/songs.json`. Ignora los campos del JSON que no existan en la base, descarta las canciones sin género o sin mood, e inserta ids explícitos, por lo que adelanta las secuencias con `setval`. Es idempotente: se puede volver a correr. |
+| pgAdmin | `docker compose up -d` levanta también pgAdmin en `localhost:8080`; las credenciales están en `docker-compose.yml`. |
+| [ ] Pendiente | En `favorite.service.js` había una nota de "probar esto" con `const playlist = await ensureFavoritesPlaylist(userId)` comentada. Queda sin decidir si el service debe garantizar la playlist de favoritos o si la resuelve el controlador. |
+
 ---
 
 ## 3. Bloqueantes (P0) — sin esto no se incorpora nada

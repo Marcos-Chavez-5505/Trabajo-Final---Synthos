@@ -65,8 +65,6 @@ async function getFavorites(userId) {
 		select: { id: true, name: true },
 	});
 
-	//! PRUEBEN SI FUNCIONA ESTO
-	// const playlist = await ensureFavoritesPlaylist(userId);
 
 	const favorites = await prisma.favorite.findMany({
 		where: { idUser: userId },

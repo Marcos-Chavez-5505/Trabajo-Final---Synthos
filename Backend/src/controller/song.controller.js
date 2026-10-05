@@ -26,9 +26,6 @@ async function getSongById(req, res, next) {
 
 async function searchSongs(req, res, next) {
 	try {
-		// `query` puede no venir: el service lo normaliza a "" y devuelve el
-		// catalogo paginado. `page`/`pageSize` sin validas tambien: el service los
-		// acota a un rango valido.
 		const { query, page, pageSize } = req.query;
 
 		const result = await songService.searchSongs(query, { page, pageSize });
