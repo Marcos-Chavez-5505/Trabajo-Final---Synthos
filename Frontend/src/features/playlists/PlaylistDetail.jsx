@@ -35,7 +35,7 @@ export default function PlaylistDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { playSongs } = usePlayer()
+  const { playSongs, removeFromPlaylistQueue, clearQueueIfSource } = usePlayer()
   const { isFavorite } = useFavorites()
 
   const userId = user?.id ?? null
@@ -93,17 +93,14 @@ export default function PlaylistDetail() {
   async function handleRemoveSong(songId) {
     const updated = await removeSongFromPlaylist(userId, id, songId)
 
+    // Solo si el backend confirmó el borrado: la cola nunca puede quedar más
+    // sincronizada que el servidor.
     if (updated) {
       setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
-    }
-  }
 
-  async function handleUpdate({ name, description }) {
-    const updated = await updatePlaylist(userId, id, { name, description })
-
-    if (updated) {
-      setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
-      setEditing(false)
+      // Solo si la cola es de esta playlist: si lo que suena es el catálogo, la
+      // búsqueda u otra playlist, esta canción sigue siendo válida ahí.
+      removeFromPlaylistQueue(songId, id)
     }
   }
 
@@ -118,7 +115,22 @@ export default function PlaylistDetail() {
 
     const deleted = await removePlaylist(userId, id)
 
-    if (deleted) navigate('/playlists')
+    if (deleted) {
+      // Si la playlist era la que estaba sonando, sus canciones ya no existen:
+      // la cola se vacía en vez de quedar con una copia huérfana. No-op si lo que
+      // sonaba era el catálogo, la búsqueda u otra playlist.
+      clearQueueIfSource(id)
+      navigate('/playlists')
+    }
+  }
+
+  async function handleUpdate({ name, description }) {
+    const updated = await updatePlaylist(userId, id, { name, description })
+
+    if (updated) {
+      setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
+      setEditing(false)
+    }
   }
 
   return (
@@ -156,7 +168,12 @@ export default function PlaylistDetail() {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => playSongs(playable)}
+                  onClick={() =>
+                    playSongs(playable, 0, {
+                      playlistId: id,
+                      isFavorites: Boolean(playlist.isFavorites),
+                    })
+                  }
                   disabled={playable.length === 0}
                   className="rounded px-4 py-2 Fucsia Button disabled:opacity-50"
                 >
@@ -216,7 +233,20 @@ export default function PlaylistDetail() {
                       song={song}
                       index={index}
                       isFavorite={isFavorite(song.id)}
-                      onPlay={() => playSongs(playable, index)}
+                      onPlay={() =>
+                        playSongs(
+                          playable,
+                          // `index` es la posición en `songs`, que puede tener
+                          // huecos (`null`) por canciones que el backend ya no
+                          // conoce. La cola arranca desde `playable`, así que hay
+                          // que translating a esa posición o se reproduce otra.
+                          songs.slice(0, index).filter(Boolean).length,
+                          {
+                            playlistId: id,
+                            isFavorites: Boolean(playlist.isFavorites),
+                          }
+                        )
+                      }
                       onRemove={() => handleRemoveSong(song.id)}
                     />
                   )}

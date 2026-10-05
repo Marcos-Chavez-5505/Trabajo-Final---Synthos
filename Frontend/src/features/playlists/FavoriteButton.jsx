@@ -2,6 +2,7 @@ import { useState } from 'react'
 import emptyHeartIcon from '../../assets/empty_heart.svg'
 import fullHeartIcon from '../../assets/full_heart.svg'
 import useFavorites from '../../hooks/useFavorites.js'
+import usePlayer from '../../hooks/usePlayer.js'
 
 /**
  * Corazón de favorito de la canción que está sonando.
@@ -17,6 +18,7 @@ import useFavorites from '../../hooks/useFavorites.js'
  */
 export default function FavoriteButton({ songId, className = '' }) {
   const { isFavorite, toggleFavorite } = useFavorites()
+  const { removeFromFavoritesQueue } = usePlayer()
   const [pending, setPending] = useState(false)
 
   if (!songId) return null
@@ -31,7 +33,15 @@ export default function FavoriteButton({ songId, className = '' }) {
     setPending(true)
 
     try {
-      await toggleFavorite(songId)
+      const nowFavorite = await toggleFavorite(songId)
+
+      // Desmarcar quita la canción de "Mis Favoritos". Si lo que está sonando es
+      // justamente esa playlist, hay que sacarla de la cola también o seguiría
+      // reproduciéndose. `removeFromFavoritesQueue` es no-op en cualquier otra
+      // fuente: marcar o desmarcar no invalida una canción del catálogo.
+      if (!nowFavorite) {
+        removeFromFavoritesQueue(songId)
+      }
     } finally {
       setPending(false)
     }
