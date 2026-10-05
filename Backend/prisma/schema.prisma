@@ -253,6 +253,10 @@ view user_top_genre {
 view RoomAvgRating {
   id_room    Int
   avg_rating Decimal?
+
+  // La vista se crea a mano en la migracion add_room_avg_rating_view, con este
+  // nombre en snake_case. Sin el @@map, Prisma la buscaria como "RoomAvgRating".
+  @@map("room_avg_rating")
 }
 
 enum PlaylistType {
