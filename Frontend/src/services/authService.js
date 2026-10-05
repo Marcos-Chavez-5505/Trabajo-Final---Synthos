@@ -52,10 +52,12 @@ export function clearSession() {
 /**
  * Reconstruye la sesión al arrancar la app.
  *
- * Con sesión guardada valida el token contra `/users/me` (así un token vencido
- * no deja entrar) y refresca el usuario cacheado. Si el backend responde 401/404
- * la sesión ya no sirve y se limpia. Si hay error de red se devuelve el usuario
- * guardado para no desloguear por estar sin conexión.
+ * Con sesión guardada valida el token contra `/users/me` (así un token
+ * vencido no deja entrar) y refresca el usuario cacheado. Si el backend responde
+ * 401/404 la sesión ya no sirve y se limpia. Si no hay red se devuelve el usuario
+ * guardado para no desloguear por estar sin conexión; ante un 5xx se devuelve
+ * `null` sin borrar lo guardado, para que la app pida iniciar sesión pero la
+ * sesión sobreviva a un problema pasajero del servidor.
  */
 export async function getCurrentUser() {
   const session = readSession()
@@ -72,12 +74,23 @@ export async function getCurrentUser() {
 
     return user
   } catch (error) {
-    if (error instanceof ApiError && (error.status === 401 || error.status === 404)) {
-      clearSession()
-      return null
+    // Lo importante es distinguir "no hubo respuesta" de "el servidor respondió
+    // con un error": un 500 también es un `ApiError`. Si el fallback se aplicaba
+    // ante cualquier error, un backend roto devolvía un usuario cacheado y
+    // `RequireAuth` dejaba entrar a Home sin pedir inicio de sesión.
+    if (!(error instanceof ApiError)) {
+      return session.user ? toUser(session.user) : null
     }
 
-    return session.user ? toUser(session.user) : null
+    // Token vencido o usuario que ya no existe: la sesión no sirve más y se
+    // descarta, así no se reintenta en cada arranque.
+    if (error.status === 401 || error.status === 404) {
+      clearSession()
+    }
+
+    // Cualquier otro status (5xx) no borra lo guardado, pero tampoco habilita el
+    // acceso: la guarda de ruta decide.
+    return null
   }
 }
 
