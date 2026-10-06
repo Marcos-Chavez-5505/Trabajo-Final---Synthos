@@ -39,8 +39,10 @@ export default function TopBar() {
 
   return (
     <header className="flex items-center justify-between px-6 py-4">
-      <div className="flex gap-2">
-        {/* TODO(agente): navegación atrás/adelante (historial de router) */}
+      {/* TODO(agente): navegación atrás/adelante (historial de router) */}
+      {/* `hidden` los apaga: nunca se conectaron a useNavigate, así que no
+          hacen nada. Al implementarles onClick, sacar el `hidden`. */}
+      <div className="hidden gap-2">
         <button type="button" className="rounded-full Volume px-2 py-1 Button">←</button>
         <button type="button" className="rounded-full Volume px-2 py-1 Button">→</button>
       </div>

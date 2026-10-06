@@ -14,16 +14,13 @@ import {
 } from '../../components/ui/dropdown-menu.tsx'
 import {
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from '../../components/ui/sidebar.tsx'
 import useAuth from '../../hooks/useAuth.js'
 import useFollow from './useFollow.js'
 import logoutIcon from '../../assets/logout.svg'
 import playlistIcon from '../../assets/playlist.svg'
-import threeDotsIcon from '../../assets/three_dots.svg'
 import userIcon from '../../assets/user.svg'
 /**
  * Resumen del usuario de la sesión para el pie del Sidebar (TS-10).
@@ -37,9 +34,21 @@ import userIcon from '../../assets/user.svg'
  * (`canFollow` es false para uno mismo) y solo quedan los contadores, que son
  * los que se piden en la primera carga.
  *
- * La fila es un `SidebarMenuItem` como el resto del menú, con un
- * `SidebarMenuAction` que abre el menú de cuenta. Editar el perfil NO vive acá:
- * sigue siendo un modo local de la vista de perfil.
+ * La fila es un `SidebarMenuItem` como el resto del menú, y abre el menú de
+ * cuenta en los dos estados del sidebar. Editar el perfil NO vive acá: sigue
+ * siendo un modo local de la vista de perfil.
+ *
+ * Es un único `SidebarMenuButton` para los dos estados a propósito. Antes se
+ * bifurcaba en JSX según `state === 'collapsed'`, lo que remontaba el botón y el
+ * avatar: el nodo nuevo ya nacía con la altura final de 32px y la
+ * `transition-[width,height,padding]` de `SidebarMenuButton` no tenía de dónde
+ * interpolar, así que el avatar saltaba de golpe al piso. Con un nodo solo, el
+ * alto interpola de 48px a 32px y, como el footer está anclado abajo de la
+ * columna, el avatar se desliza 8px hacia abajo. El texto se oculta con
+ * `group-data-[collapsible=icon]:hidden`, igual que el resto del sidebar.
+ *
+ * Perder el link directo a /perfil no deja nada inaccesible: está el ítem
+ * "Perfil" de la navegación y el ítem "Mi perfil" de este mismo menú.
  *
  * Vive en la feature y no en `components/layout/Sidebar.jsx` porque consulta
  * un service, igual que `MisPlaylists` de TS-09.
@@ -48,8 +57,6 @@ export default function ProfileSummary() {
   const { user, logout } = useAuth()
   const userId = user?.id ?? null
   const { followerCount, followingCount } = useFollow(userId)
-  const { state } = useSidebar()
-  const isCollapsed = state === 'collapsed'
   const onProfile = useLocation().pathname.startsWith('/perfil')
 
   if (!user) return null
@@ -110,47 +117,24 @@ export default function ProfileSummary() {
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
-          {isCollapsed ? (
-            <DropdownMenuTrigger
-              render={
-                <SidebarMenuButton
-                  size="lg"
-                  tooltip="Menú de la cuenta"
-                  className="justify-center"
-                />
-              }
-            >
-              {avatar}
-            </DropdownMenuTrigger>
-          ) : (
-            <>
+          <DropdownMenuTrigger
+            render={
               <SidebarMenuButton
-                render={<Link to="/perfil" />}
                 size="lg"
                 isActive={onProfile}
-              >
-                {avatar}
-                <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                  <p className="truncate TextMedium">{user.username}</p>
-                  <p className="truncate TextTiny text-muted-foreground">
-                    {followerCount} {followerCount === 1 ? 'seguidor' : 'seguidores'} ·{' '}
-                    {followingCount} {followingCount === 1 ? 'seguido' : 'seguidos'}
-                  </p>
-                </div>
-              </SidebarMenuButton>
-
-              <DropdownMenuTrigger
-                render={<SidebarMenuAction aria-label="Menú de la cuenta" />}
-              >
-                <img
-                  src={threeDotsIcon}
-                  alt=""
-                  aria-hidden="true"
-                  className="h-5 w-5"
-                />
-              </DropdownMenuTrigger>
-            </>
-          )}
+                tooltip="Menú de la cuenta"
+              />
+            }
+          >
+            {avatar}
+            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+              <p className="truncate TextMedium">{user.username}</p>
+              <p className="truncate TextTiny text-muted-foreground">
+                {followerCount} {followerCount === 1 ? 'seguidor' : 'seguidores'} ·{' '}
+                {followingCount} {followingCount === 1 ? 'seguido' : 'seguidos'}
+              </p>
+            </div>
+          </DropdownMenuTrigger>
 
           {menu}
         </DropdownMenu>

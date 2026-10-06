@@ -57,7 +57,7 @@ export default function PlayerBar() {
   if (!hasQueue) return null
 
   return (
-    <footer className="Surface relative flex shrink-0 flex-col border-t border-sidebar-border">
+    <footer className="Volume relative flex shrink-0 flex-col border-t border-sidebar-border">
       <div className="flex items-center gap-4 px-4 py-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <SongCover song={song} />
