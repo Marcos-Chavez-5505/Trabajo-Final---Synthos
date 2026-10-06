@@ -78,6 +78,10 @@ export default function ProgressBar({
         {formatDuration(currentTime)}
       </span>
 
+      {/* Área clicable ampliada: el pseudo-elemento invisible (before:) extiende
+          la zona de interacción del track arriba y abajo (-inset-y-3 = 12px)
+          sin cambiar el layout ni el aspecto. Sus eventos llegan a los
+          handlers del track. */}
       <div
         ref={trackRef}
         role="slider"
@@ -92,7 +96,7 @@ export default function ProgressBar({
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
         onKeyDown={handleKeyDown}
-        className={`group relative w-full cursor-pointer touch-none rounded-full Volume outline-none focus-visible:ring-2 Fucsia ${trackHeight}`}
+        className={`group relative w-full cursor-pointer touch-none rounded-full Wall outline-none focus-visible:ring-2 focus-visible:ring-fucsia before:absolute before:inset-x-0 before:-inset-y-3 before:content-[''] ${trackHeight}`}
       >
         <div
           className="h-full rounded-full Fucsia"
