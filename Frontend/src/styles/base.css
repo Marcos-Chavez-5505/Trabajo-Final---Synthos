@@ -1,4 +1,11 @@
 /* Resets y estilos base del documento. Los valores salen de tokens.css. */
+@font-face {
+  font-family: 'SynthosLogo';
+  src: url('../fonts/Stereofunk.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
 
 @layer base {
   * {
@@ -41,5 +48,43 @@
   ::selection {
     background: var(--ds-fucsia);
     color: var(--ds-lighter);
+  }
+
+
+
+  /* Añadidos recientemente */
+
+  /* Para que el usuario no pueda arrastrar las imágenes */
+  img, svg {
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none;     /* IE 10 and IE 11 */
+    user-select: none;         /* Standard syntax */
+    -webkit-user-drag: none;   /* For older WebKit browsers */
+    user-drag: none;
+  }
+
+  /* Barra scroll */
+  html {
+    scrollbar-gutter: stable;
+  }
+  html::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  html::-webkit-scrollbar-thumb {
+    border-radius: 6px;
+    background-color: var(--ds-plaster);
+  }
+  html::-webkit-scrollbar-thumb:hover {
+    background-color: var(--ds-plaster);
+  }
+  @supports (scrollbar-color: gray black) {
+    html {
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+    }
+    html {
+      scrollbar-color: var(--ds-plaster) transparent;
+      /* background: var(--color-s-bg); */
+    }
   }
 }
