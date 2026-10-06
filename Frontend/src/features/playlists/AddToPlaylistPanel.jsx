@@ -6,7 +6,15 @@ import {
   removeSongFromPlaylist,
 } from '../../services/playlistsService.js'
 import useSongPlaylists from './useSongPlaylists.js'
-import playlistIcon from '../../assets/playlist.svg'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuPortal,
+  DropdownMenuPositioner,
+  DropdownMenuPopup,
+  DropdownMenuCheckboxItem,
+  DropdownMenuGroup,
+} from '../../components/ui/dropdown-menu.tsx'
 
 /**
  * Lista de playlists del usuario para agregar o quitar la canción que está sonando.
@@ -80,39 +88,51 @@ export default function AddToPlaylistPanel({ songId, onClose }) {
           .
         </p>
       ) : (
-        <ul className="mt-4 flex flex-col gap-1">
-          {playlists.map((playlist) => {
-            const already = contains(playlist)
-            const pending = pendingId === playlist.id
-
-            return (
-              <li key={playlist.id}>
-                <button
-                  type="button"
-                  onClick={() => handleToggle(playlist)}
-                  disabled={pending}
-                  aria-pressed={already}
-                  className="flex w-full items-center gap-2 rounded px-2 py-2 text-left TextRegluar hover:opacity-80 disabled:opacity-60"
-                >
-                  <img
-                    src={playlistIcon}
-                    alt=""
-                    aria-hidden="true"
-                    className="h-4 w-4 shrink-0 invert opacity-70"
-                  />
-                  <span className="min-w-0 flex-1 truncate">{playlist.name}</span>
-                  <span
-                    className={`TextTiny shrink-0 ${
-                      already ? 'text-accent' : 'text-muted-foreground'
-                    }`}
+        <DropdownMenu open modal={false}>
+          <DropdownMenuTrigger asChild>
+            <span className="sr-only">Abrir menú de playlists</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuPositioner side="top" align="end" sideOffset={8}>
+              <DropdownMenuPopup className="SurfaceLight Elevation1 CardRadius w-72 p-2">
+                <div className="flex items-center justify-between px-1 py-1">
+                  <h3 className="Header4">Agregar a playlist</h3>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Cerrar"
+                    className="rounded px-2 py-1 TextMedium hover:opacity-70"
                   >
-                    {pending ? '…' : already ? 'Quitar' : 'Agregar'}
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+                    Cerrar
+                  </button>
+                </div>
+
+                <DropdownMenuGroup>
+                  {playlists.map((playlist) => {
+                    const already = contains(playlist)
+                    const pending = pendingId === playlist.id
+
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={playlist.id}
+                        checked={already}
+                        disabled={pending}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          handleToggle(playlist)
+                        }}
+                        onCheckedChange={() => {}}
+                        aria-label={`${already ? 'Quitar' : 'Agregar'} ${playlist.name} a la playlist`}
+                      >
+                        <span className="min-w-0 flex-1 truncate">{playlist.name}</span>
+                      </DropdownMenuCheckboxItem>
+                    )
+                  })}
+                </DropdownMenuGroup>
+              </DropdownMenuPopup>
+            </DropdownMenuPositioner>
+          </DropdownMenuPortal>
+        </DropdownMenu>
       )}
     </div>
   )
