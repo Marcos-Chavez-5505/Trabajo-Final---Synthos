@@ -50,6 +50,8 @@
   --ds-size-header1: 56px;
   --ds-lh-header1: 64px;
 
+  --ds-font-logo: 'SynthosLogo', var(--ds-font);
+
   /* Elevación */
   --ds-elevation-1: 0px 4px 8px 2px var(--ds-wall);
 

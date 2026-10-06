@@ -110,6 +110,9 @@
     font-weight: var(--ds-weight-regular);
     line-height: var(--ds-lh-medium);
   }
+  .LogoSynthos {
+    font-family: var(--ds-font-logo);
+  }
 
   /* Elevación */
   .Elevation1 {
@@ -131,3 +134,8 @@
     height: var(--ds-size-media-card-play);
   }
 }
+
+  /* Color para texto fucsia */
+  .TextFucsia {
+    color: var(--ds-fucsia);
+  }

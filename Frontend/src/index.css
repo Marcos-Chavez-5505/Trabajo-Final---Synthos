@@ -64,7 +64,7 @@
   --destructive-foreground: var(--ds-lighter);
   --input: var(--ds-volume);
   --ring: var(--ds-fucsia);
-  --sidebar: var(--ds-wall);
+  --sidebar: var(--ds-surface-light);
   --sidebar-foreground: var(--ds-lighter);
   --sidebar-primary: var(--ds-fucsia);
   --sidebar-primary-foreground: var(--ds-surface);

@@ -3,6 +3,7 @@ import { Disc3, Flame, Home, ListMusic, Mic2, User } from 'lucide-react'
 import MisPlaylists from '../../features/playlists/MisPlaylists.jsx'
 import ProfileSummary from '../../features/social/ProfileSummary.jsx'
 import roomIcon from '../../assets/join_music_room.svg'
+import logoSynthos from '../../assets/logo_synthos.svg'
 import {
   Sidebar as SidebarRoot,
   SidebarContent,
@@ -57,18 +58,11 @@ function MenuItem({ item, isActive }) {
         }
       >
         {item.src ? (
-          // Los SVG del set traen `#F4F0F9` hardcodeado (= token `Lighter`), así que
-          // no heredan el color del texto y quedan igual de claros sobre el fondo
-          // `Fucsia` del ítem activo, con el `text-sidebar-primary-foreground`
-          // oscuro de los íconos de lucide al lado (regla 10 de AGENTS.md).
-          // `invert` los pasa a oscuros para que acompañen al texto. Es el mismo
-          // truco que usan las carátulas sin `coverUrl` (`MediaCard`, `PlaylistTile`).
-          // El hover no lo necesita: ahí el texto también queda en `Lighter`.
           <img
             src={item.src}
             alt=""
             aria-hidden="true"
-            className={`h-5 w-5${isActive ? ' invert' : ''}`}
+            className={`size-4 shrink-0${isActive ? ' invert' : ''}`}
           />
         ) : (
           <Icon />
@@ -88,8 +82,29 @@ export default function Sidebar() {
   return (
     <SidebarRoot collapsible="icon">
       <SidebarHeader>
-        <div className="flex h-8 items-center rounded-md px-2">
-          <span className="Header4">Synthos</span>
+        {/* Un solo nodo, por la misma razón que el avatar de `ProfileSummary`:
+            bifurcar en JSX según `state` remontaría el logo y la transición no
+            tendría de dónde interpolar. Con un nodo, el alto baja de 48px a 32px
+            con `transition-[width,height,padding]`, y como el header está anclado
+            arriba de la columna el logo se desliza 8px hacia arriba, mientras que
+            en el footer el avatar baja. Las clases son las mismas que lleva
+            `SidebarMenuButton` con `size="lg"`, para que ambos extremos se
+            comporten igual.
+
+            El logo queda de 32px porque es el ancho usable que deja el `p-2` de
+            `SidebarHeader` sobre los `3rem` del sidebar contraído, igual que el
+            avatar. Un logo más chico quedaría pegado al borde en vez de centrado.
+            El texto se oculta con `group-data-[collapsible=icon]:hidden`, igual
+            que el resto del sidebar. En mobile no hay `data-collapsible`, así que
+            logo y nombre se ven siempre.
+
+            El `fill` del SVG ya es `#EF2F62`, que es `--ds-fucsia`, y viene
+            hardcodeado como el resto del set: no se recolorea desde CSS. */}
+        <div className="flex h-12 w-full items-center gap-2 overflow-hidden rounded-md p-2 transition-[width,height,padding] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0!">
+          <img src={logoSynthos} alt="" aria-hidden="true" className="size-8 shrink-0" />
+          <span className="LogoSynthos TextFucsia truncate group-data-[collapsible=icon]:hidden text-lg tracking-wider">
+            Synthos
+          </span>
         </div>
       </SidebarHeader>
 
