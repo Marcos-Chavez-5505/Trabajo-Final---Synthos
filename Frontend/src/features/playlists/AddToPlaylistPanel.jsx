@@ -12,6 +12,7 @@ import {
   DropdownMenuPopup,
   DropdownMenuPositioner,
   DropdownMenuCheckboxItem,
+  DropdownMenuGroup,
 } from '../../components/ui/dropdown-menu.tsx'
 
 /**
@@ -102,28 +103,27 @@ export default function AddToPlaylistPanel({ songId, onClose }) {
                 </button>
               </div>
 
-              <ul className="mt-2 flex flex-col gap-0.5">
+              <DropdownMenuGroup>
                 {playlists.map((playlist) => {
                   const already = contains(playlist)
                   const pending = pendingId === playlist.id
 
                   return (
-                    <li key={playlist.id}>
-                      <DropdownMenuCheckboxItem
-                        checked={already}
-                        disabled={pending}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          handleToggle(playlist)
-                        }}
-                        aria-label={`${already ? 'Quitar' : 'Agregar'} ${playlist.name} a la playlist`}
-                      >
-                        <span className="min-w-0 flex-1 truncate">{playlist.name}</span>
-                      </DropdownMenuCheckboxItem>
-                    </li>
+                    <DropdownMenuCheckboxItem
+                      key={playlist.id}
+                      checked={already}
+                      disabled={pending}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        handleToggle(playlist)
+                      }}
+                      aria-label={`${already ? 'Quitar' : 'Agregar'} ${playlist.name} a la playlist`}
+                    >
+                      <span className="min-w-0 flex-1 truncate">{playlist.name}</span>
+                    </DropdownMenuCheckboxItem>
                   )
                 })}
-              </ul>
+              </DropdownMenuGroup>
             </DropdownMenuPopup>
           </DropdownMenuPositioner>
         </DropdownMenuPortal>
