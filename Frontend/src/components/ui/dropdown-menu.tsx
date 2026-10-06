@@ -102,7 +102,7 @@ function DropdownMenuCheckboxItem({
       className={cn(itemClass, "pl-8", className)}
       {...props}
     >
-      <MenuPrimitive.ItemIndicator className="absolute left-2 flex items-center justify-center">
+      <MenuPrimitive.CheckboxItemIndicator className="absolute left-2 flex items-center justify-center">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="16"
@@ -118,7 +118,7 @@ function DropdownMenuCheckboxItem({
         >
           <polyline points="20 6 9 17 4 12" />
         </svg>
-      </MenuPrimitive.ItemIndicator>
+      </MenuPrimitive.CheckboxItemIndicator>
       {children}
     </MenuPrimitive.CheckboxItem>
   )
