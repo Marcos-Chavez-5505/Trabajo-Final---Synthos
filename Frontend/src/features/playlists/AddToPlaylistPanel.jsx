@@ -86,8 +86,9 @@ export default function AddToPlaylistPanel({ songId, onClose }) {
         </p>
       ) : (
         <DropdownMenu open modal={false}>
-          <DropdownMenuPositioner side="top" align="end" sideOffset={8}>
-            <DropdownMenuPopup className="SurfaceLight Elevation1 CardRadius w-72 p-2">
+          <DropdownMenuPortal>
+            <DropdownMenuPositioner side="top" align="end" sideOffset={8}>
+              <DropdownMenuPopup className="SurfaceLight Elevation1 CardRadius w-72 p-2">
               <div className="flex items-center justify-between px-1 py-1">
                 <h3 className="Header4">Agregar a playlist</h3>
                 <button
@@ -124,6 +125,7 @@ export default function AddToPlaylistPanel({ songId, onClose }) {
               </ul>
             </DropdownMenuPopup>
           </DropdownMenuPositioner>
+        </DropdownMenuPortal>
         </DropdownMenu>
       )}
     </div>
