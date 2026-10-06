@@ -8,6 +8,7 @@ import {
 import useSongPlaylists from './useSongPlaylists.js'
 import {
   DropdownMenu,
+  DropdownMenuPortal,
   DropdownMenuPopup,
   DropdownMenuPositioner,
   DropdownMenuCheckboxItem,
