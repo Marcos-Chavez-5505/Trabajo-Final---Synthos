@@ -91,6 +91,39 @@ function DropdownMenuGroupLabel({
   )
 }
 
+function DropdownMenuCheckboxItem({
+  className,
+  children,
+  ...props
+}: MenuPrimitive.CheckboxItem.Props) {
+  return (
+    <MenuPrimitive.CheckboxItem
+      data-slot="dropdown-menu-checkbox-item"
+      className={cn(itemClass, "pl-8", className)}
+      {...props}
+    >
+      <MenuPrimitive.ItemIndicator className="absolute left-2 flex items-center justify-center">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="size-4"
+          aria-hidden="true"
+        >
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </MenuPrimitive.ItemIndicator>
+      {children}
+    </MenuPrimitive.CheckboxItem>
+  )
+}
+
 function DropdownMenuItem({ className, ...props }: MenuPrimitive.Item.Props) {
   return (
     <MenuPrimitive.Item
@@ -137,5 +170,6 @@ export {
   DropdownMenuGroupLabel,
   DropdownMenuItem,
   DropdownMenuLinkItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 }

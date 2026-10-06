@@ -6,7 +6,11 @@ import {
   removeSongFromPlaylist,
 } from '../../services/playlistsService.js'
 import useSongPlaylists from './useSongPlaylists.js'
-import playlistIcon from '../../assets/playlist.svg'
+import {
+  DropdownMenu,
+  DropdownMenuPopup,
+  DropdownMenuCheckboxItem,
+} from '../../components/ui/dropdown-menu.tsx'
 
 /**
  * Lista de playlists del usuario para agregar o quitar la canción que está sonando.
@@ -80,39 +84,44 @@ export default function AddToPlaylistPanel({ songId, onClose }) {
           .
         </p>
       ) : (
-        <ul className="mt-4 flex flex-col gap-1">
-          {playlists.map((playlist) => {
-            const already = contains(playlist)
-            const pending = pendingId === playlist.id
+        <DropdownMenu open modal={false}>
+          <DropdownMenuPopup className="SurfaceLight Elevation1 CardRadius w-72 p-2">
+            <div className="flex items-center justify-between px-1 py-1">
+              <h3 className="Header4">Agregar a playlist</h3>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Cerrar"
+                className="rounded px-2 py-1 TextMedium hover:opacity-70"
+              >
+                Cerrar
+              </button>
+            </div>
 
-            return (
-              <li key={playlist.id}>
-                <button
-                  type="button"
-                  onClick={() => handleToggle(playlist)}
-                  disabled={pending}
-                  aria-pressed={already}
-                  className="flex w-full items-center gap-2 rounded px-2 py-2 text-left TextRegluar hover:opacity-80 disabled:opacity-60"
-                >
-                  <img
-                    src={playlistIcon}
-                    alt=""
-                    aria-hidden="true"
-                    className="h-4 w-4 shrink-0 invert opacity-70"
-                  />
-                  <span className="min-w-0 flex-1 truncate">{playlist.name}</span>
-                  <span
-                    className={`TextTiny shrink-0 ${
-                      already ? 'text-accent' : 'text-muted-foreground'
-                    }`}
-                  >
-                    {pending ? '…' : already ? 'Quitar' : 'Agregar'}
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+            <ul className="mt-2 flex flex-col gap-0.5">
+              {playlists.map((playlist) => {
+                const already = contains(playlist)
+                const pending = pendingId === playlist.id
+
+                return (
+                  <li key={playlist.id}>
+                    <DropdownMenuCheckboxItem
+                      checked={already}
+                      disabled={pending}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        handleToggle(playlist)
+                      }}
+                      aria-label={`${already ? 'Quitar' : 'Agregar'} ${playlist.name} a la playlist`}
+                    >
+                      <span className="min-w-0 flex-1 truncate">{playlist.name}</span>
+                    </DropdownMenuCheckboxItem>
+                  </li>
+                )
+              })}
+            </ul>
+          </DropdownMenuPopup>
+        </DropdownMenu>
       )}
     </div>
   )
