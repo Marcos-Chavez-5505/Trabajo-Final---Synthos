@@ -157,6 +157,7 @@ Una vez que el usuario autoriza, cada cambio viaja en su propia rama saliendo de
 - **Nada ajeno por accidente.** Revisar `git status` antes de `git add` y stagear con rutas explícitas archivo por archivo, nunca con `git add .` ni `git add -A`. Archivo frecuentemente no deseado: el `package-lock.json` de la raíz (es un artefacto vacío, sin `package.json` que lo justifique; los locks reales viven en `Backend/` y `Frontend/`).
 - **Verificar antes de pushear:** correr el lint y el build de `Frontend` (o el test que aplique). Recién con eso en verde se hace `git push -u origin <rama>`.
 - **El PR lo abre el usuario.** El agente pushea la rama y pasa el link que devuelve GitHub (`.../pull/new/<rama>`), sin abrirlo.
+- **Descripción de la rama.** Junto con el link del PR, el agente entrega un resumen breve con los puntos más importantes del cambio. Ese resumen se vuelca en `.github/PULL_REQUEST_TEMPLATE.md`, que GitHub carga automáticamente al abrir un PR contra `dev` o `main`. Los puntos se ordenan con alertas de Markdown (`> [!NOTE]`, `> [!IMPORTANT]`, `> [!WARNING]`, `> [!TIP]`), no como texto plano suelto: en qué consiste el cambio, decisiones relevantes, riesgos y cómo verificarlo.
 - Al terminar, volver a `dev` para que el repo quede limpio y listo para el siguiente cambio.
 
 ## 5. Pendiente / decisiones abiertas
