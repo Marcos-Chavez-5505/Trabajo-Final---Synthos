@@ -98,7 +98,7 @@ export async function updateProfile({ username, bio, avatarUrl }) {
 // pasa `user.id` de `useAuth()`.
 //
 // El seguimiento ya está migrado al backend: `POST`/`DELETE /api/users/:id/follow`
-// y `GET /api/users/:id/followers|following` (ver REQUERIMIENTOS-BACKEND.md §6).
+// y `GET /api/users/:id/followers|following` (ver docs/REQUERIMIENTOS-BACKEND.md §6).
 
 // El Sidebar (y cualquier pantalla ya montada) no se remonta al seguir o dejar
 // de seguir desde otra vista, así que `ProfileSummary` y los perfiles quedarían

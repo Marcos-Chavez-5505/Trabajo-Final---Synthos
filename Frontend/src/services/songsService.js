@@ -1,6 +1,6 @@
 import { get } from './api.js'
 
-// Contrato de la API real (ver ESPECIFICACIONES-BACKEND.md en la raíz):
+// Contrato de la API real (ver docs/ESPECIFICACIONES-BACKEND.md):
 //   GET /api/songs             -> { songs, nextCursor, hasMore }
 //   GET /api/songs/search      -> { items, total, page, pageSize, totalPages }
 //   GET /api/songs/:id         -> song
@@ -28,7 +28,7 @@ export const SEARCH_PAGE_SIZE = 10
  * - `genre` se arma con el primer nombre de `songGenres[].genre.name`. El backend
  *   anida la entidad en el include, así que hay nombre; si una canción no tuviera
  *   género queda en `null` y la card muestra la etiqueta vacía.
- * - `album` y `source` no existen en el esquema (ver PENDIENTES.md). `album` solo
+ * - `album` y `source` no existen en el esquema (ver docs/PENDIENTES.md). `album` solo
  *   se usa como `alt` de la carátula, que ya cae a `title`; `source` es la línea
  *   "Reproduciéndose desde", que se oculta si no viene.
  */

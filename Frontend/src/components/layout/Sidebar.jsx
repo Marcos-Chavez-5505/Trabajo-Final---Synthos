@@ -23,7 +23,7 @@ const NAV_ITEMS = [
   // TS-17: "Salas" entra con ícono del set propio (`join_music_room.svg`),
   // importado como URL y renderizado con `<img>` según la regla 10 de AGENTS.md.
   // El resto de los ítems sigue con lucide-react, que es la deuda que ya está
-  // anotada en PENDIENTES.md §2.
+  // anotada en docs/PENDIENTES.md §2.
   { label: 'Salas', to: '/salas', src: roomIcon },
   { label: 'Perfil', to: '/perfil', icon: User },
 ]
@@ -43,7 +43,7 @@ function MenuItem({ item, isActive }) {
   const Icon = item.icon
 
   // `item.icon` es un componente de lucide-react (deuda pendiente en
-  // PENDIENTES.md §2); `item.src` es un SVG del set propio, que va como URL. Los
+  // docs/PENDIENTES.md §2); `item.src` es un SVG del set propio, que va como URL. Los
   // dos se dibujan acá para que la lista pueda ir migrando de a uno.
   return (
     <SidebarMenuItem>

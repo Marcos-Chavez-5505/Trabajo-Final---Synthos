@@ -74,10 +74,19 @@ src/
 │   └── base.css                #   resets, derivados con var()
 ├── index.css                   # entrypoint de Tailwind (convención Vite) + puente semántico de shadcn
 └── App.jsx
+```
 
+La documentación del proyecto vive en `docs/` (raíz del repo):
+
+```
 docs/
-└── plan/                       # planes de sprint en formato agente, uno por entrega
-    └── sprint-1-plan.md
+├── ESTRUCTURA.md                # onboarding: dónde está cada cosa y qué responsabilidad tiene
+├── PENDIENTES.md                # estado de migración a la API real y pendientes
+├── REQUERIMIENTOS-BACKEND.md    # requisitos por historia de usuario y su estado
+├── ESPECIFICACIONES-BACKEND.md  # contratos de la API con ejemplos de curl
+└── plan/                        # planes de sprint en formato agente, uno por entrega
+    ├── sprint-1-plan.md
+    └── sprint-2-plan.md
 ```
 
 ## 3. Convención de nombres
@@ -132,7 +141,7 @@ Ejemplos: `roomsService.js` → `listRooms()`, `getRoomById(id)`, `createRoom(da
 6. `mocks/` solo es consumido por su `xService.js` correspondiente (ej. `mocks/users.js` → `authService.js`/`usersService.js`), nunca directo desde componentes o features. Al migrar a backend real, solo se edita el contenido de `services/`; nada fuera de esa carpeta cambia.
 7. Nuevo archivo de servicio → agregar su convención de nombres a este documento.
 8. Antes de generar una feature nueva, revisar si ya existe folder en `features/` correspondiente.
-9. `docs/plan/` contiene los planes de sprint en formato agente (autocontenidos). Nuevo sprint → nuevo archivo ahí, no sobrescribir los anteriores.
+9. `docs/plan/` (en la raíz del repo) contiene los planes de sprint en formato agente (autocontenidos). Nuevo sprint → nuevo archivo ahí, no sobrescribir los anteriores.
 10. **Íconos: siempre desde `src/assets/*.svg`** (set de diseño propio), nunca de librerías de íconos. Se importan como **URL** (sin sufijo) y se usan con `<img src={...} alt="" aria-hidden="true" className="h-5 w-5" />`, dimensionados con utilidades Tailwind. **No** usar el sufijo `?react`: `@vitejs/plugin-react` no lo transforma en este proyecto, el import queda como string `data:image/svg+xml` y al renderizarlo como componente (`<Icon />`) revienta con `InvalidCharacterError: The tag name provided ('data:...')`. Los SVG traen `#F4F0F9` hardcodeado (= token `Lighter`), así que no se recolorean: para estado activo, jugar con el fondo (`Fucsia`/`Volume`) del botón, no con el color del ícono. Usar `<img>` con `alt` real solo para contenido (fotos, carátulas, avatares).
 11. **Tokens: los literales viven solo en `src/styles/tokens.css`.** `styles/utilities.css` (clases `.Wall`, `.Fucsia`, `.TextRegluar`…) y `styles/base.css` (resets) se derivan con `var(--ds-*)`, y el puente semántico de shadcn en `src/index.css` (`:root` con `--background`, `--primary`, `--sidebar*`… y el `@theme inline`) también: **nunca** escribir un hex, un `px` de fuente o un `box-shadow` en otro archivo CSS ni en estilos inline de un componente. Para un color nuevo: primero el token en `tokens.css`, después su clase (si corresponde al design system) o su mapeo en el `:root` de `index.css` (si es una utilidad semántica de shadcn que lo necesita). Las clases del design system viven en `@layer components`, así que una utilidad Tailwind las sobrescribe (`className="Wall bg-red-500"`). ⚠️ `components.json` apunta `tailwind.css` a `src/index.css`: el CLI de shadcn reinyecta ahí su propio `:root` neutral, que al ir después en la cascada pisa el design system — si se corre `npx shadcn add`, hay que revisar y volver a dejar el bloque en `var(--ds-*)`.
 12. **Git: no subir commits ni crear ramas sin autorización previa.** No ejecutar `git push` (ni `--force`/`--force-with-lease`, ni tags), **no crear ramas o tags**, no abrir PRs, y no hacer `reset --hard`/`rebase` sobre ramas ya publicadas, salvo que el usuario lo pida o lo autorice explícitamente en el mensaje. Sí se pueden hacer lecturas (`status`, `diff`, `log`, `show`) y commits locales. Ante la duda, **preguntar antes**: publicar afecta a otras personas y no se improvisa.
@@ -145,7 +154,7 @@ Una vez que el usuario autoriza, cada cambio viaja en su propia rama saliendo de
 - **Prefijo por tipo:** `feat/` funcionalidad nueva, `fix/` corrección de algo roto, `docs/` solo documentación o archivos `.md`. El prefijo va en el nombre de la rama, en minúsculas y con guiones.
 - **Un cambio por rama.** Si en una misma tanda hay cosas de dominios distintos (por ejemplo una feature y una corrección de `AGENTS.md`), son ramas separadas, no un commit mixto.
 - **Commits en español**, con el estilo de la regla 12 y cuerpo que explique el porqué, no el qué. Mensaje en imperativo, primera línea corta.
-- **Nada ajeno por accidente.** Revisar `git status` antes de `git add` y stagear con rutas explícitas archivo por archivo, nunca con `git add .` ni `git add -A`. Archivos frequentemente no deseados: `ESTRUCTURA.md` y el `package-lock.json` de la raíz (es un artefacto vacío, sin `package.json` que lo justifique; los locks reales viven en `Backend/` y `Frontend/`).
+- **Nada ajeno por accidente.** Revisar `git status` antes de `git add` y stagear con rutas explícitas archivo por archivo, nunca con `git add .` ni `git add -A`. Archivo frecuentemente no deseado: el `package-lock.json` de la raíz (es un artefacto vacío, sin `package.json` que lo justifique; los locks reales viven en `Backend/` y `Frontend/`).
 - **Verificar antes de pushear:** correr el lint y el build de `Frontend` (o el test que aplique). Recién con eso en verde se hace `git push -u origin <rama>`.
 - **El PR lo abre el usuario.** El agente pushea la rama y pasa el link que devuelve GitHub (`.../pull/new/<rama>`), sin abrirlo.
 - Al terminar, volver a `dev` para que el repo quede limpio y listo para el siguiente cambio.

@@ -208,7 +208,7 @@ Los shells son `ScreenPlaceholder` local en `AppRoutes.jsx`; cada pantalla se co
 
 **Nota (migración a backend).** Los criterios se cerraron contra el mock y después la pantalla pasó a la
 API real (`GET /api/songs/search?query=&page=&pageSize=`), así que el segundo criterio se cumple hoy
-sobre datos del servidor y no sobre el mock. Detalle en `ESPECIFICACIONES-BACKEND.md` (raíz):
+sobre datos del servidor y no sobre el mock. Detalle en `ESPECIFICACIONES-BACKEND.md` (`docs/`):
 
 - La paginación pasó de cursor a offset porque un cursor no puede expresar "la página 7".
 - Se sacó "álbumo" del copy: el backend no tiene columna `album` ni filtra por ella. Cuando se agregue,

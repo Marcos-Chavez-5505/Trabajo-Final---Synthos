@@ -143,7 +143,7 @@ del backend; el endpoint solo cambia de dónde viene la cola.
 
 **Estado:** la integración quedó completa. `listSongs()`, `getSongById()` y `searchSongs()` van contra
 el backend real, y el backend se ajustó para el paginado por offset y los nombres de género.
-Contrato en `ESPECIFICACIONES-BACKEND.md` (raíz).
+Contrato en `ESPECIFICACIONES-BACKEND.md` (`docs/`).
 
 Lo que queda son decisiones de producto y la validación contra la base real (8.4–8.8).
 

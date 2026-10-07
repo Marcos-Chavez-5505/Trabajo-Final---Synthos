@@ -100,7 +100,7 @@ export default function SearchSongs() {
       <SearchTabs
         tipo="canciones"
         title="Buscar canciones"
-        /* El backend no tiene columna `album` ni busca por él (ver PENDIENTES.md),
+        /* El backend no tiene columna `album` ni busca por él (ver docs/PENDIENTES.md),
            así que el copy promete solo lo que el endpoint puede cumplir. Cuando se
            agregue el filtro por álbum, vuelve "álbumo" acá. */
         subtitle="Buscá por título, artista o género."
