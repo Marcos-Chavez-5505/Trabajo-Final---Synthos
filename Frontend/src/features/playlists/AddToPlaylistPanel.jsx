@@ -6,11 +6,13 @@ import {
   removeSongFromPlaylist,
 } from '../../services/playlistsService.js'
 import useSongPlaylists from './useSongPlaylists.js'
+import playlistIcon from '../../assets/playlist.svg'
 import {
   DropdownMenu,
   DropdownMenuPositioner,
   DropdownMenuPopup,
   DropdownMenuGroup,
+  DropdownMenuGroupLabel,
   DropdownMenuCheckboxItem,
 } from '../../components/ui/dropdown-menu.tsx'
 
@@ -21,13 +23,18 @@ import {
  * botón "agregar" en cada card: el reproductor es el único lugar donde ya se sabe
  * qué canción está cargada.
  *
- * El menú se arma con el `DropdownMenu` de shadcn ( sobre Base UI), pero sin
- * `DropdownMenuTrigger`: el botón "+" del reproductor no es un trigger de Base UI
- * porque no se puede cambiar desde acá, y el panel ya se monta y desmonta según
- * ese botón. Por eso el ancla es esta caja vacía: el reproductor ya la coloca
- * justo arriba del "+", y `side="top"` + `align="end"` deja el popup en ese mismo
- * lugar. El popup no va en un portal a propósito: dentro del reproductor, el
- * `pointerdown` de afuera que lo cierra sigue viéndolo como parte del panel.
+ * Es el mismo menú que el de cuenta del Sidebar (`ProfileSummary`) y el de orden
+ * de `/salas` (`Rooms`): `DropdownMenu` de Base UI con el estilo por defecto del
+ * `DropdownMenuPopup`, sin card propio ni botón de cerrar, y el cierre con Escape
+ * o con el clic afuera.
+ *
+ * Lo que no puede ser igual es el trigger y el portal. El botón "+" del
+ * reproductor abre el panel y queda fuera de este archivo, así que no hay
+ * `DropdownMenuTrigger`: el popup se ancla a la caja que el reproductor ya
+ * posiciona arriba del botón (`side="top"`, `align="end"`) y se monta en línea en
+ * vez de teleportado. Eso también es lo que permite que el `pointerdown` de
+ * afuera del reproductor, el que lo cierra, siga viendo el popup como parte del
+ * panel en vez de como un clic en el exterior.
  *
  * Cada fila es un checkbox: si la canción ya está en la playlist, marcarla la
  * quita. "Mis Favoritos" se excluye de la lista: los favoritos se marcan con el
@@ -68,10 +75,10 @@ export default function AddToPlaylistPanel({ songId, onClose }) {
         modal={false}
         onOpenChange={(next, details) => {
           // El clic afuera lo cierra el reproductor (su listener envuelve este
-          // panel), así que acá solo se atiende Escape. También lo cerraría
-          // Base UI con `outside-press`, pero como el popup no tiene trigger, el
-          // clic en "+" contaría como afuera: cerraría y el reproductor lo
-          // volvería a abrir en el mismo gesto.
+          // panel), así que acá solo se atiende Escape. También lo cerraría Base
+          // UI con `outside-press`, pero como el popup no tiene trigger, el clic
+          // en "+" contaría como afuera: cerraría y el reproductor lo volvería a
+          // abrir en el mismo gesto.
           if (!next && details.reason === 'escape-key') onClose()
         }}
       >
@@ -83,27 +90,29 @@ export default function AddToPlaylistPanel({ songId, onClose }) {
           sideOffset={0}
           collisionPadding={8}
         >
-          <DropdownMenuPopup className="SurfaceLight Elevation1 CardRadius w-72 p-2">
-            <h3 className="Header4 px-2 py-1.5">Agregar a playlist</h3>
+          <DropdownMenuPopup>
+            <DropdownMenuGroup>
+              <DropdownMenuGroupLabel className="TextMedium">
+                Agregar a playlist
+              </DropdownMenuGroupLabel>
 
-            {loading ? (
-              <p className="text-muted-foreground TextMedium px-2 py-1.5">Cargando…</p>
-            ) : error ? (
-              <p className="Salmon TextMedium mx-2 my-1.5 rounded px-3 py-2">{error}</p>
-            ) : playlists.length === 0 ? (
-              <p className="text-muted-foreground TextMedium px-2 py-1.5">
-                Todavía no tenés playlists.{' '}
-                {/* El panel vive en el PlayerBar, que sobrevive a la navegación: sin
-                    cerrarlo al cambiar de ruta, "Creá una" te deja el panel flotando
-                    arriba de la biblioteca. */}
-                <Link to="/playlists" onClick={onClose} className="text-accent">
-                  Creá una
-                </Link>
-                .
-              </p>
-            ) : (
-              <DropdownMenuGroup>
-                {playlists.map((playlist) => {
+              {loading ? (
+                <p className="text-muted-foreground TextMedium px-2 py-1.5">Cargando…</p>
+              ) : error ? (
+                <p className="Salmon TextMedium mx-2 my-1 rounded px-3 py-2">{error}</p>
+              ) : playlists.length === 0 ? (
+                <p className="text-muted-foreground TextMedium px-2 py-1.5">
+                  Todavía no tenés playlists.{' '}
+                  {/* El panel vive en el PlayerBar, que sobrevive a la navegación: sin
+                      cerrarlo al cambiar de ruta, "Creá una" te deja el panel flotando
+                      arriba de la biblioteca. */}
+                  <Link to="/playlists" onClick={onClose} className="text-accent">
+                    Creá una
+                  </Link>
+                  .
+                </p>
+              ) : (
+                playlists.map((playlist) => {
                   const already = contains(playlist)
                   const pending = pendingId === playlist.id
 
@@ -112,17 +121,16 @@ export default function AddToPlaylistPanel({ songId, onClose }) {
                       key={playlist.id}
                       checked={already}
                       disabled={pending}
-                      // Explícito aunque sea el default: marcar una playlist no
-                      // debe cerrar el menú, para poder marcar varias.
-                      closeOnClick={false}
+                      label={playlist.name}
                       onCheckedChange={() => handleToggle(playlist)}
                     >
+                      <img src={playlistIcon} alt="" aria-hidden="true" />
                       <span className="min-w-0 flex-1 truncate">{playlist.name}</span>
                     </DropdownMenuCheckboxItem>
                   )
-                })}
-              </DropdownMenuGroup>
-            )}
+                })
+              )}
+            </DropdownMenuGroup>
           </DropdownMenuPopup>
         </DropdownMenuPositioner>
       </DropdownMenu>
