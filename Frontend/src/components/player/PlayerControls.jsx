@@ -62,7 +62,7 @@ export default function PlayerControls() {
   const repeatCurrent = repeat === 'track' ? repeatOneIcon : repeatIcon
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex min-w-0 items-center gap-0.5 sm:gap-1 [&>button]:min-w-0 [&>button]:shrink [&_img]:min-w-0">
       <ControlButton
         label="Aleatorio"
         onClick={toggleShuffle}
