@@ -6,7 +6,7 @@
 >
 > Documentos relacionados: `ESPECIFICACIONES-BACKEND.md` (contrato ya aplicado de canciones),
 > `PENDIENTES.md` (pendientes generales), `AGENTS.md` (convenciones),
-> `Frontend/docs/plan/sprint-2-plan.md` (TS-10 a TS-20, que es quien va a consumir casi todo lo de acá).
+> `docs/plan/sprint-2-plan.md` (TS-10 a TS-20, que es quien va a consumir casi todo lo de acá).
 
 **Cómo usar la hoja:** cada requerimiento tiene un id (`REQ-<dominio>-<n>`), una prioridad y una casilla.
 Una casilla se tilda cuando el endpoint está implementado **y** verificado contra la base real, no cuando
