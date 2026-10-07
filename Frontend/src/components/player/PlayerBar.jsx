@@ -33,8 +33,8 @@ export default function PlayerBar() {
 
   return (
     <footer className="Volume relative flex shrink-0 flex-col border-t border-sidebar-border">
-      <div className="flex items-center gap-4 px-4 py-3">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-2 py-3 sm:gap-4 sm:px-4">
+        <div className="flex min-w-0 items-center gap-3">
           <SongCover song={song} />
 
           <div className="min-w-0">
@@ -56,7 +56,7 @@ export default function PlayerBar() {
             `DropdownMenu` de Base UI, con `Portal`, y necesita que su botón sea
             el trigger para poder posicionarse y cerrarse con Escape o clic
             afuera. */}
-        <div className="flex flex-1 items-center justify-end gap-1">
+        <div className="flex min-w-0 items-center justify-end gap-0.5 sm:gap-1">
           <FavoriteButton songId={song?.id} />
 
           <AddToPlaylistPanel songId={song?.id} />
@@ -79,7 +79,7 @@ export default function PlayerBar() {
         duration={duration}
         onSeek={seek}
         size="sm"
-        className="px-4 pb-3"
+        className="px-2 pb-3 sm:px-4"
       />
     </footer>
   )
