@@ -6,29 +6,50 @@ import {
   removeSongFromPlaylist,
 } from '../../services/playlistsService.js'
 import useSongPlaylists from './useSongPlaylists.js'
+import addToPlaylistIcon from '../../assets/add_to_playlist.svg'
 import playlistIcon from '../../assets/playlist.svg'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuPortal,
+  DropdownMenuPositioner,
+  DropdownMenuPopup,
+  DropdownMenuGroup,
+  DropdownMenuGroupLabel,
+  DropdownMenuCheckboxItem,
+} from '../../components/ui/dropdown-menu.tsx'
 
 /**
- * Lista de playlists del usuario para agregar o quitar la canción que está sonando.
+ * Menú de "agregar a playlist" del reproductor.
  *
- * Se abre desde el reproductor, sobre la canción actual, en vez de duplicar un
- * botón "agregar" en cada card: el reproductor es el único lugar donde ya se sabe
- * qué canción está cargada.
+ * Es el mismo `DropdownMenu` de Base UI que el menú de cuenta del Sidebar
+ * (`ProfileSummary`) y el de orden de `/salas` (`Rooms`): trigger propio,
+ * `Portal` + `Positioner` + `Popup` con el estilo por defecto, y el cierre a
+ * cargo del menú, con Escape o con el clic afuera. Por eso el botón "+" vive
+ * acá adentro y no suelto en el reproductor: el `Positioner` de Base UI exige un
+ * `Portal` y se posiciona contra su trigger, así que un "+" externo dejaba el
+ * menú sin ancla.
  *
- * Es un panel inline controlado por quien lo abre y no el `Sheet` de shadcn: ese
- * componente no se usó nunca en el repo y depende de las animaciones de base-ui,
- * que son imposibles de verificar sin navegador.
- *
- * Cada fila es un toggle: si la canción ya está en la playlist, el clic la quita.
- * "Mis Favoritos" se excluye de la lista: los favoritos se marcan con el corazón
- * del reproductor, no desde acá, así que ofrecerlos duplicaba dos caminos para lo
- * mismo.
+ * Cada fila es un checkbox: si la canción ya está en la playlist, marcarla la
+ * quita. "Mis Favoritos" se excluye de la lista: los favoritos se marcan con el
+ * corazón del reproductor, no desde acá, así que ofrecerlos duplicaba dos caminos
+ * para lo mismo.
  */
-export default function AddToPlaylistPanel({ songId, onClose }) {
+export default function AddToPlaylistPanel({ songId }) {
   const { user } = useAuth()
   const userId = user?.id ?? null
-  const { playlists: allPlaylists, loading, error, contains } = useSongPlaylists(songId)
+  const {
+    playlists: allPlaylists,
+    loading,
+    error,
+    contains,
+    inAnyPlaylist,
+  } = useSongPlaylists(songId)
   const [pendingId, setPendingId] = useState(null)
+  // El reproductor pinta el "+" activo mientras el menú está abierto y también
+  // cuando la canción ya está en alguna playlist, así que el estado del menú vive
+  // acá y no en el reproductor.
+  const [open, setOpen] = useState(false)
 
   const playlists = allPlaylists.filter((playlist) => !playlist.isFavorites)
 
@@ -51,69 +72,68 @@ export default function AddToPlaylistPanel({ songId, onClose }) {
   }
 
   return (
-    <div className="SurfaceLight Elevation1 CardRadius w-72 p-4">
-      <div className="flex items-center justify-between">
-        <h3 className="Header4">Agregar a playlist</h3>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Cerrar"
-          className="rounded px-2 py-1 TextMedium hover:opacity-70"
-        >
-          Cerrar
-        </button>
-      </div>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            aria-label="Agregar a playlist"
+            title="Agregar a playlist"
+            className={`rounded-full p-2 hover:opacity-80 ${
+              open || inAnyPlaylist ? 'Fucsia' : 'Volume'
+            }`}
+          />
+        }
+      >
+        <img src={addToPlaylistIcon} alt="" aria-hidden="true" className="h-5 w-5" />
+      </DropdownMenuTrigger>
 
-      {loading ? (
-        <p className="text-muted-foreground TextMedium mt-4">Cargando…</p>
-      ) : error ? (
-        <p className="mt-4 rounded px-3 py-2 Salmon TextMedium">{error}</p>
-      ) : playlists.length === 0 ? (
-        <p className="text-muted-foreground TextMedium mt-4">
-          Todavía no tenés playlists.{' '}
-          {/* El panel vive en el PlayerBar, que sobrevive a la navegación: sin
-              cerrarlo al cambiar de ruta, "Creá una" te deja el panel flotando
-              arriba de la biblioteca. */}
-          <Link to="/playlists" onClick={onClose} className="text-accent">
-            Creá una
-          </Link>
-          .
-        </p>
-      ) : (
-        <ul className="mt-4 flex flex-col gap-1">
-          {playlists.map((playlist) => {
-            const already = contains(playlist)
-            const pending = pendingId === playlist.id
+      <DropdownMenuPortal>
+        <DropdownMenuPositioner side="top" align="end">
+          <DropdownMenuPopup>
+            <DropdownMenuGroup>
+              <DropdownMenuGroupLabel className="TextMedium">
+                Agregar a playlist
+              </DropdownMenuGroupLabel>
 
-            return (
-              <li key={playlist.id}>
-                <button
-                  type="button"
-                  onClick={() => handleToggle(playlist)}
-                  disabled={pending}
-                  aria-pressed={already}
-                  className="flex w-full items-center gap-2 rounded px-2 py-2 text-left TextRegluar hover:opacity-80 disabled:opacity-60"
-                >
-                  <img
-                    src={playlistIcon}
-                    alt=""
-                    aria-hidden="true"
-                    className="h-4 w-4 shrink-0 invert opacity-70"
-                  />
-                  <span className="min-w-0 flex-1 truncate">{playlist.name}</span>
-                  <span
-                    className={`TextTiny shrink-0 ${
-                      already ? 'text-accent' : 'text-muted-foreground'
-                    }`}
-                  >
-                    {pending ? '…' : already ? 'Quitar' : 'Agregar'}
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </div>
+              {loading ? (
+                <p className="text-muted-foreground TextMedium px-2 py-1.5">Cargando…</p>
+              ) : error ? (
+                <p className="Salmon TextMedium mx-2 my-1 rounded px-3 py-2">{error}</p>
+              ) : playlists.length === 0 ? (
+                <p className="text-muted-foreground TextMedium px-2 py-1.5">
+                  Todavía no tenés playlists.{' '}
+                  {/* El reproductor sobrevive a la navegación: sin cerrar el menú al
+                      cambiar de ruta, "Creá una" lo deja flotando arriba de la
+                      biblioteca. */}
+                  <Link to="/playlists" onClick={() => setOpen(false)} className="text-accent">
+                    Creá una
+                  </Link>
+                  .
+                </p>
+              ) : (
+                playlists.map((playlist) => {
+                  const already = contains(playlist)
+                  const pending = pendingId === playlist.id
+
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={playlist.id}
+                      checked={already}
+                      disabled={pending}
+                      label={playlist.name}
+                      onCheckedChange={() => handleToggle(playlist)}
+                    >
+                      <img src={playlistIcon} alt="" aria-hidden="true" />
+                      <span className="min-w-0 flex-1 truncate">{playlist.name}</span>
+                    </DropdownMenuCheckboxItem>
+                  )
+                })
+              )}
+            </DropdownMenuGroup>
+          </DropdownMenuPopup>
+        </DropdownMenuPositioner>
+      </DropdownMenuPortal>
+    </DropdownMenu>
   )
 }

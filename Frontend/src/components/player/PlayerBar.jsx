@@ -1,11 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
 import musicNoteIcon from '../../assets/music_note.svg'
 import expandIcon from '../../assets/expand.svg'
-import addToPlaylistIcon from '../../assets/add_to_playlist.svg'
 import usePlayer from '../../hooks/usePlayer.js'
 import AddToPlaylistPanel from '../../features/playlists/AddToPlaylistPanel.jsx'
 import FavoriteButton from '../../features/playlists/FavoriteButton.jsx'
-import useSongPlaylists from '../../features/playlists/useSongPlaylists.js'
 import PlayerControls from './PlayerControls.jsx'
 import ProgressBar from './ProgressBar.jsx'
 
@@ -31,28 +28,6 @@ function SongCover({ song }) {
  */
 export default function PlayerBar() {
   const { song, currentTime, duration, seek, hasQueue } = usePlayer()
-  const [adding, setAdding] = useState(false)
-  const menuRef = useRef(null)
-  // Activo cuando la canción ya está en alguna playlist (sin contar favoritos),
-  // además de mientras el panel está abierto.
-  const { inAnyPlaylist } = useSongPlaylists(song?.id)
-
-  // Cualquier clic fuera del panel (y de su botón) lo cierra. Se usa `pointerdown`
-  // para reaccionar antes que el `click` de los elementos que están debajo. El
-  // listener sólo existe mientras el panel está abierto.
-  useEffect(() => {
-    if (!adding) return undefined
-
-    function handlePointerDown(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setAdding(false)
-      }
-    }
-
-    document.addEventListener('pointerdown', handlePointerDown)
-
-    return () => document.removeEventListener('pointerdown', handlePointerDown)
-  }, [adding])
 
   if (!hasQueue) return null
 
@@ -77,38 +52,14 @@ export default function PlayerBar() {
 
         {/* Favoritos y "agregar a playlist" (TS-09) viven acá porque el
             reproductor es el único lugar donde ya se sabe qué canción está
-            cargada. */}
+            cargada. El menú de playlists trae su propio trigger: es un
+            `DropdownMenu` de Base UI, con `Portal`, y necesita que su botón sea
+            el trigger para poder posicionarse y cerrarse con Escape o clic
+            afuera. */}
         <div className="flex flex-1 items-center justify-end gap-1">
           <FavoriteButton songId={song?.id} />
 
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              onClick={() => setAdding((prev) => !prev)}
-              aria-expanded={adding}
-              aria-label="Agregar a playlist"
-              title="Agregar a playlist"
-              className={`rounded-full p-2 hover:opacity-80 ${
-                adding || inAnyPlaylist ? 'Fucsia' : 'Volume'
-              }`}
-            >
-              <img
-                src={addToPlaylistIcon}
-                alt=""
-                aria-hidden="true"
-                className="h-5 w-5"
-              />
-            </button>
-
-            {adding && (
-              <div className="absolute right-0 bottom-12 z-20">
-                <AddToPlaylistPanel
-                  songId={song?.id}
-                  onClose={() => setAdding(false)}
-                />
-              </div>
-            )}
-          </div>
+          <AddToPlaylistPanel songId={song?.id} />
 
           {/* TODO(agente, TS-06): el botón es solo visual. Falta el estado de
               pantalla completa y alternar expand.svg / collapse.svg. */}

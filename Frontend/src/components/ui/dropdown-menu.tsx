@@ -2,6 +2,7 @@ import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 
 import { cn } from "@/lib/utils";
+import checkIcon from "@/assets/check.svg"
 
 const itemClass =
   "relative flex w-full cursor-pointer select-none items-center gap-2.5 rounded-sm px-2 py-1.5 TextRegluar text-popover-foreground outline-hidden transition-colors data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-sidebar-accent data-highlighted:text-sidebar-accent-foreground [&_img]:size-4 [&_img]:shrink-0"
@@ -91,6 +92,25 @@ function DropdownMenuGroupLabel({
   )
 }
 
+function DropdownMenuCheckboxItem({
+  className,
+  children,
+  ...props
+}: MenuPrimitive.CheckboxItem.Props) {
+  return (
+    <MenuPrimitive.CheckboxItem
+      data-slot="dropdown-menu-checkbox-item"
+      className={cn(itemClass, "pl-8", className)}
+      {...props}
+    >
+      <MenuPrimitive.CheckboxItemIndicator className="absolute left-2 flex items-center justify-center">
+        <img src={checkIcon} alt="" aria-hidden="true" />
+      </MenuPrimitive.CheckboxItemIndicator>
+      {children}
+    </MenuPrimitive.CheckboxItem>
+  )
+}
+
 function DropdownMenuItem({ className, ...props }: MenuPrimitive.Item.Props) {
   return (
     <MenuPrimitive.Item
@@ -137,5 +157,6 @@ export {
   DropdownMenuGroupLabel,
   DropdownMenuItem,
   DropdownMenuLinkItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 }
