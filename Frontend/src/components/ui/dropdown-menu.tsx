@@ -2,6 +2,7 @@ import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 
 import { cn } from "@/lib/utils";
+import checkIcon from "@/assets/check.svg"
 
 const itemClass =
   "relative flex w-full cursor-pointer select-none items-center gap-2.5 rounded-sm px-2 py-1.5 TextRegluar text-popover-foreground outline-hidden transition-colors data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-sidebar-accent data-highlighted:text-sidebar-accent-foreground [&_img]:size-4 [&_img]:shrink-0"
@@ -103,21 +104,7 @@ function DropdownMenuCheckboxItem({
       {...props}
     >
       <MenuPrimitive.CheckboxItemIndicator className="absolute left-2 flex items-center justify-center">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="size-4"
-          aria-hidden="true"
-        >
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
+        <img src={checkIcon} alt="" aria-hidden="true" />
       </MenuPrimitive.CheckboxItemIndicator>
       {children}
     </MenuPrimitive.CheckboxItem>
