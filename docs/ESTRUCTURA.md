@@ -35,9 +35,10 @@ AGENTS.md                  Reglas de arquitectura y convenciones (es la fuente d
 package-lock.json          Artefacto vacío, no commitear (los locks reales viven en Backend/ y Frontend/)
 docs/
   ESTRUCTURA.md            Este documento: onboarding del repo
-  PENDIENTES.md            Estado de qué está migrado a la API real y qué queda mock (contiene secciones viejas)
+  CONTEXT.md               Snapshot del estado actual (se inyecta a agentes IA)
+  PENDIENTES.md            Backlog vivo: qué está migrado, qué falta y decisiones abiertas
   REQUERIMIENTOS-BACKEND.md  Requisitos por TS y estado de cada uno
-  ESPECIFICACIONES-BACKEND.md Contratos de la API con ejemplos de curl
+  ESPECIFICACIONES-BACKEND.md Contratos vigentes de la API con ejemplos de curl
   plan/                    Planes de sprint (sprint-1-plan.md, sprint-2-plan.md)
 ```
 
@@ -47,7 +48,7 @@ docs/
 prisma/
   schema.prisma       17 modelos + 4 enums: la fuente de verdad del schema
   migrations/         SQL de cada migración, en carpetas timestamp
-  views/public/       .sql de las vistas que crea una migración (room_avg_rating, user_top_genre, …)
+  views/public/       .sql de las vistas que crea una migración (user_genre_counts, user_top_genre)
   seed.js             Puebla el catálogo desde prisma/data/songs.json (artist, song, genre, mood y sus puentes)
   data/songs.json     Dataset de canciones del seed
 src/
@@ -71,20 +72,19 @@ src/
   main.jsx            AuthProvider > PlayerProvider > BrowserRouter > App
   App.jsx             Sólo delega en AppRoutes
   routes/             AppRoutes + guardas RequireAuth (sesión obligatoria) y PublicOnly (sin sesión)
-  context/            AuthProvider.jsx / PlayerContext.jsx (estado) + authContext.js / playerContext.js (createContext)
+  context/            AuthContext.jsx / PlayerContext.jsx (estado) + authContext.js / playerContext.js (createContext)
   hooks/              useAuth, usePlayer, useBreakpoint, useFavorites, useDebounce, use-mobile
   services/           ÚNICA capa que hace fetch. Un archivo por dominio
   features/           Lógica de negocio y pantallas, una carpeta por dominio
   components/
-    layout/           AppLayout (Sidebar vs BottomNav), Sidebar, TopBar, BottomNav, MiniPlayerBar
+    layout/           AppLayout (Sidebar vs BottomNav), Sidebar, SidebarAutoCollapse, TopBar, BottomNav, MiniPlayerBar
     player/           PlayerBar (desktop), PlayerControls, ProgressBar
-    cards/            MediaCard, MiniMediaCard, UserRow
-    chat/             Vacío (placeholder de shadcn)
+    cards/            MediaCard, MiniMediaCard, RoomCard, UserRow
     ui/               Componentes shadcn/base-ui + Avatar y LoadingScreen propios
   styles/             tokens.css (única fuente de valores), utilities.css, base.css
   assets/*.svg        Set de íconos propio. Se importan como URL y se usan con <img>
   lib/                utils.ts (cn), formatTime.js, pageRange.js
-  mocks/              Datos falsos. **Hoy nadie los importa** (ver §6)
+  mocks/              Datos falsos. Sólo `rooms.js` los consume (vía `roomsService`); ver §6
   index.css           Entry point de Tailwind + puente semántico de shadcn
   pages/Landing/      Landing pública
 ```
@@ -162,7 +162,7 @@ Una carpeta por dominio, con sus pantallas, componentes y hooks:
 | `playlists/` | Biblioteca y detalle, formularios, `MisPlaylists` (sidebar), `FavoriteButton`, `AddToPlaylistPanel`, `useSongPlaylists` |
 | `search/` | `Search` + pestañas `SearchSongs` / `SearchPeople` / `SearchTabs` |
 | `social/` | `useFollow`, `FollowButton`, `FollowList`, `FollowStats`, `ProfileSummary` |
-| `rooms/` | Vacío (placeholder) |
+| `rooms/` | `Rooms.jsx`: listado con `RoomCard` (hoy contra mocks; crear/administrar salas, pendiente) |
 
 ### 3.6 `components/`
 
@@ -239,7 +239,7 @@ respuesta y, en desarrollo, el `meta`.
 Modelos (`prisma/schema.prisma`): `User`, `Artist`, `Song`, `SongArtist`, `Genre`, `SongGenre`, `Mood`,
 `SongMood`, `Playlist`, `PlaylistMember`, `PlaylistSong`, `Favorite`, `Follow`, `Content`,
 `ContentPlayement`, `Room`, `RoomMember`, `HostRating`.
-Enums: `PlaylistType` (`personal`/`favorites`), `PlaylistRole`, `RoomRole`, `RoomStatus`.
+Enums: `PlaylistType` (`personal`/`colab`/`favorites`), `PlaylistRole`, `RoomRole`, `RoomStatus`.
 
 Además del ORM hay **vistas SQL** creadas por migración y usadas con `$queryRaw`: `room_avg_rating`,
 `user_top_genre`, `user_genre_counts`. `searchUsers` y `getSortedRoom` dependen de ellas.
@@ -260,78 +260,20 @@ GET /api/playlists/12
 
 ## 5. Catálogo de endpoints
 
-**Auth**: `JWT` = requiere `Authorization: Bearer <jwt>`. Sólo `POST /api/auth/logout` y las rutas
-de `me`/`playlists`/`favorites`/follow son privadas; el resto es público.
+Todo bajo `/api` (`Backend/src/app.js`). El contrato completo —requests, responses, errores y
+`curl`— vive en [`ESPECIFICACIONES-BACKEND.md`](ESPECIFICACIONES-BACKEND.md); este es el resumen:
 
-### Salud
-
-| Endpoint | Auth | Request | Response |
+| Grupo | Endpoints | Privadas con JWT | Contrato |
 |---|---|---|---|
-| `GET /api/health` | — | — | `{ status: "ok" }` |
+| Salud | `GET /health` | — | ESPECIFICACIONES §6 |
+| Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout` | `logout` | §6 |
+| Usuarios y follow | `GET /users/search`, `GET\|PATCH /users/me`, `GET /users/:id`, `GET /users/:id/followers\|following`, `POST\|DELETE /users/:id/follow` | `me`, follow | §7 |
+| Canciones | `GET /songs`, `GET /songs/search`, `GET /songs/:id` | — | §1–§5 |
+| Favoritos | `GET /favorites`, `GET /favorites/songs/ids`, `POST /favorites/songs`, `DELETE /favorites/songs/:songId` | todas | §8 |
+| Playlists | `GET /playlists`, `GET\|PUT\|DELETE /playlists/:id`, `POST /playlists` | todas | §9 |
+| Salas | `GET /rooms?sort=` | — | §10 |
 
-### Auth — `/api/auth`
-
-| Endpoint | Auth | Request | Response |
-|---|---|---|---|
-| `POST /register` | — | body: `email`, `username` (3–50), `password` (≥8, con letra y número) | 201 `{ status, token, user }`. 400 con `errors: []`; 400 si el email o el username ya existen |
-| `POST /login` | — | body: `email`, `password` | 200 `{ status, token, user }` (sin `passwordHash`). 401 si no coincide |
-| `POST /logout` | `JWT` | — | 200 `{ status, message }` |
-
-El registro **deja la sesión iniciada**: devuelve token igual que `login`. El JWT lleva
-`{ sub, email, username }` y `sub` es el id del usuario.
-
-### Usuarios y follow — `/api/users`
-
-| Endpoint | Auth | Request | Response |
-|---|---|---|---|
-| `GET /search` | — | query: `query`, `page`, `pageSize` | `{ items, total, page, pageSize, totalPages }`. `items` viene de un `$queryRaw`, así que trae **`picture_url` y `genre_name` en snake_case** |
-| `GET /me` | `JWT` | — | `user` con `email`, o 404 |
-| `PATCH /me` | `JWT` | body: `username`, `biography`, `pictureUrl` (sólo los presentes) | `user` actualizado. 400 si el username es inválido o ya está usado |
-| `GET /:id` | — | — | `{ id, username, pictureUrl, biography, registrationDate, followers[], following[], followerCount, followingCount }`. 404 si no existe, 400 si el id no es un entero |
-| `GET /:id/followers` | — | — | `{ status, followers: [{ id, username, pictureUrl }] }` — **array completo, sin paginar** |
-| `GET /:id/following` | — | — | `{ status, following: [{ id, username, pictureUrl }] }` — ídem |
-| `POST /:id/follow` | `JWT` | — | 200 `{ status, message }` (idempotente). 400 si el id es inválido o te seguís a vos mismo; 404 si el usuario no existe |
-| `DELETE /:id/follow` | `JWT` | — | 200 `{ status, message }`. 404 si no lo seguías |
-
-No existe un endpoint `isFollowing`: el Frontend lo deriva de la lista de seguidores.
-
-### Canciones — `/api/songs`
-
-| Endpoint | Auth | Request | Response |
-|---|---|---|---|
-| `GET /` | — | query: `cursor` (id de la última) | `{ songs, nextCursor, hasMore }`, de a 10 por página |
-| `GET /search` | — | query: `query`, `page`, `pageSize` (10 por defecto, máx 50) | `{ items, total, page, pageSize, totalPages }`. Busca por título, artista o género; si la página pedida se pasa, devuelve la última con contenido y el `page` ya corregido |
-| `GET /:id` | — | — | La canción con `songGenres.genre`, `songMoods.mood` y `artist` anidados. 404 si no existe |
-
-### Favoritos — `/api/favorites` (todas `JWT`)
-
-| Endpoint | Request | Response |
-|---|---|---|
-| `GET /` | — | `{ status, playlist: { id, name } \| null, songs[] }` |
-| `GET /songs/ids` | — | `{ status, songIds: number[] }` — es lo que consume el hook de favoritos |
-| `POST /songs` | body: `songId` (o `idSong`) | 201 `{ status, favorite: { song, markedDate } }`. 400 id inválido, 404 canción inexistente, 409 ya está en favoritos |
-| `DELETE /songs/:songId` | — | 200 `{ status, message }`. 404 si no estaba en favoritos |
-
-### Playlists — `/api/playlists` (todas `JWT`)
-
-| Endpoint | Request | Response |
-|---|---|---|
-| `GET /` | — | `{ status, playlists[] }` — las del usuario, con `creator` y `songs` ordenadas por posición |
-| `GET /:id` | — | `{ status, playlist }`. **404 si no es del dueño** |
-| `POST /` | body: `name` (obligatorio, ≤50), `description`, `isPublic` | 201 `{ status, playlist }` con `type: "personal"` |
-| `PUT /:id` | body: `name?`, `description?`, `addSongs?`, `removeSongs?`, `reorder?` | 200 `{ status, playlist }`. 403 si no es el dueño o si es la de favoritos, 404 si no existe |
-| `DELETE /:id` | — | 200 `{ status, message }`. 403 si no es el dueño o si es la de favoritos |
-
-**Cómo funcionan los favoritos:** no son un estado aparte, sino una playlist con
-`type: "favorites"`, que se crea sola (`"Favoritos"`, privada) al agregar el primer favorito. Las
-canciones marcadas viven en la tabla `favorite`; `GET /` y `GET /:id` la sintetizan para que el
-Frontend la trate como una playlist más. No se puede editar ni borrar (403).
-
-### Salas — `/api/rooms`
-
-| Endpoint | Auth | Request | Response |
-|---|---|---|---|
-| `GET /` | — | query: `sort` = `alphabetical` (default) \| `rating` | **Array plano** (sin envelope) de filas con `room.*` + `avg_rating`, desde la vista `room_avg_rating` |
+El resto es público. Errores: siempre `{ status: "error", message, code? }` (ver §6).
 
 ---
 
@@ -365,11 +307,12 @@ Frontend la trate como una playlist más. No se puede editar ni borrar (403).
 - **Favoritos**: la playlist de favoritos aparece recién después del primer favorito, y editarla o
   borrarla devuelve 403.
 - **`/api/v1` no existe**: todo cuelga de `/api` (`app.js`). `src/const/baseUrl.js` es un resto sin uso.
-- **Código muerto** que conviene no tomar como referencia: `Frontend/src/mocks/` (nadie lo importa ya
-  que todo migró a la API real), `Backend/src/const/baseUrl.js`, `Backend/src/test.js` y el commented-out
-  de `ensureFavoritesPlaylist` en `favorite.service.js`.
-- **Vistas de una sola página**: `/populares`, `/albums`, `/artistas` y `/salas` son
-  `ScreenPlaceholder`, y `components/chat/` y `features/rooms/` están vacíos.
+- **Código muerto** que conviene no tomar como referencia: `Frontend/src/mocks/` (sólo `rooms.js` se
+  consume, vía `roomsService`; `users.js`, `songs.js` y `playlists.js` quedaron sin uso tras migrar),
+  `Backend/src/const/baseUrl.js`, `Backend/src/test.js` y la llamada a `ensureFavoritesPlaylist` que
+  quedó comentada en `favorite.service.js`.
+- **Vistas de una sola página**: `/populares`, `/albums` y `/artistas` son `ScreenPlaceholder`;
+  el chat todavía no existe, y `features/rooms/` sólo tiene el listado (`Rooms.jsx`).
 
 ---
 
@@ -378,7 +321,8 @@ Frontend la trate como una playlist más. No se puede editar ni borrar (403).
 | Documento | Para qué |
 |---|---|
 | [`AGENTS.md`](../AGENTS.md) | Reglas de arquitectura y convención de nombres. **La fuente de verdad** del proyecto |
-| [`PENDIENTES.md`](PENDIENTES.md) | Qué está migrado a la API real y qué queda pendiente (ojo: §8.6 está desactualizado, §9 es lo vigente) |
+| [`CONTEXT.md`](CONTEXT.md) | Snapshot del estado actual del repo, pensado para inyectar a agentes IA |
+| [`PENDIENTES.md`](PENDIENTES.md) | Backlog vivo: qué está migrado, qué falta y las decisiones abiertas |
 | [`REQUERIMIENTOS-BACKEND.md`](REQUERIMIENTOS-BACKEND.md) | Requisitos por historia de usuario y estado de cada uno |
-| [`ESPECIFICACIONES-BACKEND.md`](ESPECIFICACIONES-BACKEND.md) | Contratos de la API en detalle, con comandos de `curl` (§5.2) |
+| [`ESPECIFICACIONES-BACKEND.md`](ESPECIFICACIONES-BACKEND.md) | Contratos vigentes de la API en detalle (canciones §1–5, resto §6–10), con comandos de `curl` (§5.2) |
 | [`plan/sprint-*.md`](plan/sprint-1-plan.md) | Planes de sprint con el detalle de implementación |
