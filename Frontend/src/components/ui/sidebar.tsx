@@ -207,7 +207,7 @@ function Sidebar({
 
   return (
     <div
-      className="group peer hidden text-sidebar-foreground md:block"
+      className="group peer isolate hidden text-sidebar-foreground md:block"
       data-state={state}
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-variant={variant}
@@ -259,21 +259,28 @@ function SidebarTrigger({
   const { toggleSidebar } = useSidebar()
 
   return (
-    <Button
-      data-sidebar="trigger"
-      data-slot="sidebar-trigger"
-      variant="ghost"
-      size="icon-sm"
-      className={cn(className)}
-      onClick={(event) => {
-        onClick?.(event)
-        toggleSidebar()
-      }}
-      {...props}
-    >
-      <PanelLeftIcon />
-      <span className="sr-only">Toggle Sidebar</span>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            data-sidebar="trigger"
+            data-slot="sidebar-trigger"
+            variant="ghost"
+            size="icon-sm"
+            className={cn(className)}
+            onClick={(event) => {
+              onClick?.(event)
+              toggleSidebar()
+            }}
+            {...props}
+          >
+            <PanelLeftIcon />
+            <span className="sr-only">Toggle Sidebar</span>
+          </Button>
+        }
+      />
+      <TooltipContent side="bottom">Ctrl+B</TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -289,10 +296,10 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
       onClick={toggleSidebar}
       title="Toggle Sidebar"
       className={cn(
-        "absolute hover:after:bg-sidebar-border inset-y-0 z-20 hidden w-4 transition-[right,transform] ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:inset-s-1/2 after:w-0.5 group-data-[collapsible=icon]:after:hidden sm:flex ltr:-translate-x-1/2 rtl:translate-x-1/2 group-data-[collapsible=icon]:translate-x-0 [[data-side=left][data-collapsible=icon]_&]:right-0 [[data-side=right][data-collapsible=icon]_&]:translate-x-0",
+        "absolute hover:after:bg-sidebar-border inset-y-0 z-20 hidden w-4 bg-transparent transition-[right] ease-linear group-data-[side=left]:-right-2 group-data-[side=right]:-left-2 after:absolute after:inset-y-0 after:inset-s-1/2 after:w-0.5 group-data-[collapsible=icon]:after:hidden sm:flex [[data-side=left][data-collapsible=icon]_&]:right-0 [[data-side=right][data-collapsible=icon]_&]:left-0",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
         "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
-        "hover:group-data-[collapsible=offcanvas]:bg-muted-foreground group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full",
+        "hover:group-data-[collapsible=offcanvas]:bg-muted-foreground group-data-[collapsible=offcanvas]:after:left-full",
         "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
         "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
         className
