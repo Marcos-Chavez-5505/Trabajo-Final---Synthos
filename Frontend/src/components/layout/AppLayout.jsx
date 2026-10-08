@@ -4,7 +4,18 @@ import BottomNav from './BottomNav.jsx'
 import MiniPlayerBar from './MiniPlayerBar.jsx'
 import TopBar from './TopBar.jsx'
 import PlayerBar from '../player/PlayerBar.jsx'
+import SidebarAutoCollapse, { SIDEBAR_AUTO_COLLAPSE_QUERY } from './SidebarAutoCollapse.jsx'
 import { SidebarProvider } from '../ui/sidebar.tsx'
+
+/**
+ * `defaultOpen` calculado con el MISMO query que el auto-colapso: si la
+ * ventana arranca bajo el umbral, el sidebar nace colapsado sin parpadeo.
+ * Protegido para renders sin `window` (SSR/prerender).
+ */
+function getDefaultSidebarOpen() {
+  if (typeof window === 'undefined' || !window.matchMedia) return true
+  return !window.matchMedia(SIDEBAR_AUTO_COLLAPSE_QUERY).matches
+}
 
 /**
  * Layout raíz. Alterna Sidebar (desktop, shadcn/ui) vs BottomNav + MiniPlayerBar (mobile).
@@ -27,8 +38,14 @@ export default function AppLayout({ children }) {
   }
 
   return (
-    <SidebarProvider className="Surface h-dvh min-h-0">
-      <div className="flex min-h-0 min-w-0 flex-1">
+    <SidebarProvider
+      defaultOpen={getDefaultSidebarOpen()}
+      className="Surface h-dvh min-h-0"
+    >
+      {/* Colapsa/expande el sidebar solo al cruzar el umbral de 1280px.
+          El trigger y Ctrl+B siguen mandando sobre el estado manual. */}
+      <SidebarAutoCollapse />
+      <div className="isolate flex min-h-0 min-w-0 flex-1">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar />

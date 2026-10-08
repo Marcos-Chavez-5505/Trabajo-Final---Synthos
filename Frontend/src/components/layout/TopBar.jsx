@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { SidebarTrigger } from '../ui/sidebar.tsx'
 import searchIcon from '../../assets/search.svg'
 
 /**
@@ -38,7 +39,10 @@ export default function TopBar() {
   }
 
   return (
-    <header className="flex items-center justify-between px-6 py-4">
+    <header className="flex items-center gap-4 px-3 py-4">
+      {/* Dispara toggleSidebar (mismo estado que Ctrl+B). Va en el header del
+          área de contenido, fuera del sidebar, como en el layout de shadcn. */}
+      <SidebarTrigger className="-ml-1" />
       {/* TODO(agente): navegación atrás/adelante (historial de router) */}
       {/* `hidden` los apaga: nunca se conectaron a useNavigate, así que no
           hacen nada. Al implementarles onClick, sacar el `hidden`. */}
