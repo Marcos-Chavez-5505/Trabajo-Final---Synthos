@@ -1,12 +1,11 @@
 # Pendientes
 
-Estado al cerrar la cadena de ramas del Sprint 1. El trabajo está repartido en ramas apiladas
-(`main` -> `chore/docs-plan` -> `chore/design-system-e-iconos` -> `feat/ts-06-player-core` ->
-`feat/ts-03-auth` -> `feat/ts-04-auth-screens` -> `feat/ts-05-profile` -> `feat/ts-02-layout` ->
-`feat/ts-01-app-wiring` -> `feat/ts-06-player-redesign`). `dev` apunta a la punta de esa cadena.
+Backlog vivo: lo que **falta**. El estado actual del código está resumido en `CONTEXT.md` y la
+estructura del repo en `ESTRUCTURA.md`.
 
-En ese punto: `npm run build` compila y `npm run lint` solo reporta 3 warnings preexistentes de
-`components/ui/*` (`only-export-components`) y `hooks/use-mobile.ts` (`set-state-in-effect`).
+Estado al 2026-10-08 (HEAD `419a5ac`, rama `dev`): `npm run build` compila y `npm run lint` solo
+reporta 3 warnings preexistentes de `components/ui/*` (`only-export-components`) y
+`hooks/use-mobile.ts` (`set-state-in-effect`).
 
 ---
 
@@ -38,71 +37,39 @@ se ejercitan a mano.
 
 ---
 
-## 2. `Sidebar.jsx` todavía usa `lucide-react`
+## 2. `lucide-react` sigue en uso en cuatro archivos
 
 **Contexto:** la regla 10 de `AGENTS.md` pide íconos solo desde `src/assets/*.svg` (set de diseño
-propio, importados como URL y usados con `<img>`), nunca de librerías. El `Sidebar` es el único
-lugar que quedó con `lucide-react` (`Home`, `Flame`, `User`, `ListMusic`, `Disc3`, `Mic2`).
+propio, importados como URL y usados con `<img>`), nunca de librerías. `lucide-react` todavía se
+importa en cuatro archivos:
 
-**Qué hacer:** mapear cada ítem (Home, Populares, Perfil, Playlists, Albums, Artistas) a su SVG del
-set, cambiar el render (hoy `<Icon />`, debe pasar a `<img src={...} alt="" aria-hidden="true" className="h-5 w-5" />`)
-y quitar `lucide-react` de `package.json` si no queda ningún uso.
+- `components/layout/Sidebar.jsx` — un import con los ítems del nav: `Home`, `Flame`, `User`,
+  `ListMusic`, `Disc3`, `Mic2`.
+- `features/playlists/MisPlaylists.jsx` — `ListMusic`.
+- `components/ui/sidebar.tsx` (`PanelLeftIcon`) y `components/ui/sheet.tsx` (`XIcon`) —
+  componentes generados por shadcn.
 
----
-
-## 3. `pages/Landing/Landing.jsx` conserva "Grupos/#groups"
-
-**Contexto:** la regla 1 de `AGENTS.md` prohíbe reintroducir el concepto "Grupos": fue reemplazado
-por **Salas** (`rooms`). `Landing.jsx` sigue con ese copy/anclas.
-
-**Qué hacer:** renombrar el texto y los anclas (`#groups` -> `#salas` o equivalente) a "Salas".
-Revisar el resto del repo por otros restos de "Grupo/grupo".
+**Qué hacer:** mapear cada ítem del `Sidebar` y de `MisPlaylists` a su SVG del set y cambiar el
+render (hoy `<Icon />`, debe pasar a `<img src={...} alt="" aria-hidden="true" className="h-5 w-5" />`).
+Decidir qué hacer con `ui/`: son componentes de shadcn y `npx shadcn add` los regenera con lucide,
+así que o se dejan con la excepción escrita en la regla 10 o se editan sabiendo que el CLI los puede
+pisar. Cuando no quede ningún import, sacar `lucide-react` de `package.json`.
 
 ---
 
-## 4. Scaffolds borrados con `.gitkeep` (recrear cuando toque)
+## 3. Decisiones abiertas de `AGENTS.md` (sección 5)
 
-**Contexto:** para dejar el árbol limpio sin componentes vacíos, se borraron placeholders y se
-dejó `.gitkeep` en las carpetas. No están en el build.
-
-- `components/cards/`: se borraron `MediaCard.jsx`, `SectionCarousel.jsx` y `RoomListItem.jsx`.
-  `HomeDesktop`/`HomeMobile` ya tienen un `TODO(agente, TS-06/TS-07)` y los imports comentados para
-  reincorporarlos al armar el contenido de Home. `TS-07` del plan los reutiliza.
-- `components/chat/`: se borraron `ChatList.jsx`, `ChatWindow.jsx`, `MessageBubble.jsx` (chat de Salas).
-- `features/rooms`, `features/search`, `features/playlists`, `features/social`: placeholders vacíos.
-- `services/`: se borraron `playlistsService.js`, `roomsService.js`, `recommendationsService.js`
-  (se rehacen en sus tareas). `services/api.js` quedó solo con `export const API_BASE_URL = '/api/v1'`.
-
----
-
-## 5. Decisiones abiertas de `AGENTS.md` (sección 5)
-
-- **Librería HTTP:** definir `axios` vs `fetch` nativo dentro de `services/api.js`, más interceptores
-  de auth. Hoy `authService`/`usersService`/`songsService` trabajan contra `mocks/` y no pasan por `api.js`.
 - **WebSockets:** definir `services/socketService.js` para el chat de Salas y la sincronización de
   reproducción entre miembros.
 - **Estado global:** evaluar si `Context` alcanza o conviene un gestor (p. ej. Zustand) cuando
   aparezcan las features que aún faltan.
 
----
-
-## 6. `pages/Landing/Landing.css` tiene su propia paleta
-
-**Contexto:** el landing (ruta `/`, fuera de `AppRoutes`) trae 660 líneas de CSS con 59 hex
-propios — grises (`#f4f4f5`, `#8b8b96`, `#6b6b76`), violetas (`#8b5cf6`, `#a78bfa`, `#c4b5fd`),
-cian `#22d3ee`, verde `#22c55e` — más 3 hex en `Landing.jsx`. Ninguno pertenece al design system
-de `src/styles/`, así que es la única fuente de estilos que quedó fuera de la centralización de
-tokens (se dejó así a propósito: mezclarla con la reorganización de estilos sin decidir el
-rediseño).
-
-**Qué hacer:** decidir si el landing se migra a los tokens del design system (reescribiendo su CSS
-con `var(--ds-*)` o directamente con clases) o si se descarta por estar fuera del alcance del
-Sprint 1. Recordar la regla 11 de `AGENTS.md`: los literales solo pueden vivir en
-`styles/tokens.css`.
+*(La librería HTTP ya se definió: `fetch` nativo dentro de `services/api.js`, con helpers
+`get/post/patch/put/del`.)*
 
 ---
 
-## 7. Opcional: garantía de "no repetir hasta agotar la lista" en shuffle
+## 4. Opcional: garantía de "no repetir hasta agotar la lista" en shuffle
 
 **Prioridad:** opcional. No está asignado a ningún sprint; queda registrado como posible adición.
 **Estado:** no implementado. El reproductor hoy funciona con una ventana de 10 canciones previas.
@@ -139,15 +106,15 @@ del backend; el endpoint solo cambia de dónde viene la cola.
 
 ---
 
-## 8. Conectar el frontend con `/api/songs`
+## 5. Conectar el frontend con `/api/songs`
 
 **Estado:** la integración quedó completa. `listSongs()`, `getSongById()` y `searchSongs()` van contra
 el backend real, y el backend se ajustó para el paginado por offset y los nombres de género.
 Contrato en `ESPECIFICACIONES-BACKEND.md` (`docs/`).
 
-Lo que queda son decisiones de producto y la validación contra la base real (8.4–8.8).
+Lo que queda son decisiones de producto y casos sin cubrir (5.4–5.7).
 
-### 8.1 Paginación de `/buscar` — resuelto en backend
+### 5.1 Paginación de `/buscar` — resuelto en backend
 
 **Qué se hizo:** `song.service.js::searchSongs` pasó de cursor a offset (`skip: (page - 1) * pageSize`,
 `take: pageSize`) con `prisma.song.count({ where })` en la misma transacción, y devuelve
@@ -158,13 +125,13 @@ y se devuelve `page` corregido.
 **Por qué no se degradó la pantalla:** se evaluó reescribir `SearchSongs.jsx` a anterior/siguiente con
 cursor, pero se perdía la fila de números y el salto directo.
 
-### 8.2 Etiqueta de género — resuelto
+### 5.2 Etiqueta de género — resuelto
 
 `SONG_INCLUDE` ahora usa `songGenres: { include: { genre: true } }` (idem `songMoods`), así que el
 payload trae el nombre y `songsService.toSong()` lo mapea a `song.genre`. Las cards de `/home` y
 `/buscar` vuelven a mostrar la etiqueta.
 
-### 8.3 La búsqueda por álbum se eliminó del contrato
+### 5.3 La búsqueda por álbum se eliminó del contrato
 
 **Qué pasa:** el catálogo mock tenía `album` y `searchSongs()` mock filtraba por `title`, `artist`,
 `album` y `genre`. El backend no tiene columna `album` en el esquema (`song` es título/artista/
@@ -174,7 +141,7 @@ Por eso se **quitó "álbumo" del copy** de `SearchSongs.jsx`: la pantalla ya no
 backend no cumple. Si más adelante se agrega la columna `album` y su filtro, hay que devolver el
 nombre en el payload y reponer la palabra en el copy.
 
-### 8.4 `album` y `source` no existen en el esquema
+### 5.4 `album` y `source` no existen en el esquema
 
 `PlayerBar` usaba `song.album` como `alt` de la carátula y `song.source` para la línea
 "Reproduciéndose desde". Con el payload real ambos son `null`:
@@ -184,56 +151,65 @@ nombre en el payload y reponer la palabra en el copy.
 
 **Qué hace falta para `source`:** decidir de dónde sale. "Reproduciéndose desde" debería ser el origen
 real de la canción (nombre de playlist o sala), que requiere saber de qué playlist o sala se pidió
-reproducir: o el endpoint lo recibe como query param, o el frontend lo calcula al armar la cola.
+reproducir. El frontend ya lleva el origen de la cola (`queueSourceRef = { playlistId, isFavorites }`
+y `playSongs(songs, startIndex, source)`), falta decidir el label y pintarlo.
 
-### 8.5 Bugs de backend encontrados al conectar — corregidos
+### 5.5 Bugs de backend encontrados al conectar — corregidos
 
 - `song.controller.js` hacía `query.trim()` sin guarda: `/api/songs/search` **sin** `?query=` lanzaba
   `TypeError` → 500. Ahora el service normaliza a `""` y devuelve el catálogo paginado.
 - `Number(cursor)` daba `NaN` si faltaba el cursor. Sin efecto al pasar a offset, pero ya no se castea.
 
-### 8.6 Auth sigue en mocks, a propósito
-
-**Desactualizado.** Auth, edición de perfil y seguimiento ya se migraron al backend (PR #20/#21 y la
-migración de follow). Ver §9. Se conserva el texto original como registro.
-
-`authService`/`usersService` quedaron con `mocks/users.js`. El backend ya expone
-`POST /api/auth/register`, `/login` y `/logout` (montados dos veces en `app.js`, en `/api/auth` y
-`/api/v1/auth`), pero conectar eso excede esta entrega y arrastra el manejo de JWT: `logout` requiere
-token (`authenticate` middleware) y `api.js` todavía no manda `Authorization`. Queda para un sprint
-aparte. Nota: `mocks/users.js` genera ids con `crypto.randomUUID()`, que **no** son los enteros
-`SERIAL` de la base, así que al migrar hay que revisar `getUserById`.
-
-### 8.7 `mocks/songs.js` quedó sin uso
+### 5.6 `mocks/songs.js` quedó sin uso
 
 Ningún módulo lo importa más. **No se borró**, a propósito y esperando poder validar contra el
 endpoint real con la base conectada. Cuando se borre, también se puede reducir `SEARCH_PAGE_SIZE` y la
 lógica de normalización de acentos de `songsService.js`, que ya no aplican.
 
-### 8.8 Verificación pendiente contra la base real
+### 5.7 Verificación contra la base real — mayormente cubierta
 
-La **lógica de paginación** sí se verificó: script temporal con Prisma interceptado y 137 canciones
-sintéticas, cubriendo `skip`, clamping de página fuera de rango, última página parcial, defaults para
-valores ausentes/`"0"`/`"abc"`, tope de `pageSize` y recorrido completo de las 14 páginas sin repetidos
-ni saltos. Todas las comprobaciones pasaron; el script se eliminó después.
+**Estado (2026-10-08): la base está levantada.** Existe `Backend/.env`, los contenedores
+`SYNTHOS_POSTGRES`/`SYNTHOS_PGADMIN` están corriendo, `npx prisma migrate status` informa
+`6 migrations found` y `Database schema is up to date!`, y el seed cargó 97 canciones.
 
-Lo que **no** se pudo probar es el fetch real: no responde en `localhost:3000`, Docker no está
-levantado y no existe `Backend/.env` (solo `.env.example`, sin `DATABASE_URL`), así que Prisma no tiene
-a qué conectarse. `npm run build` y `npm run lint` pasan (solo los 3 warnings preexistentes), pero eso no
-ejercita la red ni el include anidado de género contra Postgres.
+Además de eso, la **lógica de paginación** se había verificado antes con un script temporal que
+intercepta el `require` de `prismaClient` y usa un catálogo sintético de 137 canciones: `skip`,
+clamping de página fuera de rango, última página parcial, defaults, tope de `pageSize` y recorrido
+completo de las 14 páginas. Todas pasaron; el script se eliminó después.
 
-Para cerrar: `docker compose up -d` en `Backend/`, copiar `.env.example` a `.env` con las `POSTGRES_*` y
-`DATABASE_URL`, `npx prisma migrate dev`, `npx prisma db seed`, `npm run dev`, y recién ahí levantar el
-Frontend. Comandos de `curl` en `ESPECIFICACIONES-BACKEND.md` §5.2.
+**Suite de humo por HTTP contra la base real (2026-10-08): 41 de 42 chequeos pasaron:**
+
+- `GET /health`, `GET /songs` (cursor), `GET /songs/:id` (200 y 404), `GET /songs/search`
+  (offset, clamping `page=999` → última página, query vacía = catálogo completo, 97 canciones).
+- `GET /rooms?sort=rating` (trae `avg_rating`) y `sort` inválido → 400.
+- `GET /users/search` (envelope offset, claves `picture_url`/`biography`/`genre_name` en snake_case,
+  query vacía → 200 con todos los usuarios).
+- Auth: `login` 200 con token / password malo 401; `register` 201 con token, 400 con `errors[]`,
+  email repetido 400; `GET /users/me` con `email` y 401 sin token.
+- Playlists: crear 201 (`type: personal`), name vacío o >50 → 400, `addSongs` idempotente (200,
+  no 409), `GET /:id` con las canciones incluidas, playlist ajena → 404 (GET) / 403 (DELETE),
+  borrar → 200 y 404 después.
+- Favoritos: `GET /songs/ids`, agregar 201, repetir 409, quitar 200, quitar algo que no estaba 404.
+- Follow: `followers`/`following`, contadores en `GET /users/:id`, seguir 200 idempotente,
+  dejar de seguir 200 y otra vez → 404. `GET /users/abc` → 400.
+
+**Bug encontrado y aún abierto:** `PUT /api/playlists/:id` con `addSongs` de un id **no numérico**
+responde **500** (`P2023` de Prisma sin mapear en `errorHandler`); con un id numérico inexistente
+responde 409 (FK `P2003`). Anotado en `REQUERIMIENTOS-BACKEND.md` §2 (avisos de errores).
+
+**Queda sin cubrir:** `PATCH /users/me`, `PUT /playlists/:id` con `name`/`description`/
+`removeSongs`/`reorder`, `POST /auth/logout`, y la prueba visual en navegador (§1). La suite dejó un
+usuario de prueba (`verifdocs`) porque no hay endpoint para dar de baja usuarios; el resto de las
+escrituras (playlist, favorito, follow) se revirtieron.
 
 ---
 
-## 9. Seguimiento migrado al backend
+## 6. Seguimiento migrado al backend
 
 **Estado:** migrado. Auth y edición de perfil van contra el backend desde PR #20/#21; el seguimiento
 (TS-10) también, sobre `POST`/`DELETE /api/users/:id/follow` y `GET /api/users/:id/followers|following`.
 
-### 9.1 Qué se conectó
+### 6.1 Qué se conectó
 
 - `usersService.js`: `followUser`, `unfollowUser`, `getFollowCounts`, `isFollowing`, `listFollowing` y
   `listFollowers` contra el backend real. Se eliminó el mock de follow (`synthos_mock_follows`) y el
@@ -245,7 +221,7 @@ Frontend. Comandos de `curl` en `ESPECIFICACIONES-BACKEND.md` §5.2.
 - `FollowList` ya resuelve `listFollowers`/`listFollowing` contra la base, así que las listas de
   seguidores/seguidos muestran usuarios reales.
 
-### 9.2 Lo que queda pendiente
+### 6.2 Lo que queda pendiente
 
 1. **Listas sin paginar:** `GET /users/:id/followers|following` devuelven el array completo, no un envelope
    con `page`/`total`.
@@ -256,7 +232,7 @@ Frontend. Comandos de `curl` en `ESPECIFICACIONES-BACKEND.md` §5.2.
 
 ---
 
-## 10. La foto de perfil se guarda como base64 dentro de una columna de texto
+## 7. La foto de perfil se guarda como base64 dentro de una columna de texto
 
 **Estado:** la edición de perfil sí conecta con el backend de punta a punta — `ProfileEdit.jsx` →
 `useAuth().updateProfile()` → `usersService.updateProfile()` → `PATCH /api/users/me` →
@@ -282,9 +258,9 @@ archivos todavía, el arreglo barato es al menos acotar tamaño y tipo en ambos 
 reciba un data URI arbitrario.
 
 **Verificación:** subir una imagen de tamaño realista y confirmar que el `PATCH` pesa kilobytes y no
-megabytes. Levantar la base real primero (§8.8), porque sin `Backend/.env` no hay contra qué probar.
+megabytes. La base real ya está levantada (§5.7), así que no hay excusa para no probarlo.
 
-### 10.1 Feedback y validación de la edición de perfil
+### 7.1 Feedback y validación de la edición de perfil
 
 Menor, va junto con lo anterior:
 

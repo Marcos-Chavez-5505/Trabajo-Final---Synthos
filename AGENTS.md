@@ -23,49 +23,51 @@ src/
 │   ├── layout/
 │   │   ├── AppLayout.jsx      # decide Sidebar (desktop) vs BottomNav (mobile) via useBreakpoint
 │   │   ├── Sidebar.jsx        # desktop: Home, Populares, Mi Colección, Mis Salas, Mis Playlists
+│   │   ├── SidebarAutoCollapse.jsx # colapsa/expande el sidebar al cruzar 1280px (no pisa el trigger manual)
 │   │   ├── BottomNav.jsx      # mobile: Home, Salas, Buscar, Playlists
-│   │   ├── TopBar.jsx         # flechas navegación + search
+│   │   ├── TopBar.jsx         # búsqueda + botón del sidebar (trigger de shadcn); flechas navegación ocultas
 │   │   └── MiniPlayerBar.jsx  # barra reproducción mobile (encima de BottomNav)
 │   ├── player/
 │   │   ├── PlayerBar.jsx      # reproductor completo desktop
 │   │   ├── PlayerControls.jsx # play/pause/skip/shuffle/repeat
 │   │   └── ProgressBar.jsx
 │   ├── cards/
-│   │   ├── MediaCard.jsx      # tarjeta Título/Artista/Label (usado en Home y Salas)
-│   │   ├── SectionCarousel.jsx
-│   │   └── RoomListItem.jsx   # ítem de sala en sidebar/listas (reemplaza a "grupo")
-│   └── chat/
-│       ├── ChatList.jsx
-│       ├── ChatWindow.jsx     # chat dentro de una sala
-│       └── MessageBubble.jsx
+│   │   ├── MediaCard.jsx      # tarjeta Título/Artista/Label (grids)
+│   │   ├── MiniMediaCard.jsx  # variante compacta
+│   │   ├── RoomCard.jsx       # tarjeta de sala (listado /salas)
+│   │   └── UserRow.jsx        # fila de usuario (búsqueda y listas de seguidores)
 ├── features/                  # lógica de negocio por dominio, un folder = una feature
 │   ├── home/
 │   │   ├── HomeDesktop.jsx
 │   │   └── HomeMobile.jsx
 │   ├── auth/                  # registro, login, logout
-│   ├── profile/                # editar perfil, ver perfil público, recomendaciones recibidas
-│   ├── playlists/               # CRUD playlists, favoritos, playlists colaborativas
-│   ├── rooms/                  # crear/administrar sala, votar skip, ranking por calificación, buscar salas
-│   ├── search/                  # buscar canciones, personas, salas
-│   └── social/                  # seguir/dejar de seguir, calificar anfitrión
+│   ├── profile/               # editar perfil, ver perfil público
+│   ├── playlists/             # CRUD playlists, favoritos, playlists colaborativas
+│   ├── rooms/                 # listado de salas (crear/administrar/votar skip, pendientes)
+│   ├── search/                # buscar canciones y personas
+│   └── social/                # seguir/dejar de seguir
 ├── hooks/
-│   ├── useBreakpoint.js
+│   ├── useAuth.js
 │   ├── usePlayer.js
-│   └── useAuth.js
+│   ├── useBreakpoint.js
+│   ├── useFavorites.js
+│   ├── useDebounce.js
+│   └── use-mobile.ts          # hook de breakpoint mobile (primitiva de shadcn)
 ├── context/
 │   ├── PlayerContext.jsx      # estado global de reproducción
 │   └── AuthContext.jsx
 ├── services/                   # una función = una llamada API, ver convención abajo
-│   ├── api.js                  # instancia base (fetch/axios), interceptores auth
+│   ├── api.js                  # fetch nativo: helpers get/post/patch/put/del, token y handler de 401
 │   ├── authService.js
 │   ├── songsService.js
 │   ├── playlistsService.js
-│   ├── roomsService.js
-│   ├── usersService.js
-│   └── recommendationsService.js
-├── mocks/                      # datos fake por dominio, mientras no hay backend
-│   ├── users.js
-│   └── songs.js                # (agregar uno por dominio según haga falta)
+│   ├── roomsService.js         # único que consume mocks hoy (USE_MOCK)
+│   └── usersService.js
+├── mocks/                      # datos fake; solo los importa su service. Hoy solo rooms.js (→ roomsService)
+│   ├── playlists.js            # sin uso (playlists migró a la API)
+│   ├── rooms.js                # en uso
+│   ├── songs.js                # sin uso (pendiente de borrar)
+│   └── users.js                # sin uso (auth/usuarios migraron a la API)
 ├── routes/
 │   └── AppRoutes.jsx
 ├── styles/                     # design system (única fuente de verdad de los valores)
@@ -76,18 +78,18 @@ src/
 └── App.jsx
 ```
 
-La documentación del proyecto vive en `docs/` (raíz del repo):
+La documentación del proyecto vive en `docs/` (raíz del repo). **No leer todos**: elegir el documento según la pregunta y abrir solo ese (ahorra tokens):
 
-```
-docs/
-├── ESTRUCTURA.md                # onboarding: dónde está cada cosa y qué responsabilidad tiene
-├── PENDIENTES.md                # estado de migración a la API real y pendientes
-├── REQUERIMIENTOS-BACKEND.md    # requisitos por historia de usuario y su estado
-├── ESPECIFICACIONES-BACKEND.md  # contratos de la API con ejemplos de curl
-└── plan/                        # planes de sprint en formato agente, uno por entrega
-    ├── sprint-1-plan.md
-    └── sprint-2-plan.md
-```
+| Pregunta / necesidad | Documento y dónde mirar |
+| --- | --- |
+| ¿Dónde vive un archivo, cómo se estructura el repo, convenciones de carpetas o trampas conocidas? | `docs/ESTRUCTURA.md` — onboarding. §5 catálogo de endpoints (resumen), §6 convenciones y trampas, §7 índice de los demás docs |
+| ¿Cómo está el código **hoy**? (stack, endpoints vigentes, services, estado de features, deudas) | `docs/CONTEXT.md` — snapshot listo para inyectar a agentes; §3 backend, §4 frontend, §7 deudas |
+| ¿Qué **falta**, qué está migrado, qué decisión está abierta o qué se verificó contra la base real? | `docs/PENDIENTES.md` — backlog vivo numerado por tema (§5 conexión a la API con su sub-numeración) |
+| ¿Cuál es el **contrato** de un endpoint (request/response/errores/`curl`)? | `docs/ESPECIFICACIONES-BACKEND.md` — **fuente canónica de contratos**: §1–5 canciones, §6 auth, §7 usuarios/follow, §8 favoritos, §9 playlists, §10 salas |
+| ¿Está implementado/verificado un requerimiento? ¿qué bloquea a qué? ¿qué sigue? | `docs/REQUERIMIENTOS-BACKEND.md` — casillas con evidencia de verificación, decisiones D1–D11, §11 orden de incorporación, §12 trazabilidad TS |
+| ¿Cómo se implementó o qué se decidió en un sprint pasado? | `docs/plan/sprint-1-plan.md`, `sprint-2-plan.md` — históricos autocontenidos (regla 9: no sobrescribir) |
+
+Precedencia en caso de conflicto: `AGENTS.md` (convenciones) → `ESPECIFICACIONES-BACKEND.md` (contratos) → el resto. Si un doc contradice el código, manda el código y actualizar el doc.
 
 ## 3. Convención de nombres
 
@@ -134,11 +136,11 @@ Ejemplos: `roomsService.js` → `listRooms()`, `getRoomById(id)`, `createRoom(da
 ## 4. Reglas para agentes IA
 
 1. **No reintroducir "Grupos".** El concepto correcto es `rooms` / "Salas" en toda la app (variables, componentes, endpoints, copy en español = "Sala").
-2. Reutilizar `MediaCard` y `SectionCarousel` en toda vista tipo grid — no crear variantes ad-hoc por pantalla.
+2. Reutilizar `MediaCard` y sus variantes (`MiniMediaCard`, `RoomCard`) en toda vista tipo grid — no crear variantes ad-hoc por pantalla.
 3. Un solo `PlayerContext` global. `PlayerBar` (desktop) y `MiniPlayerBar` (mobile) son solo presentación, consumen el mismo estado.
 4. Breakpoints Tailwind (`md:`, `lg:`) para alternar layouts desktop/mobile — no duplicar componentes por CSS cuando alcanza con clases responsive. Sí duplicar cuando la interacción es distinta (Sidebar vs BottomNav).
 5. Toda llamada a red pasa por `services/`, nunca `fetch` directo dentro de un componente.
-6. `mocks/` solo es consumido por su `xService.js` correspondiente (ej. `mocks/users.js` → `authService.js`/`usersService.js`), nunca directo desde componentes o features. Al migrar a backend real, solo se edita el contenido de `services/`; nada fuera de esa carpeta cambia.
+6. `mocks/` solo es consumido por su `xService.js` correspondiente (ej. `mocks/rooms.js` → `roomsService.js`), nunca directo desde componentes o features. Al migrar a backend real, solo se edita el contenido de `services/`; nada fuera de esa carpeta cambia.
 7. Nuevo archivo de servicio → agregar su convención de nombres a este documento.
 8. Antes de generar una feature nueva, revisar si ya existe folder en `features/` correspondiente.
 9. `docs/plan/` (en la raíz del repo) contiene los planes de sprint en formato agente (autocontenidos). Nuevo sprint → nuevo archivo ahí, no sobrescribir los anteriores.
@@ -162,6 +164,5 @@ Una vez que el usuario autoriza, cada cambio viaja en su propia rama saliendo de
 
 ## 5. Pendiente / decisiones abiertas
 
-- Definir librería HTTP (axios vs fetch nativo) en `services/api.js`.
 - Definir manejo de WebSockets para chat en salas y sincronización de reproducción (sugerido: `services/socketService.js`).
 - Definir gestor de estado global si Context queda insuficiente (ej. Zustand).

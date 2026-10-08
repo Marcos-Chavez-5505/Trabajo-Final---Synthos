@@ -1,10 +1,11 @@
-# Endpoint de canciones — contrato aplicado
+# Contratos de la API
 
-> Alcance: se modificaron **frontend y backend**. La paginación por offset y los nombres de género ya
-> están implementados; este documento queda como referencia del contrato final.
+> Alcance: contrato vigente de los endpoints montados en `Backend/src/app.js` (todo bajo `/api`).
+> §1–5 documentan en detalle el endpoint de canciones (el primero implementado y verificado);
+> §6–10 cubren auth, usuarios y follow, favoritos, playlists y salas.
 >
-> Contradicción con `AGENTS.md`: la convención de rutas dice `/api/songs`, así que lo de abajo ya no
-> incluye sugerencia de prefijo. Las rutas vigentes son las de `Backend/src/app.js`.
+> Lo que todavía no existe (salas CRUD, chat, recomendaciones, playlists colaborativas…) vive en
+> `REQUERIMIENTOS-BACKEND.md`.
 
 ---
 
@@ -163,5 +164,79 @@ cd Frontend && npm run dev
 En el frontend: `/home` muestra novedades con carátula, artista y género; `/buscar` pagina con números;
 el reproductor reproduce audio real desde la fila de novedades.
 
-Esto sigue **sin ejecutarse**: el backend no responde en `localhost:3000`, Docker no está levantado y no
-existe `Backend/.env` (solo `.env.example`, sin `DATABASE_URL`). Ver `PENDIENTES.md` §8.8.
+La verificación contra la base real sigue pendiente (no hay `Backend/.env` ni base levantada):
+ver `PENDIENTES.md` §5.7.
+
+---
+
+## 6. Auth — `/api/auth` (y `GET /api/health`)
+
+**Auth**: `JWT` = requiere `Authorization: Bearer <jwt>`. Sólo `POST /api/auth/logout` y las rutas
+de `me`/`playlists`/`favorites`/follow son privadas; el resto es público.
+
+| Endpoint | Auth | Request | Response |
+|---|---|---|---|
+| `GET /api/health` | — | — | `{ status: "ok" }` |
+| `POST /api/auth/register` | — | body: `email`, `username` (3–50), `password` (≥8, con letra y número) | 201 `{ status, token, user }`. 400 con `errors: []`; 400 si el email o el username ya existen |
+| `POST /api/auth/login` | — | body: `email`, `password` | 200 `{ status, token, user }` (sin `passwordHash`). 401 si no coincide |
+| `POST /api/auth/logout` | `JWT` | — | 200 `{ status, message }` |
+
+El registro **deja la sesión iniciada**: devuelve token igual que `login`. El JWT lleva
+`{ sub, email, username }` y `sub` es el id del usuario. El `user` de register/login trae los mismos
+campos que `GET /api/users/me`.
+
+---
+
+## 7. Usuarios y follow — `/api/users`
+
+| Endpoint | Auth | Request | Response |
+|---|---|---|---|
+| `GET /search` | — | query: `query`, `page`, `pageSize` | `{ items, total, page, pageSize, totalPages }`. `items` viene de un `$queryRaw`, así que trae **`picture_url` y `genre_name` en snake_case**; `query` vacío = todos los usuarios |
+| `GET /me` | `JWT` | — | `user` con `email`, o 404 |
+| `PATCH /me` | `JWT` | body: `username`, `biography`, `pictureUrl` (sólo los presentes) | `user` actualizado. 400 si el username es inválido o ya está usado |
+| `GET /:id` | — | — | `{ id, username, pictureUrl, biography, registrationDate, followers[], following[], followerCount, followingCount }`. 404 si no existe, 400 si el id no es un entero |
+| `GET /:id/followers` | — | — | `{ status, followers: [{ id, username, pictureUrl }] }` — **array completo, sin paginar** |
+| `GET /:id/following` | — | — | `{ status, following: [{ id, username, pictureUrl }] }` — ídem |
+| `POST /:id/follow` | `JWT` | — | 200 `{ status, message }` (idempotente). 400 si el id es inválido o te seguís a vos mismo; 404 si el usuario no existe |
+| `DELETE /:id/follow` | `JWT` | — | 200 `{ status, message }`. 404 si no lo seguías |
+
+No existe un endpoint `isFollowing`: el Frontend lo deriva de la lista de seguidores.
+
+---
+
+## 8. Favoritos — `/api/favorites` (todas `JWT`)
+
+| Endpoint | Request | Response |
+|---|---|---|
+| `GET /` | — | `{ status, playlist: { id, name } \| null, songs[] }` |
+| `GET /songs/ids` | — | `{ status, songIds: number[] }` — es lo que consume el hook de favoritos |
+| `POST /songs` | body: `songId` (o `idSong`) | 201 `{ status, favorite: { song, markedDate } }`. 400 id inválido, 404 canción inexistente, 409 ya está en favoritos |
+| `DELETE /songs/:songId` | — | 200 `{ status, message }`. 404 si no estaba en favoritos |
+
+**Cómo funcionan los favoritos:** no son un estado aparte, sino una playlist con
+`type: "favorites"`, que se crea sola (`"Favoritos"`, privada) al agregar el primer favorito. Las
+canciones marcadas viven en la tabla `favorite`; `GET /` y `GET /:id` la sintetizan para que el
+Frontend la trate como una playlist más. No se puede editar ni borrar (403).
+
+---
+
+## 9. Playlists — `/api/playlists` (todas `JWT`)
+
+| Endpoint | Request | Response |
+|---|---|---|
+| `GET /` | — | `{ status, playlists[] }` — las del usuario, con `creator` y `songs` ordenadas por posición |
+| `GET /:id` | — | `{ status, playlist }`. **404 si no es del dueño** |
+| `POST /` | body: `name` (obligatorio, ≤50), `description`, `isPublic` | 201 `{ status, playlist }` con `type: "personal"` |
+| `PUT /:id` | body: `name?`, `description?`, `addSongs?`, `removeSongs?`, `reorder?` | 200 `{ status, playlist }`. 403 si no es el dueño o si es la de favoritos, 404 si no existe |
+| `DELETE /:id` | — | 200 `{ status, message }`. 403 si no es el dueño o si es la de favoritos |
+
+No hay sub-recursos `/songs`: las canciones llegan incluidas en `GET /` y `GET /:id`, y se agregan,
+quitan o reordenan en lote a través de `PUT /:id` (`addSongs`/`removeSongs`/`reorder`).
+
+---
+
+## 10. Salas — `/api/rooms`
+
+| Endpoint | Auth | Request | Response |
+|---|---|---|---|
+| `GET /` | — | query: `sort` = `alphabetical` (default) \| `rating` | **Array plano** (sin envelope) de filas con `room.*` + `avg_rating`, desde la vista `room_avg_rating` |
