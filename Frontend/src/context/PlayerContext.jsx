@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PlayerContext } from './playerContext.js'
-import { listSongs } from '../services/songsService.js'
 
 const REPEAT_MODES = ['off', 'track', 'list']
 const RESTART_THRESHOLD_SECONDS = 3
@@ -85,30 +84,27 @@ export default function PlayerProvider({ children }) {
 
   const song = queue[index] ?? null
 
-  // Si el catálogo no llega, la cola queda vacía y el player se oculta
-  // (hasQueue false). No rompe la app: el resto de las pantallas no dependen de
-  // esto para renderizar.
-  // TODO(agente): TS-07/TS-09 arman la cola con la selección real del usuario.
-  // Por ahora la cola inicial es la primera tanda del catálogo, para que el
-  // player sea usable.
+  // Estado idle: sin canción actual no hay nada cargado. No hay inicialización
+  // automática en mount: la cola arranca vacía y solo se puebla cuando el usuario
+  // elige reproducir algo (playSongs). El playerbar queda visible pero inerte con
+  // un overlay hasta ese momento.
+  const isIdle = song === null
+
+  // Idle: sin canción no hay src que cargar. Si el player volvió a idle (cola
+  // vaciada), hay que soltar el track anterior o quedaría un audio huérfano en
+  // el elemento. Efecto aparte y sin setState, para que el de carga de abajo
+  // quede con la misma forma simple de siempre.
   useEffect(() => {
-    let active = true
+    const audio = audioRef.current
 
-    listSongs()
-      .then((songs) => {
-        if (active) setQueue(songs)
-      })
-      .catch(() => {
-        if (active) setQueue([])
-      })
+    if (!audio || song) return
 
-    return () => {
-      active = false
-    }
-  }, [])
+    audio.removeAttribute('src')
+    audio.load()
+  }, [song])
 
   // Cargar el track en el <audio>. Va antes del efecto de play para que al
-  // cambiar de canción el src ya esté seteado cuando se intenta reproducir.
+  // cambiar de canción el src ya esté seteado cuando se intente reproducir.
   useEffect(() => {
     const audio = audioRef.current
 
@@ -137,7 +133,7 @@ export default function PlayerProvider({ children }) {
     (time) => {
       const audio = audioRef.current
 
-      if (!audio) return
+      if (!audio || !audio.src) return
 
       const target = Math.min(Math.max(time, 0), Number.isFinite(audio.duration) ? audio.duration : time)
 
@@ -235,6 +231,39 @@ export default function PlayerProvider({ children }) {
 
     setIsPlaying((prev) => !prev)
   }, [song])
+
+  // Tecla "space": alterna reproducir/pausar desde cualquier lugar de la app,
+  // incluso con un elemento enfocado (botón, card, ítem de menú). Se toma en
+  // fase de captura para interceptarla antes que el elemento enfocado y se
+  // reserva como control de reproducción, igual que en un reproductor de
+  // escritorio; los controles siguen activándose con Enter. Solo se cede donde
+  // se escribe (inputs, textarea, selects, contenteditable), en IME y en
+  // combinaciones con modifiers. En idle se deja el comportamiento nativo.
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.code !== 'Space' || event.repeat || event.isComposing) return
+      if (event.ctrlKey || event.metaKey || event.altKey) return
+      if (isIdle) return
+
+      const target = event.target
+
+      if (
+        typeof target?.closest === 'function' &&
+        target.closest(
+          'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]'
+        )
+      ) {
+        return
+      }
+
+      event.preventDefault() // que no scrollee ni active al elemento enfocado
+      event.stopPropagation()
+      togglePlay()
+    }
+
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
+  }, [togglePlay, isIdle])
 
   /**
    * Arma la cola y arranca a reproducir.
@@ -409,6 +438,7 @@ export default function PlayerProvider({ children }) {
       duration,
       shuffle,
       repeat,
+      isIdle,
       hasQueue: queue.length > 0,
       playSongs,
       removeFromPlaylistQueue,
@@ -430,6 +460,7 @@ export default function PlayerProvider({ children }) {
       duration,
       shuffle,
       repeat,
+      isIdle,
       playSongs,
       removeFromPlaylistQueue,
       removeFromFavoritesQueue,
