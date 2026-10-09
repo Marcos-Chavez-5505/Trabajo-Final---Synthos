@@ -220,13 +220,17 @@ escrituras (playlist, favorito, follow) se revirtieron.
   `ProfilePublic`) para que contadores y listas se refresquen al seguir/dejar de seguir desde otra vista.
 - `FollowList` ya resuelve `listFollowers`/`listFollowing` contra la base, así que las listas de
   seguidores/seguidos muestran usuarios reales.
+- `searchUsers` suma la relación **completa** por resultado cuando hay sesión (TS-10b): el backend
+  la resuelve en la misma query de búsqueda con dos `EXISTS` (`isFollowing` y `followsMe`);
+  `SearchPersonRow` usa ambos para el botón y la etiqueta mutua.
 
 ### 6.2 Lo que queda pendiente
 
 1. **Listas sin paginar:** `GET /users/:id/followers|following` devuelven el array completo, no un envelope
    con `page`/`total`.
 2. **`isFollowing` en `GET /users/:id`:** hoy el perfil público hace dos llamadas (contadores + relación).
-   Incluir `isFollowing` para el usuario del token lo dejaría en una sola.
+   Incluir `isFollowing` para el usuario del token lo dejaría en una sola. (La búsqueda sí lo tiene;
+   ver §6.1.)
 3. **Respuesta de `follow`/`unfollow`:** sigue siendo `{ status, message }`, así que `useFollow` re-consulta
    el estado (`relationState`).
 

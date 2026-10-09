@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import useDebounce from '../../hooks/useDebounce.js'
 import buildPageRange from '../../lib/pageRange.js'
 import { searchUsers, SEARCH_PAGE_SIZE } from '../../services/usersService.js'
-import UserRow from '../../components/cards/UserRow.jsx'
+import SearchPersonRow from './SearchPersonRow.jsx'
 import SearchTabs from './SearchTabs.jsx'
 import {
   Pagination,
@@ -116,9 +116,12 @@ export default function SearchPeople() {
         <>
           <ul className="flex flex-col gap-3">
             {results.items.map((person) => (
-              <li key={person.id}>
-                {/* Misma fila que las listas de seguidores y seguidos (TS-10). */}
-                <UserRow person={person} />
+              // La key incluye la página: al repaginar las filas se remontan
+              // con el estado fresco de `isFollowing` que trae la respuesta.
+              <li key={`${results.page}-${person.id}`}>
+                {/* Misma fila que seguidores/seguidos (TS-10) + botón seguir
+                    que se actualiza solo, sin recargar (TS-10b). */}
+                <SearchPersonRow person={person} />
               </li>
             ))}
           </ul>

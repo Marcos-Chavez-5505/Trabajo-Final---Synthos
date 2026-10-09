@@ -32,7 +32,7 @@
 | D9  | **Permisos extra del creador de playlist.** El plan mock solo restringe eliminar canciones; B8 también reserva al creador editar nombre/descripción y borrar la playlist.                                                                             | Adoptar regla de B8 (propuesta, es la más estricta) / solo eliminar canciones.                                                                                          | TS-12                |
 | D10 | **Ruta de invitación.** `/playlists/join/:token` vs `/playlists/invitar/:token`.                                                                                                                                                                   | Elegir una y usarla en`AppRoutes.jsx` y en el link generado. Propuesta: `/playlists/invitar/:token` (consistente con rutas en español como `/perfil/seguidores`). | TS-13                |
 | D11 | **Invitación ya generada.** Si el creador pide otro link y ya existe uno.                                                                                                                                                                              | `409` / `200` con el mismo enlace.                                                                                                                                   | TS-13 (B6)           |
-| D12 | **Estado real de TS-10 en la búsqueda.** El plan mock dice que `UserRow` (con botón seguir) se usa en `SearchPeople`; F10 dice que la búsqueda no muestra estado de seguimiento. Probable causa: lo primero es mock, lo segundo es backend real. | Verificar contra el código antes de TS-10b.                                                                                                                             | TS-10b               |
+| D12 | **Estado real de TS-10 en la búsqueda.** El plan mock dice que `UserRow` (con botón seguir) se usa en `SearchPeople`; F10 dice que la búsqueda no muestra estado de seguimiento. Probable causa: lo primero es mock, lo segundo es backend real. | **resuelta (verificado contra el código):** `UserRow` es un `<Link>` plano sin botón (también en `FollowList`); `SearchPeople` no muestra el estado. El plan-mock no se cumple → TS-10b es trabajo real. | TS-10b |
 
 **Decisión ya tomada:** orden cronológico de recomendaciones = **más reciente primero** (definido en B1; reemplaza el "definir y ser consistente" del plan mock).
 
@@ -79,9 +79,9 @@
 - **Códigos:** los actuales (`200` y errores ya manejados); `401` solo si se pide explícitamente el dato autenticado y no hay sesión.
 - **Necesita:** tabla de seguimiento; endpoint existente de búsqueda.
 - **Criterios de aceptación:**
-  - [ ] La respuesta incluye el indicador por persona.
-  - [ ] Con muchos resultados sigue siendo **una sola consulta** (no una por persona).
-  - [ ] La búsqueda sigue funcionando igual para el resto de los campos.
+  - [X] La respuesta incluye el indicador por persona.
+  - [X] Con muchos resultados sigue siendo **una sola consulta** (no una por persona).
+  - [X] La búsqueda sigue funcionando igual para el resto de los campos.
 
 **Frontend (F10)**
 
@@ -89,11 +89,16 @@
 - **Endpoint:** usa B4.
 - **Falta:** mostrar indicador o botón de seguir en cada fila según la respuesta; mantenerlo sincronizado si el usuario empieza o deja de seguir desde el resultado; estado de carga; búsqueda sin resultados; paginación como hasta ahora.
 - **Criterios de aceptación:**
-  - [ ] Cada resultado indica si ya sigo a esa persona.
-  - [ ] Al seguir o dejar de seguir desde la lista, el indicador se actualiza sin recargar.
-  - [ ] Paginación y búsqueda siguen funcionando como hasta ahora.
+  - [X] Cada resultado indica si ya sigo a esa persona.
+  - [X] Al seguir o dejar de seguir desde la lista, el indicador se actualiza sin recargar.
+  - [X] Paginación y búsqueda siguen funcionando como hasta ahora.
 
 **Dependencias:** TS-10.
+
+**Estado: entregado (B4 + F10).**
+
+- B4: `GET /api/users/search` con auth **opcional** (`optionalAuthenticate`); con sesión cada ítem agrega la relación **en los dos sentidos** — `isFollowing` (el que busca lo sigue) y `followsMe` (esa persona lo sigue a él) — resuelta con dos `EXISTS` en la misma query de búsqueda (verificado contra la base real: anónimo sin campos; con sesión ambos campos aparecen y reflejan el estado real tras `POST`/`DELETE /follow`).
+- F10: `searchUsers` mapea `isFollowing` y `followsMe` por resultado; `UserRow` acepta un slot `action` (fuera del link, sin interactivos anidados); `FollowButton` generaliza su wrapper con prop `className`; nueva `features/search/SearchPersonRow.jsx` con toggle optimista (reversión en error, `pending` bloquea, el error se muestra bajo el botón con el mensaje del service) y badge "Te sigue" cuando `followsMe`. Al repaginar las filas se remontan (`key = página-persona`) con el estado fresco de la respuesta.
 
 ---
 

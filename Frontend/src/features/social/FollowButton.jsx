@@ -8,11 +8,11 @@
  * Devuelve `null` cuando no corresponde mostrarlo (sin sesión, o el perfil es
  * el propio), así que la pantalla no tiene que decidir nada.
  */
-export default function FollowButton({ canFollow, isFollowing, onToggle, pending }) {
+export default function FollowButton({ canFollow, isFollowing, onToggle, pending, className = 'mt-6' }) {
   if (!canFollow) return null
 
   return (
-    <div className="mt-6">
+    <div className={className}>
       <button
         type="button"
         onClick={onToggle}
