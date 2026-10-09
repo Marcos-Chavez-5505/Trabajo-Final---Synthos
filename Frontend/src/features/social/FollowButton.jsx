@@ -24,8 +24,8 @@ export default function FollowButton({ canFollow, isFollowing, onToggle, pending
           // por el fondo: los íconos del set de diseño vienen con `#F4F0F9`
           // hardcodeado y no se recolorean (regla 10 de AGENTS.md).
           isFollowing
-            ? 'Volume Button rounded px-4 py-2 disabled:opacity-60'
-            : 'Fucsia Button rounded px-4 py-2 disabled:opacity-60'
+            ? 'Volume Button rounded px-4 py-2 hover:brightness-110 disabled:opacity-60 disabled:hover:brightness-100'
+            : 'Fucsia Button rounded px-4 py-2 hover:brightness-110 disabled:opacity-60 disabled:hover:brightness-100'
         }
       >
         {isFollowing ? 'Siguiendo' : 'Seguir'}

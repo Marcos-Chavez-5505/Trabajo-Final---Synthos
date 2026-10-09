@@ -51,7 +51,7 @@ export default function ProfileEdit({ onDone }) {
 
         <div className="flex items-center gap-4">
           <Avatar src={avatarUrl} name={username} className="h-20 w-20" />
-          <label className="cursor-pointer rounded px-3 py-2 Volume Button">
+          <label className="cursor-pointer rounded px-3 py-2 Volume Button hover:brightness-110">
             Subir foto
             <input
               type="file"
@@ -84,14 +84,14 @@ export default function ProfileEdit({ onDone }) {
           <button
             type="submit"
             disabled={loading}
-            className="rounded px-4 py-2 Fucsia Button disabled:opacity-50"
+            className="rounded px-4 py-2 Fucsia Button hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100"
           >
             Guardar
           </button>
           <button
             type="button"
             onClick={onDone}
-            className="rounded px-4 py-2 Volume Button"
+            className="rounded px-4 py-2 Volume Button hover:brightness-110"
           >
             Cancelar
           </button>

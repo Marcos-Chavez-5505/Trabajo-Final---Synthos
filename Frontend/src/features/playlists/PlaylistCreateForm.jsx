@@ -64,14 +64,14 @@ export default function PlaylistCreateForm({ onCreate, onCancel }) {
         <button
           type="submit"
           disabled={saving}
-          className="rounded px-4 py-2 Fucsia Button disabled:opacity-50"
+          className="rounded px-4 py-2 Fucsia Button hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100"
         >
           {saving ? 'Creando…' : 'Crear'}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded px-4 py-2 Volume Button"
+          className="rounded px-4 py-2 Volume Button hover:brightness-110"
         >
           Cancelar
         </button>
