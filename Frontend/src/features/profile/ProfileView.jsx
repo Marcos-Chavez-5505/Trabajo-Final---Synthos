@@ -49,7 +49,7 @@ export default function ProfileView() {
 
         <button
           onClick={() => setEditing(true)}
-          className="mt-6 rounded px-4 py-2 Fucsia Button"
+          className="mt-6 rounded px-4 py-2 Fucsia Button hover:brightness-110"
         >
           Editar perfil
         </button>

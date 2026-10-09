@@ -175,7 +175,7 @@ export default function PlaylistDetail() {
                     })
                   }
                   disabled={playable.length === 0}
-                  className="rounded px-4 py-2 Fucsia Button disabled:opacity-50"
+                  className="rounded px-4 py-2 Fucsia Button hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100"
                 >
                   Reproducir
                 </button>
@@ -187,7 +187,7 @@ export default function PlaylistDetail() {
                     <button
                       type="button"
                       onClick={() => setEditing(true)}
-                      className="rounded px-4 py-2 Volume Button"
+                      className="rounded px-4 py-2 Volume Button hover:brightness-110"
                     >
                       Editar
                     </button>
@@ -195,7 +195,7 @@ export default function PlaylistDetail() {
                     <button
                       type="button"
                       onClick={handleDelete}
-                      className="rounded px-4 py-2 Volume Button"
+                      className="rounded px-4 py-2 Volume Button hover:brightness-110"
                     >
                       Eliminar
                     </button>
@@ -306,7 +306,7 @@ function NotFound() {
       <p className="text-muted-foreground TextRegluar mt-1">
         Puede que la hayas eliminado, o que no sea tuya.
       </p>
-      <Link to="/playlists" className="TextRegluar Volume mt-6 inline-block rounded px-4 py-2">
+      <Link to="/playlists" className="TextRegluar Volume mt-6 inline-block rounded px-4 py-2 hover:brightness-110">
         Volver a mis playlists
       </Link>
     </div>

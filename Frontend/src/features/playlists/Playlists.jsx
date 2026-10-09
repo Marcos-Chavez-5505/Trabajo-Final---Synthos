@@ -75,7 +75,7 @@ export default function Playlists() {
         <button
           type="button"
           onClick={() => setCreating((prev) => !prev)}
-          className="rounded px-4 py-2 Fucsia Button"
+          className="rounded px-4 py-2 Fucsia Button hover:brightness-110"
         >
           {creating ? 'Cancelar' : 'Crear playlist'}
         </button>
