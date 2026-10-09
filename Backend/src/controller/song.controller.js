@@ -36,4 +36,29 @@ async function searchSongs(req, res, next) {
 	}
 }
 
-module.exports = { getSongs, getSongById, searchSongs };
+async function getRecommendations(req, res, next) {
+	try {
+		const { expression } = req.query;
+
+		if (!expression) {
+			return res.status(400).json({
+				status: "error",
+				message: "El parámetro expression es obligatorio.",
+			});
+		}
+
+		const songs = await songService.getRecommendationsByExpression(expression);
+
+		return res.status(200).json({ status: "success", songs });
+	} catch (error) {
+		if (error.status === 400) {
+			return res.status(400).json({
+				status: "error",
+				message: error.message,
+			});
+		}
+		next(error);
+	}
+}
+
+module.exports = { getSongs, getSongById, searchSongs, getRecommendations };

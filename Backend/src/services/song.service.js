@@ -8,6 +8,9 @@ const SONG_INCLUDE = {
 	artist: true,
 };
 
+const VALID_EXPRESSIONS = ["neutral", "happy", "sad"];
+const RECOMMENDATIONS_LIMIT = 20;
+
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
@@ -102,4 +105,33 @@ async function getSongById(songId) {
 	return song;
 }
 
-module.exports = { getSongs, getSongById, searchSongs };
+
+async function getRecommendationsByExpression(expression) {
+	if (!VALID_EXPRESSIONS.includes(expression)) {
+		const err = new Error("Expresión inválida.");
+		err.status = 400;
+		throw err;
+	}
+
+	// IDs aleatorios de canciones que tengan ese mood
+	const rows = await prisma.$queryRaw`
+		SELECT s.id
+		FROM song s
+		JOIN song_mood sm ON sm.id_song = s.id
+		JOIN mood m ON m.id = sm.id_mood
+		WHERE m.name = ${expression}
+		ORDER BY RANDOM()
+		LIMIT ${RECOMMENDATIONS_LIMIT}
+	`;
+
+	const ids = rows.map((r) => r.id);
+	if (ids.length === 0) return [];
+
+	return prisma.song.findMany({
+		where: { id: { in: ids } },
+		include: SONG_INCLUDE,
+	});
+}
+
+
+module.exports = { getSongs, getSongById, searchSongs, getRecommendationsByExpression };
