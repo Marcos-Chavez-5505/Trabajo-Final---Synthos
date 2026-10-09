@@ -64,7 +64,15 @@ export async function searchUsers(query = '', page = 1, pageSize = SEARCH_PAGE_S
   })
 
   return {
-    items: (data.items ?? []).map(toUser),
+    items: (data.items ?? []).map((raw) => ({
+      ...toUser(raw),
+      // TS-10b: con sesión el backend agrega la relación en los dos sentidos:
+      // si el que busca ya sigue a la persona (`isFollowing`) y si esa persona
+      // lo sigue a él (`followsMe`). Sin sesión los campos no vienen y quedan
+      // falsos.
+      isFollowing: Boolean(raw.isFollowing),
+      followsMe: Boolean(raw.followsMe),
+    })),
     total: data.total ?? 0,
     page: data.page ?? 1,
     pageSize: data.pageSize ?? pageSize,
