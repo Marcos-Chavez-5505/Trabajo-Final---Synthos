@@ -191,7 +191,7 @@ campos que `GET /api/users/me`.
 
 | Endpoint | Auth | Request | Response |
 |---|---|---|---|
-| `GET /search` | — | query: `query`, `page`, `pageSize` | `{ items, total, page, pageSize, totalPages }`. `items` viene de un `$queryRaw`, así que trae **`picture_url` y `genre_name` en snake_case**; `query` vacío = todos los usuarios |
+| `GET /search` | opcional | query: `query`, `page`, `pageSize` | `{ items, total, page, pageSize, totalPages }`. `items` viene de un `$queryRaw`, así que trae **`picture_url` y `genre_name` en snake_case**; `query` vacío = todos los usuarios. **Con sesión** (Bearer) cada ítem suma la relación en los **dos sentidos**: `isFollowing` (el que busca ya lo sigue) y `followsMe` (esa persona ya lo sigue a él), resueltos con dos `EXISTS` en la misma query (jamás una consulta por resultado) |
 | `GET /me` | `JWT` | — | `user` con `email`, o 404 |
 | `PATCH /me` | `JWT` | body: `username`, `biography`, `pictureUrl` (sólo los presentes) | `user` actualizado. 400 si el username es inválido o ya está usado |
 | `GET /:id` | — | — | `{ id, username, pictureUrl, biography, registrationDate, followers[], following[], followerCount, followingCount }`. 404 si no existe, 400 si el id no es un entero |
@@ -200,7 +200,9 @@ campos que `GET /api/users/me`.
 | `POST /:id/follow` | `JWT` | — | 200 `{ status, message }` (idempotente). 400 si el id es inválido o te seguís a vos mismo; 404 si el usuario no existe |
 | `DELETE /:id/follow` | `JWT` | — | 200 `{ status, message }`. 404 si no lo seguías |
 
-No existe un endpoint `isFollowing`: el Frontend lo deriva de la lista de seguidores.
+No existe un endpoint `isFollowing` directo para un perfil: el Frontend lo deriva de la lista de
+seguidores. La búsqueda (`GET /search`) sí trae la relación completa por resultado cuando hay sesión
+(`isFollowing` + `followsMe`, TS-10b); el perfil público sigue sin él.
 
 ---
 

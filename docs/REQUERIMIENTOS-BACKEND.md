@@ -30,7 +30,7 @@ romperlo.
 | `GET /api/songs/:id` | listo | Usa `SONG_INCLUDE` (artista, géneros, estados de ánimo) y `findUniqueOrThrow`, así que un id inexistente cae en el `404` de `errorHandler`. |
 | Auth | **listo** | `register` (201 con token), `login` y `logout`, montados **una sola vez** en `/api/auth` (el mount duplicado `/api/v1/auth` ya se eliminó). |
 | `authenticate` | listo | JWT `Bearer`, deja el payload del token en `req.user`. |
-| `GET /api/users/search` | listo | Offset con `{ items, total, page, pageSize, totalPages }`, busca por `username` **y** por género vía las vistas `user_top_genre` / `user_genre_counts`. Los `items` salen de un `$queryRaw`, así que traen `picture_url` y `genre_name` en snake_case (el mapeo vive en `usersService`). |
+| `GET /api/users/search` | listo | Offset con `{ items, total, page, pageSize, totalPages }`, busca por `username` **y** por género vía las vistas `user_top_genre` / `user_genre_counts`. Los `items` salen de un `$queryRaw`, así que traen `picture_url` y `genre_name` en snake_case (el mapeo vive en `usersService`). Con sesión (auth **opcional**) cada item agrega la relación en los dos sentidos para el que busca, resuelta con dos `EXISTS` en la misma query: `isFollowing` y `followsMe` (TS-10b). |
 | Usuarios y follow | **listos** | `GET /users/me` (+ `PATCH`), `GET /users/:id` con contadores, `followers`/`following`, `POST`/`DELETE /:id/follow`. Contrato en ESPECIFICACIONES §7. |
 | Playlists y favoritos | **listos** | CRUD completo de `/api/playlists` (las canciones se agregan/quitan/reordenan en lote por `PUT /:id`) y `/api/favorites`. Contrato en ESPECIFICACIONES §8–§9. |
 | Manejo de errores | con reparos | `errorHandler` mapea códigos Prisma a español. Además, `getId` y los validadores de `validation.js` lanzan con `error.code = 400` y el catch-all de `app.js` usa `res.status(err.code \|\| 500)`. Ver los avisos de §2. |
@@ -132,7 +132,7 @@ Verificado contra la base real (2026-10-08): `POST /api/auth/register` responde 
 
 | Método | Ruta | Estado | Notas |
 | --- | --- | --- | --- |
-| `GET` | `/api/users/search?query=` | listo | Offset con `{ items, total, page, pageSize, totalPages }` (antes cursor). `items` en snake_case (`picture_url`, `genre_name`); el mapeo vive en `usersService`. |
+| `GET` | `/api/users/search?query=` | listo | Offset con `{ items, total, page, pageSize, totalPages }` (antes cursor). `items` en snake_case (`picture_url`, `genre_name`); el mapeo vive en `usersService`. Con sesión (auth opcional): relación completa por item (TS-10b) — `isFollowing` + `followsMe` |
 | `GET` | `/api/users/:id` | listo | `getUserById` (perfil público, TS-08), con `followers[]`, `following[]` y contadores |
 | `GET` | `/api/users` | no implementado | `listUsers`: ninguna pantalla lo pide; no hace falta |
 | `PATCH` | `/api/users/me` | listo | `updateProfile`, con username 3–50 y único |

@@ -43,7 +43,7 @@ function toPageSize(value) {
 	return Math.min(toPage(value, DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE);
 }
 
-async function searchUsers(query, page, pageSize) {
+async function searchUsers(query, page, pageSize, viewerId) {
 	const term = typeof query === "string" ? query.trim() : "";
 	const currentPage = toPage(page, 1);
 	const size = toPageSize(pageSize);
@@ -53,13 +53,26 @@ async function searchUsers(query, page, pageSize) {
 		? Prisma.sql`WHERE ("user".username ILIKE ${`%${term}%`} OR user_top_genre.genre_name ILIKE ${`%${term}%`})`
 		: Prisma.empty;
 
+	const followIndicators = viewerId
+		? Prisma.sql`, EXISTS (
+			SELECT 1 FROM "follow"
+			WHERE "follow".follower_id = ${viewerId}
+			  AND "follow".followed_id = "user".id
+		) AS "isFollowing",
+		EXISTS (
+			SELECT 1 FROM "follow"
+			WHERE "follow".follower_id = "user".id
+			  AND "follow".followed_id = ${viewerId}
+		) AS "followsMe"`
+		: Prisma.empty;
+
 	const items = await prisma.$queryRaw`
 		SELECT
 			"user".id,
 			"user".username,
 			"user".picture_url,
 			"user".biography,
-			user_top_genre.genre_name
+			user_top_genre.genre_name${followIndicators}
 		FROM "user"
 		LEFT JOIN user_top_genre ON user_top_genre.id_user = "user".id
 		${filter}

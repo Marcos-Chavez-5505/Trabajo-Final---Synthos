@@ -5,7 +5,11 @@ async function searchUsers(req, res, next) {
 	try {
 		const { query = "", page, pageSize } = req.query;
 
-		const results = await userService.searchUsers(query, page, pageSize);
+		// `sub` viene del JWT y siempre es string: Prisma espera Int. Sin sesión
+		// (optionalAuthenticate) la búsqueda sigue siendo pública, sin indicador.
+		const viewerId = req.user ? Number(req.user.sub) : null;
+
+		const results = await userService.searchUsers(query, page, pageSize, viewerId);
 
 		res.status(200).json(results);
 	} catch (error) {

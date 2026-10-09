@@ -1,9 +1,9 @@
 const router = require("express").Router();
 const userController = require("../controller/user.controller");
 const followController = require("../controller/follow.controller");
-const { authenticate } = require("../middlewares/auth.middleware");
+const { authenticate, optionalAuthenticate } = require("../middlewares/auth.middleware");
 
-router.get("/search", userController.searchUsers);
+router.get("/search", optionalAuthenticate, userController.searchUsers);
 router.get("/me", authenticate, userController.getMe);
 router.patch("/me", authenticate, userController.updateMe);
 router.get("/:id", userController.getUserById);
