@@ -24,6 +24,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { PanelLeftIcon } from "lucide-react"
+import {
+  motion,
+  useSpring,
+  useTransform,
+  type MotionValue,
+} from "motion/react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -31,6 +37,14 @@ const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
+
+// Valores del spring del ancho en rem, derivados de las constantes de arriba
+// para no tener dos fuentes de verdad (si cambia `SIDEBAR_WIDTH`, el spring lo
+// sigue). El `stiffness` alto con `damping` bajo le da el rebote al llegar al
+// ancho objetivo.
+const SIDEBAR_EXPANDED_REM = parseFloat(SIDEBAR_WIDTH)
+const SIDEBAR_ICON_REM = parseFloat(SIDEBAR_WIDTH_ICON)
+const SIDEBAR_SPRING = { stiffness: 300, damping: 20, mass: 0.6 }
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
@@ -149,6 +163,98 @@ function SidebarProvider({
   )
 }
 
+/**
+ * Ancho animado del sidebar "icon" (spring).
+ *
+ * El guarda de `Math.max(0, …)` existe porque un spring con `damping` bajo puede
+ * overshootear por debajo de 0 al contraer, y un rem negativo es CSS inválido
+ * (rompería la pintada del contenedor fijo). El techo en `SIDEBAR_EXPANDED_REM`
+ * es por el overshoot opuesto al expandir: si el ancho pasa de 16rem un instante,
+ * el gap del layout suma más que la pantalla y aparece una barra de scroll
+ * horizontal en el app.
+ */
+function useSidebarWidthSpring(expanded: boolean) {
+  const target = expanded ? SIDEBAR_EXPANDED_REM : SIDEBAR_ICON_REM
+
+  const springRem = useSpring(
+    expanded ? SIDEBAR_EXPANDED_REM : SIDEBAR_ICON_REM,
+    SIDEBAR_SPRING,
+  )
+  const safeRem = useTransform(
+    springRem,
+    (value) => Math.min(SIDEBAR_EXPANDED_REM, Math.max(0, value)),
+  )
+  const width = useTransform(safeRem, (value) => `${value}rem`)
+
+  React.useEffect(() => {
+    springRem.set(target)
+  }, [target, springRem])
+
+  return { width, springRem }
+}
+
+type SidebarLabelSlides = {
+  opacity: MotionValue<number>
+  clipPath: MotionValue<string>
+}
+
+function clamp01(value: number) {
+  return Math.min(1, Math.max(0, value))
+}
+
+function useSidebarLabelSlides(springRem: MotionValue<number>): SidebarLabelSlides {
+  const collapse = useTransform(
+    springRem,
+    (value) =>
+      clamp01(
+        (SIDEBAR_EXPANDED_REM - value) /
+          (SIDEBAR_EXPANDED_REM - SIDEBAR_ICON_REM),
+      ),
+  )
+  const opacity = useTransform(collapse, (progress) => 1 - progress)
+  const clipPath = useTransform(
+    collapse,
+    (progress) => `inset(0 ${(100 * progress).toFixed(2)}% 0 0)`,
+  )
+
+  return { opacity, clipPath }
+}
+
+// Contexto local. No va en el valor del `SidebarProvider` porque el spring vive
+// en `Sidebar`, que es hijo de ese provider; un contexto propio, provisto justo
+// arriba del árbol del sidebar, deja que cualquier label lo consuma sin re-render
+// del app al cambiar el estado de colapso (los MotionValues son los que animan).
+const SidebarLabelSlidesContext = React.createContext<SidebarLabelSlides | null>(
+  null,
+)
+
+function useSidebarLabelMotion() {
+  return React.useContext(SidebarLabelSlidesContext)
+}
+
+function SidebarLabel({
+  className,
+  children,
+}: {
+  className?: string
+  children?: React.ReactNode
+}) {
+  const slides = useSidebarLabelMotion()
+
+  return slides ? (
+    <motion.span
+      className={cn("truncate", className)}
+      style={{ opacity: slides.opacity, clipPath: slides.clipPath }}
+    >
+      {children}
+    </motion.span>
+  ) : (
+    <span className={cn("truncate group-data-[collapsible=icon]:hidden", className)}>
+      {children}
+    </span>
+  )
+}
+
 function Sidebar({
   side = "left",
   variant = "sidebar",
@@ -162,7 +268,41 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const { isMobile, state, open, openMobile, setOpenMobile } = useSidebar()
+
+  // El spring corre para el sidebar "icon" (el único que anima ancho acá); los
+  // otros collapsibles conservan la transición CSS original.
+  const animated = collapsible === "icon"
+  const { width: springWidth, springRem } = useSidebarWidthSpring(open)
+  const labelSlides = useSidebarLabelSlides(springRem)
+
+  const gapClassName = cn(
+    "relative bg-transparent group-data-[collapsible=offcanvas]:w-0 group-data-[side=right]:rotate-180",
+    animated
+      ? undefined
+      : "w-(--sidebar-width) transition-[width] duration-200 ease-linear",
+    !animated &&
+      (variant === "floating" || variant === "inset"
+        ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
+        : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)"),
+  )
+
+  const containerClassName = cn(
+    "fixed inset-y-0 z-10 hidden h-svh md:flex",
+    "data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+    animated ? "overflow-hidden" : "w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear",
+    // Adjust the padding for floating and inset variants.
+    variant === "floating" || variant === "inset"
+      ? cn(
+          "p-2",
+          !animated && "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]",
+        )
+      : cn(
+          "group-data-[side=left]:border-r group-data-[side=left]:border-surface group-data-[side=right]:border-l group-data-[side=right]:border-surface",
+          !animated && "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
+        ),
+    className,
+  )
 
   if (collapsible === "none") {
     return (
@@ -206,48 +346,41 @@ function Sidebar({
   }
 
   return (
-    <div
-      className="group peer isolate hidden text-sidebar-foreground md:block"
-      data-state={state}
-      data-collapsible={state === "collapsed" ? collapsible : ""}
-      data-variant={variant}
-      data-side={side}
-      data-slot="sidebar"
-    >
-      {/* This is what handles the sidebar gap on desktop */}
+    <SidebarLabelSlidesContext.Provider value={animated ? labelSlides : null}>
       <div
-        data-slot="sidebar-gap"
-        className={cn(
-          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear",
-          "group-data-[collapsible=offcanvas]:w-0",
-          "group-data-[side=right]:rotate-180",
-          variant === "floating" || variant === "inset"
-            ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)"
-        )}
-      />
-      <div
-        data-slot="sidebar-container"
+        className="group peer isolate hidden text-sidebar-foreground md:block"
+        data-state={state}
+        data-collapsible={state === "collapsed" ? collapsible : ""}
+        data-variant={variant}
         data-side={side}
-        className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
-          // Adjust the padding for floating and inset variants.
-          variant === "floating" || variant === "inset"
-            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=left]:border-surface group-data-[side=right]:border-l group-data-[side=right]:border-surface",
-          className
-        )}
-        {...props}
+        data-slot="sidebar"
       >
-        <div
-          data-sidebar="sidebar"
-          data-slot="sidebar-inner"
-          className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+        {/* This is what handles the sidebar gap on desktop */}
+        {/* El ancho del sidebar se anima con un spring: gap y contenedor comparten
+            el MISMO MotionValue, así el hueco del layout y la barra fija se mueven
+            en sincronía siempre. */}
+        <motion.div
+          data-slot="sidebar-gap"
+          className={gapClassName}
+          style={animated ? { width: springWidth } : undefined}
+        />
+        <motion.div
+          data-slot="sidebar-container"
+          data-side={side}
+          className={containerClassName}
+          style={animated ? { width: springWidth } : undefined}
+          {...props}
         >
-          {children}
-        </div>
+          <div
+            data-sidebar="sidebar"
+            data-slot="sidebar-inner"
+            className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+          >
+            {children}
+          </div>
+        </motion.div>
       </div>
-    </div>
+    </SidebarLabelSlidesContext.Provider>
   )
 }
 
@@ -378,7 +511,7 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="sidebar-content"
       data-sidebar="content"
       className={cn(
-        "no-scrollbar flex min-h-0 flex-1 flex-col gap-0 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+        "flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto overflow-x-hidden",
         className
       )}
       {...props}
@@ -407,12 +540,7 @@ function SidebarGroupLabel({
     props: mergeProps<"div">(
       {
         className: cn(
-          // `pointer-events-none` al contraer es lo que evita que el último item
-          // de un grupo sea inclicable: `-mt-8` sube la caja del label 32px, que
-          // es justo la altura del item de arriba, y el `opacity-0` la deja
-          // invisible pero sigue con hit-testing. Va más tarde en el DOM, así que
-          // se come el clic de la mitad inferior de ese item.
-          "flex h-8 shrink-0 items-center rounded-md px-2 TextMedium font-medium text-sidebar-foreground/70 ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+          "flex h-8 shrink-0 items-center truncate rounded-md px-2 TextMedium font-medium text-sidebar-foreground/70 ring-sidebar-ring outline-hidden transition-[margin,opacity] duration-100 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
           className
         ),
       },
@@ -718,6 +846,7 @@ export {
   SidebarHeader,
   SidebarInput,
   SidebarInset,
+  SidebarLabel,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuBadge,
@@ -732,4 +861,5 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
+  useSidebarLabelMotion,
 }

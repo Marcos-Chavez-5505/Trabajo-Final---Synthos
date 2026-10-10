@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { ListMusic } from 'lucide-react'
 import useAuth from '../../hooks/useAuth.js'
 import { listPlaylists, subscribeToPlaylists } from '../../services/playlistsService.js'
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '../../components/ui/sidebar.tsx'
+import { SidebarLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '../../components/ui/sidebar.tsx'
 
 /**
  * Playlists del usuario para la sección "Mis Playlists" del Sidebar (TS-09).
@@ -67,9 +67,7 @@ export default function MisPlaylists() {
               }
             >
               <ListMusic />
-              <span className="group-data-[collapsible=icon]:hidden truncate">
-                {playlist.name}
-              </span>
+              <SidebarLabel>{playlist.name}</SidebarLabel>
             </SidebarMenuButton>
           </SidebarMenuItem>
         )
