@@ -1,5 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
+import { motion } from 'motion/react'
 import { Disc3, Flame, Home, ListMusic, Mic2, User } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import MisPlaylists from '../../features/playlists/MisPlaylists.jsx'
 import ProfileSummary from '../../features/social/ProfileSummary.jsx'
 import roomIcon from '../../assets/join_music_room.svg'
@@ -11,10 +13,12 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebarLabelMotion,
 } from '../ui/sidebar.tsx'
 
 const NAV_ITEMS = [
@@ -53,7 +57,7 @@ function MenuItem({ item, isActive }) {
         tooltip={item.label}
         className={
           isActive
-            ? 'data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground'
+            ? 'data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground overflow-x-hidden'
             : ''
         }
       >
@@ -67,9 +71,31 @@ function MenuItem({ item, isActive }) {
         ) : (
           <Icon />
         )}
-        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+        <SidebarLabel>{item.label}</SidebarLabel>
       </SidebarMenuButton>
     </SidebarMenuItem>
+  )
+}
+
+// El wordmark consume `useSidebarLabelMotion()` desde ADENTRO de `SidebarRoot`.
+// Si el hook se llamara en el componente `Sidebar()` (acá arriba, fuera del
+// provider que monta el `Sidebar` de `sidebar.tsx`), el context daría `null` y el
+// texto caería al fallback `group-data-[collapsible=icon]:hidden`: desaparecería
+// de golpe en vez de deslizarse sobre el logo.
+function SidebarWordmark() {
+  const slides = useSidebarLabelMotion()
+  const { opacity, clipPath } = slides ?? {}
+
+  return (
+    <motion.span
+      style={{ opacity, clipPath }}
+      className={cn(
+        'LogoSynthos TextFucsia truncate text-lg tracking-wider',
+        !slides && 'group-data-[collapsible=icon]:hidden',
+      )}
+    >
+      Synthos
+    </motion.span>
   )
 }
 
@@ -94,17 +120,19 @@ export default function Sidebar() {
             El logo queda de 32px porque es el ancho usable que deja el `p-2` de
             `SidebarHeader` sobre los `3rem` del sidebar contraído, igual que el
             avatar. Un logo más chico quedaría pegado al borde en vez de centrado.
-            El texto se oculta con `group-data-[collapsible=icon]:hidden`, igual
-            que el resto del sidebar. En mobile no hay `data-collapsible`, así que
-            logo y nombre se ven siempre.
+            El wordmark se borra con el mismo spring de ancho que el resto de los
+            labels (ver `useSidebarLabelMotion` en `sidebar.tsx`): un wipe con
+            `clip-path` que lo desvanece de izquierda a derecha SIN moverlo (el
+            texto no viaja, se recorta en su lugar) en vez de saltar con `hidden`.
+            Al estar dentro de este header `overflow-hidden`, además queda
+            recortado si el wipe y el encogido del bloque se desfasan. En mobile
+            no hay `data-collapsible`, así que logo y nombre se ven siempre.
 
             El `fill` del SVG ya es `#EF2F62`, que es `--ds-fucsia`, y viene
             hardcodeado como el resto del set: no se recolorea desde CSS. */}
         <div className="flex h-12 w-full items-center gap-2 overflow-hidden rounded-md p-2 transition-[width,height,padding] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0!">
           <img src={logoSynthos} alt="" aria-hidden="true" className="size-8 shrink-0" />
-          <span className="LogoSynthos TextFucsia truncate group-data-[collapsible=icon]:hidden text-lg tracking-wider">
-            Synthos
-          </span>
+          <SidebarWordmark />
         </div>
       </SidebarHeader>
 

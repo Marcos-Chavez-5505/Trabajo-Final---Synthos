@@ -1,5 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
+import { motion } from 'motion/react'
 import Avatar from '../../components/ui/Avatar.jsx'
+import { cn } from '@/lib/utils'
 import {
   DropdownMenu,
   DropdownMenuGroup,
@@ -16,6 +18,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebarLabelMotion,
 } from '../../components/ui/sidebar.tsx'
 import useAuth from '../../hooks/useAuth.js'
 import useFollow from './useFollow.js'
@@ -44,8 +47,14 @@ import userIcon from '../../assets/user.svg'
  * `transition-[width,height,padding]` de `SidebarMenuButton` no tenía de dónde
  * interpolar, así que el avatar saltaba de golpe al piso. Con un nodo solo, el
  * alto interpola de 48px a 32px y, como el footer está anclado abajo de la
- * columna, el avatar se desliza 8px hacia abajo. El texto se oculta con
- * `group-data-[collapsible=icon]:hidden`, igual que el resto del sidebar.
+ * columna, el avatar se desliza 8px hacia abajo. El texto ya no se corta de
+ * golpe con `group-data-[collapsible=icon]:hidden`: consume
+ * `useSidebarLabelMotion()` y se desvanece con un wipe (`clip-path`) de izquierda
+ * a derecha en su lugar —el texto no se mueve, se recorta— con el mismo spring de
+ * ancho del sidebar (`sidebar.tsx`). El div es SIEMPRE el mismo nodo (un
+ * `motion.div` en los dos estados): bifurcar por `state` remontaría, bifurcar por
+ * `labelSlides` (context, estable) no; la clase `hidden` solo queda como fallback
+ * cuando el colapso no se anima.
  *
  * Perder el link directo a /perfil no deja nada inaccesible: está el ítem
  * "Perfil" de la navegación y el ítem "Mi perfil" de este mismo menú.
@@ -58,6 +67,7 @@ export default function ProfileSummary() {
   const userId = user?.id ?? null
   const { followerCount, followingCount } = useFollow(userId)
   const onProfile = useLocation().pathname.startsWith('/perfil')
+  const labelSlides = useSidebarLabelMotion()
 
   if (!user) return null
 
@@ -127,13 +137,26 @@ export default function ProfileSummary() {
             }
           >
             {avatar}
-            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+            <motion.div
+              className={cn(
+                'min-w-0 flex-1',
+                !labelSlides && 'group-data-[collapsible=icon]:hidden',
+              )}
+              style={
+                labelSlides
+                  ? {
+                      opacity: labelSlides.opacity,
+                      clipPath: labelSlides.clipPath,
+                    }
+                  : undefined
+              }
+            >
               <p className="truncate TextMedium">{user.username}</p>
               <p className="truncate TextTiny text-muted-foreground">
                 {followerCount} {followerCount === 1 ? 'seguidor' : 'seguidores'} ·{' '}
                 {followingCount} {followingCount === 1 ? 'seguido' : 'seguidos'}
               </p>
-            </div>
+            </motion.div>
           </DropdownMenuTrigger>
 
           {menu}
