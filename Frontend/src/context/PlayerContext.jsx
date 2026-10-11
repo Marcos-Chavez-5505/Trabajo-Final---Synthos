@@ -439,6 +439,19 @@ export default function PlayerProvider({ children }) {
   }, [])
   const collapse = useCallback(() => setIsExpanded(false), [])
 
+  // Sincronizar estado del reproductor expandido con el body (para desactivar
+  // atajos globales como Ctrl+B mientras ExpandedPlayer está abierto).
+  useEffect(() => {
+    if (isExpanded) {
+      document.body.setAttribute('data-player-expanded', 'true')
+    } else {
+      document.body.removeAttribute('data-player-expanded')
+    }
+    return () => {
+      document.body.removeAttribute('data-player-expanded')
+    }
+  }, [isExpanded])
+
   // Eventos del <audio>: progreso, duración real y fin de pista.
   useEffect(() => {
     const audio = audioRef.current

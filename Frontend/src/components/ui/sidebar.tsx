@@ -115,6 +115,7 @@ function SidebarProvider({
         event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
         (event.metaKey || event.ctrlKey)
       ) {
+        if (document.body.dataset.playerExpanded === 'true') return
         event.preventDefault()
         toggleSidebar()
       }
@@ -501,7 +502,19 @@ function SidebarTrigger({
           </Button>
         }
       />
-      <TooltipContent side="bottom">Ctrl+B</TooltipContent>
+      <TooltipContent>
+        <div className="flex flex-col items-center">
+          Alternar sidebar
+          <div className="flex flex-row items-center gap-0.5">
+            <kbd data-slot="kbd" className="bg-muted-foreground text-foreground site-rounded-sm pointer-events-none inline-flex h-5 w-fit min-w-5 items-center justify-center gap-1 px-1 text-xs font-medium select-none [&amp;_svg:not([class*='size-'])]:size-3 [[data-slot=tooltip-content]_&amp;]:bg-site-background/20 [[data-slot=tooltip-content]_&amp;]:text-site-background dark:[[data-slot=tooltip-content]_&amp;]:bg-site-background/10">
+            Ctrl
+            </kbd>
+            <kbd data-slot="kbd" className="bg-muted-foreground text-foreground site-rounded-sm pointer-events-none inline-flex h-5 w-fit min-w-5 items-center justify-center gap-1 px-1 text-xs font-medium select-none [&amp;_svg:not([class*='size-'])]:size-3 [[data-slot=tooltip-content]_&amp;]:bg-site-background/20 [[data-slot=tooltip-content]_&amp;]:text-site-background dark:[[data-slot=tooltip-content]_&amp;]:bg-site-background/10">
+            B
+            </kbd>
+          </div>
+        </div>
+      </TooltipContent>
     </Tooltip>
   )
 }
