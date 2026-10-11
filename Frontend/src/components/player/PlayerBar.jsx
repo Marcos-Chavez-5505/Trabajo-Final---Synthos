@@ -85,7 +85,7 @@ export default function PlayerBar() {
                       onClick={expand}
                       aria-label={isExpanded ? "Colapsar" : "Expandir"}
                       aria-expanded={isExpanded}
-                      className="rounded-full p-2 Volume hover:opacity-80"
+                      className="shrink-0 rounded-full p-2 Volume hover:opacity-80"
                     />
                   }
                 >
@@ -93,7 +93,7 @@ export default function PlayerBar() {
                     src={isExpanded ? collapseIcon : expandIcon}
                     alt=""
                     aria-hidden="true"
-                    className="h-5 w-5"
+                    className="h-5 w-5 shrink-0"
                   />
                 </TooltipTrigger>
                 <TooltipContent side="top">

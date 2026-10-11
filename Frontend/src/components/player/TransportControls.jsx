@@ -23,14 +23,28 @@ const RELEASE_DELAY = 220
  * assets del proyecto (`<img>`, regla 10 de AGENTS.md).
  */
 export default function TransportControls() {
-  const { isPlaying, hasQueue, togglePlay, next, previous } = usePlayer()
+  const { isPlaying, hasQueue, togglePlay, next, previous, playPulse } = usePlayer()
 
   // Último botón pulsado: mientra es `null` todos tienen ancho igual; al pulsar
   // uno crece (1.1) y los otros se encogen (0.65), y se suelta a los 220ms.
   const [press, setPress] = useState(null)
   const timer = useRef()
+  // Ref con el último pulso visto: en el montaje arranca igual al actual, así no
+  // anima al aparecer.
+  const lastPulse = useRef(playPulse)
 
   useEffect(() => () => clearTimeout(timer.current), [])
+
+  // El play/pause anima también con la barra espaciadora: el contexto emite un
+  // pulso en cada `togglePlay` y acá se traduce a la animación de pulsado.
+  useEffect(() => {
+    if (playPulse === lastPulse.current) return
+
+    lastPulse.current = playPulse
+    setPress('play')
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setPress(null), RELEASE_DELAY)
+  }, [playPulse])
 
   const trigger = (type, cb) => {
     setPress(type)
@@ -40,8 +54,6 @@ export default function TransportControls() {
   }
 
   const grow = (type) => (press === null ? 1 : press === type ? 1.1 : 0.65)
-
-  const handlePlay = () => trigger('play', togglePlay)
 
   return (
     <div className="flex h-20 w-full max-w-80 gap-1.5">
@@ -69,7 +81,7 @@ export default function TransportControls() {
           borderRadius: isPlaying ? 60 : 26,
         }}
         transition={SPRING}
-        onClick={handlePlay}
+        onClick={togglePlay}
         disabled={!hasQueue}
         aria-label={isPlaying ? "Pausar" : "Reproducir"}
         aria-pressed={isPlaying}
