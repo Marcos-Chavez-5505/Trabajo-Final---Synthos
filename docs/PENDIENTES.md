@@ -277,3 +277,36 @@ Menor, va junto con lo anterior:
 - `ProfileEdit.jsx:79` tiene un `TODO: falta token de color para placeholder` que es deuda de la regla 11
   (los literales solo viven en `styles/tokens.css`); de paso el `placeholder` está hardcodeado a
   `placeholder-neutral-500` en los inputs.
+
+---
+
+## 8. Mobile desmantelado — se rehará con React Native
+
+**Estado (2026-10-11):** se sacaron del código las piezas dedicadas a mobile. `AppLayout` ya no ramifica
+por breakpoint: renderiza siempre el layout de desktop (`SidebarProvider` + `Sidebar` + `TopBar` +
+contenido + `PlayerBar`). `Home` también dejó de alternar y renderiza `HomeDesktop`. Se eliminaron todas
+las **importaciones** a: `components/layout/BottomNav.jsx`, `components/layout/MiniPlayerBar.jsx`,
+`features/home/HomeMobile.jsx` y el hook `hooks/useBreakpoint.js`.
+
+**Contexto (por qué se hizo):** mantener dos layouts en el mismo codebase web (desktop con shadcn + un
+shell mobile a mano) venía quedando a medias: `BottomNav` sin íconos, `MiniPlayerBar` atado a la altura
+del `BottomNav`, `HomeMobile` como shell, breakpoints y padding duplicados (`pb-28` en el `main` mobile).
+Se decidió dejar de parchar esa vía en lugar de seguir sumando excepciones.
+
+**Qué queda a medias (a propósito):** la app web hoy no tiene experiencia mobile real. En un viewport
+chico muestra el layout de desktop, sin navegación inferior ni mini reproductor. Los archivos
+`BottomNav.jsx`, `MiniPlayerBar.jsx`, `HomeMobile.jsx` y `hooks/useBreakpoint.js` **siguen en disco,
+sin uso** (no se borraron para conservarlos como referencia histórica); `use-mobile.ts` de shadcn sigue
+siendo consumido internamente por `ui/sidebar.tsx`.
+
+**Qué hacer (decisión):** rehacer mobile, cuando se retome, con **React Native** (app nativa/APK propia),
+no con soluciones a medias dentro de la web. El layout y la interacción de mobile son distintos de los
+de desktop y merecen su propia base, en vez de duplicar componentes y parchear breakpoints en el
+codebase de Vite. Al encarar eso, revisar si conviene borrar los archivos mobile sin uso de arriba.
+
+**Verificación:** `npm run lint` + `npm run build` en verde sin las importaciones mobile; confirmar que
+ningún módulo referencia `BottomNav`, `MiniPlayerBar`, `HomeMobile` ni `useBreakpoint`.
+
+**Docs desactualizados por este cambio:** `CONTEXT.md` §4.6 (Layout) y `PENDIENTES.md` §1 (smoke test,
+líneas sobre `MiniPlayerBar`/`BottomNav`/responsive) todavía describen el mobile viejo; actualizar
+cuando se cierre la decisión.
