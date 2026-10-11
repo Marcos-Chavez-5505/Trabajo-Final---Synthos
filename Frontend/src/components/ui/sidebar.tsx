@@ -44,6 +44,7 @@ const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 // ancho objetivo.
 const SIDEBAR_EXPANDED_REM = parseFloat(SIDEBAR_WIDTH)
 const SIDEBAR_ICON_REM = parseFloat(SIDEBAR_WIDTH_ICON)
+const SIDEBAR_MOBILE_REM = parseFloat(SIDEBAR_WIDTH_MOBILE)
 const SIDEBAR_SPRING = { stiffness: 300, damping: 20, mass: 0.6 }
 
 type SidebarContextProps = {
@@ -173,16 +174,17 @@ function SidebarProvider({
  * el gap del layout suma más que la pantalla y aparece una barra de scroll
  * horizontal en el app.
  */
-function useSidebarWidthSpring(expanded: boolean) {
-  const target = expanded ? SIDEBAR_EXPANDED_REM : SIDEBAR_ICON_REM
+function useSidebarWidthSpring(
+  expanded: boolean,
+  expandedRem = SIDEBAR_EXPANDED_REM,
+  iconRem = SIDEBAR_ICON_REM,
+) {
+  const target = expanded ? expandedRem : iconRem
 
-  const springRem = useSpring(
-    expanded ? SIDEBAR_EXPANDED_REM : SIDEBAR_ICON_REM,
-    SIDEBAR_SPRING,
-  )
+  const springRem = useSpring(expanded ? expandedRem : iconRem, SIDEBAR_SPRING)
   const safeRem = useTransform(
     springRem,
-    (value) => Math.min(SIDEBAR_EXPANDED_REM, Math.max(0, value)),
+    (value) => Math.min(expandedRem, Math.max(0, value)),
   )
   const width = useTransform(safeRem, (value) => `${value}rem`)
 
@@ -202,14 +204,14 @@ function clamp01(value: number) {
   return Math.min(1, Math.max(0, value))
 }
 
-function useSidebarLabelSlides(springRem: MotionValue<number>): SidebarLabelSlides {
+function useSidebarLabelSlides(
+  springRem: MotionValue<number>,
+  expandedRem = SIDEBAR_EXPANDED_REM,
+  iconRem = SIDEBAR_ICON_REM,
+): SidebarLabelSlides {
   const collapse = useTransform(
     springRem,
-    (value) =>
-      clamp01(
-        (SIDEBAR_EXPANDED_REM - value) /
-          (SIDEBAR_EXPANDED_REM - SIDEBAR_ICON_REM),
-      ),
+    (value) => clamp01((expandedRem - value) / (expandedRem - iconRem)),
   )
   const opacity = useTransform(collapse, (progress) => 1 - progress)
   const clipPath = useTransform(
@@ -276,6 +278,68 @@ function Sidebar({
   const { width: springWidth, springRem } = useSidebarWidthSpring(open)
   const labelSlides = useSidebarLabelSlides(springRem)
 
+  const [mobileClosed, setMobileClosed] = React.useState(!openMobile)
+  const [mobileOpenSettled, setMobileOpenSettled] = React.useState(false)
+  const [mobileState, setMobileState] = React.useState({
+    open: openMobile,
+    mobile: isMobile,
+  })
+
+  if (mobileState.open !== openMobile || mobileState.mobile !== isMobile) {
+    setMobileState({ open: openMobile, mobile: isMobile })
+    setMobileOpenSettled(false)
+
+    if (openMobile) {
+      setMobileClosed(false)
+    } else if (!isMobile) {
+      setMobileClosed(true)
+    }
+  }
+
+  const mobileExpanded = openMobile || !mobileClosed
+
+  const { width: mobileWidth, springRem: mobileSpringRem } =
+    useSidebarWidthSpring(mobileExpanded, SIDEBAR_MOBILE_REM)
+  const mobileLabelSlides = useSidebarLabelSlides(
+    mobileSpringRem,
+    SIDEBAR_MOBILE_REM,
+  )
+
+  // Presencia del rail en mobile: 1 = rail a la vista (cerrado), 0 = corrido
+  // fuera de pantalla (panel abierto). El spring vive acá, en `Sidebar` (que no
+  // se desmonta), y no dentro del rail: así, al cerrar, el rail vuelve a montarse
+  // ya en movimiento desde su valor actual (0 → 1) en vez de nacer in-place.
+  const railTarget = isMobile && openMobile ? 0 : 1
+  const railSpring = useSpring(railTarget, SIDEBAR_SPRING)
+
+  React.useEffect(() => {
+    railSpring.set(railTarget)
+  }, [railTarget, railSpring])
+
+  // El rail se corre hacia la IZQUIERDA (lado opuesto al panel) y el hueco de
+  // layout (gap) se cierra en sincronía, para que el contenido se reacomode
+  // suave en vez del salto que producía el desmontaje seco del rail.
+  const railTranslateX = useTransform(railSpring, (value) => {
+    const progress = clamp01(value)
+    return `${(progress - 1) * SIDEBAR_ICON_REM}rem`
+  })
+  const railGapWidth = useTransform(railSpring, (value) => {
+    const progress = clamp01(value)
+    return `${progress * SIDEBAR_ICON_REM}rem`
+  })
+
+  const handleMobileOpenChange = (nextOpen: boolean) => {
+    setOpenMobile(nextOpen)
+  }
+
+  const handleMobileOpenChangeComplete = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setMobileOpenSettled(true)
+    } else {
+      setMobileClosed(true)
+    }
+  }
+
   const gapClassName = cn(
     "relative bg-transparent group-data-[collapsible=offcanvas]:w-0 group-data-[side=right]:rotate-180",
     animated
@@ -288,7 +352,7 @@ function Sidebar({
   )
 
   const containerClassName = cn(
-    "fixed inset-y-0 z-10 hidden h-svh md:flex",
+    "fixed inset-y-0 z-10 flex h-svh",
     "data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
     animated ? "overflow-hidden" : "w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear",
     // Adjust the padding for floating and inset variants.
@@ -319,68 +383,93 @@ function Sidebar({
     )
   }
 
-  if (isMobile) {
-    return (
-      <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-        <SheetContent
-          dir={dir}
-          data-sidebar="sidebar"
-          data-slot="sidebar"
-          data-mobile="true"
-          className="w-(--sidebar-width) bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
-          style={
-            {
-              "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-            } as React.CSSProperties
-          }
-          side={side}
-        >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
-          </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
-        </SheetContent>
-      </Sheet>
-    )
-  }
-
   return (
-    <SidebarLabelSlidesContext.Provider value={animated ? labelSlides : null}>
-      <div
-        className="group peer isolate hidden text-sidebar-foreground md:block"
-        data-state={state}
-        data-collapsible={state === "collapsed" ? collapsible : ""}
-        data-variant={variant}
-        data-side={side}
-        data-slot="sidebar"
-      >
-        {/* This is what handles the sidebar gap on desktop */}
-        {/* El ancho del sidebar se anima con un spring: gap y contenedor comparten
-            el MISMO MotionValue, así el hueco del layout y la barra fija se mueven
-            en sincronía siempre. */}
-        <motion.div
-          data-slot="sidebar-gap"
-          className={gapClassName}
-          style={animated ? { width: springWidth } : undefined}
-        />
-        <motion.div
-          data-slot="sidebar-container"
-          data-side={side}
-          className={containerClassName}
-          style={animated ? { width: springWidth } : undefined}
+    <>
+      {/* Mobile (shadcn): el sidebar expandido se sirve como `Sheet`, igual que
+          el primitivo original. En viewports angostos se ve el rail contraído y
+          el trigger abre el Sheet mobile. Para que no haya un salto, el rail NO
+          se desmonta de golpe: al abrir se desliza hacia la izquierda (lado
+          opuesto al panel) mientras el hueco de layout se cierra con el mismo
+          spring, y recién se desmonta cuando el Sheet terminó de abrir. Al
+          cerrar vuelve a montarse y entra desde la izquierda. Durante esa
+          transición (~300ms) `children` está montado en los dos árboles (rail y
+          Sheet) para hacer el crossfade: `MisPlaylists`/`ProfileSummary` piden
+          datos de nuevo y esa copia se limpia al terminar la animación. */}
+      {isMobile && (
+        <Sheet
+          open={openMobile}
+          onOpenChange={handleMobileOpenChange}
+          onOpenChangeComplete={handleMobileOpenChangeComplete}
           {...props}
         >
-          <div
+          <SheetContent
+            dir={dir}
             data-sidebar="sidebar"
-            data-slot="sidebar-inner"
-            className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+            data-slot="sidebar"
+            data-mobile="true"
+            render={<motion.div style={{ width: mobileWidth }} />}
+            className="w-(--sidebar-width) border-sidebar bg-sidebar p-0 text-sidebar-foreground transition-transform duration-300 ease-out data-starting-style:opacity-100 data-ending-style:opacity-100 data-[side=left]:data-starting-style:translate-x-[calc(var(--sidebar-width)*-1)] data-[side=left]:data-ending-style:translate-x-[calc(var(--sidebar-width)*-1)] [&>button]:hidden"
+            style={
+              {
+                "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+              } as React.CSSProperties
+            }
+            side={side}
           >
-            {children}
+            <SidebarLabelSlidesContext.Provider value={mobileLabelSlides}>
+              <SheetHeader className="sr-only">
+                <SheetTitle>Sidebar</SheetTitle>
+                <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+              </SheetHeader>
+              <div className="flex h-full w-full flex-col">{children}</div>
+            </SidebarLabelSlidesContext.Provider>
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {(!isMobile || !openMobile || !mobileOpenSettled) && (
+        <SidebarLabelSlidesContext.Provider value={animated ? labelSlides : null}>
+          <div
+            className="group peer isolate text-sidebar-foreground"
+            data-state={state}
+            data-collapsible={state === "collapsed" ? collapsible : ""}
+            data-variant={variant}
+            data-side={side}
+            data-slot="sidebar"
+          >
+            {/* This is what handles the sidebar gap on desktop */}
+            {/* El ancho del sidebar se anima con un spring: gap y contenedor comparten
+                el MISMO MotionValue, así el hueco del layout y la barra fija se mueven
+                en sincronía siempre. En mobile el spring del rail manda: su ancho se
+                cierra (gap) mientras la barra fija se corre a la izquierda. */}
+            <motion.div
+              data-slot="sidebar-gap"
+              className={gapClassName}
+              style={animated ? { width: isMobile ? railGapWidth : springWidth } : undefined}
+            />
+            <motion.div
+              data-slot="sidebar-container"
+              data-side={side}
+              className={containerClassName}
+              style={
+                animated
+                  ? { width: springWidth, x: isMobile ? railTranslateX : undefined }
+                  : undefined
+              }
+              {...props}
+            >
+              <div
+                data-sidebar="sidebar"
+                data-slot="sidebar-inner"
+                className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
+              >
+                {children}
+              </div>
+            </motion.div>
           </div>
-        </motion.div>
-      </div>
-    </SidebarLabelSlidesContext.Provider>
+        </SidebarLabelSlidesContext.Provider>
+      )}
+    </>
   )
 }
 
