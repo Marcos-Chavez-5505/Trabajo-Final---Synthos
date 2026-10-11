@@ -14,6 +14,25 @@ function sameSong(a, b) {
 }
 
 /**
+ * Punto y radio de origen para el "revelado" circular del reproductor expandido.
+ *
+ * Se mide desde el botón que lo abre: el centro del botón y el radio que llega
+ * a la esquina más lejana de la ventana, para que el círculo cubra toda la
+ * pantalla al abrirse.
+ */
+function getExpandOrigin(element) {
+  const rect = element.getBoundingClientRect()
+  const x = rect.left + rect.width / 2
+  const y = rect.top + rect.height / 2
+  const radius = Math.hypot(
+    Math.max(x, window.innerWidth - x),
+    Math.max(y, window.innerHeight - y),
+  )
+
+  return { x, y, radius }
+}
+
+/**
  * Saca la canción de `position` de la cola y deja los punteros coherentes.
  *
  * Es una función suelta y no un método del provider porque la usan dos caminos
@@ -81,6 +100,12 @@ export default function PlayerProvider({ children }) {
   const [duration, setDuration] = useState(0)
   const [shuffle, setShuffle] = useState(false)
   const [repeat, setRepeat] = useState('off')
+  // Estado de UI del reproductor expandido. Vive acá (y no en el layout) para
+  // sobrevivir a la navegación: AppLayout se remonta por ruta, PlayerProvider no.
+  const [isExpanded, setIsExpanded] = useState(false)
+  // Centro/radio desde donde crece la animación de apertura. Lo fija el botón
+  // que llama a `expand(event)`; `null` hasta la primera apertura.
+  const [expandedOrigin, setExpandedOrigin] = useState(null)
 
   const song = queue[index] ?? null
 
@@ -382,6 +407,7 @@ export default function PlayerProvider({ children }) {
     setIsPlaying(false)
     setCurrentTime(0)
     setDuration(0)
+    setIsExpanded(false)
     historyRef.current = []
     queueSourceRef.current = null
     pendingSkipRef.current = null
@@ -394,6 +420,19 @@ export default function PlayerProvider({ children }) {
   const cycleRepeat = useCallback(() => {
     setRepeat((prev) => REPEAT_MODES[(REPEAT_MODES.indexOf(prev) + 1) % REPEAT_MODES.length])
   }, [])
+
+  const expand = useCallback((event) => {
+    const trigger = event?.currentTarget
+
+    // El origen se toma del botón que dispara la apertura; si `expand` se llama
+    // sin evento, se conserva el último origen y el overlay usa su fallback.
+    if (trigger?.getBoundingClientRect) {
+      setExpandedOrigin(getExpandOrigin(trigger))
+    }
+
+    setIsExpanded(true)
+  }, [])
+  const collapse = useCallback(() => setIsExpanded(false), [])
 
   // Eventos del <audio>: progreso, duración real y fin de pista.
   useEffect(() => {
@@ -439,6 +478,8 @@ export default function PlayerProvider({ children }) {
       shuffle,
       repeat,
       isIdle,
+      isExpanded,
+      expandedOrigin,
       hasQueue: queue.length > 0,
       playSongs,
       removeFromPlaylistQueue,
@@ -450,6 +491,8 @@ export default function PlayerProvider({ children }) {
       seek,
       toggleShuffle,
       cycleRepeat,
+      expand,
+      collapse,
     }),
     [
       song,
@@ -461,6 +504,8 @@ export default function PlayerProvider({ children }) {
       shuffle,
       repeat,
       isIdle,
+      isExpanded,
+      expandedOrigin,
       playSongs,
       removeFromPlaylistQueue,
       removeFromFavoritesQueue,
@@ -471,6 +516,8 @@ export default function PlayerProvider({ children }) {
       seek,
       toggleShuffle,
       cycleRepeat,
+      expand,
+      collapse,
     ],
   )
 

@@ -3,6 +3,7 @@ import emptyHeartIcon from '../../assets/empty_heart.svg'
 import fullHeartIcon from '../../assets/full_heart.svg'
 import useFavorites from '../../hooks/useFavorites.js'
 import usePlayer from '../../hooks/usePlayer.js'
+import { Tooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip.tsx'
 
 /**
  * Corazón de favorito de la canción que está sonando.
@@ -16,7 +17,7 @@ import usePlayer from '../../hooks/usePlayer.js'
  * hardcodeado y no se recolorean (AGENTS.md, regla 10), así que el estado
  * activo se marca con el fondo `Fucsia` del botón, no con el color del ícono.
  */
-export default function FavoriteButton({ songId, className = '' }) {
+export default function FavoriteButton({ songId, className = '', tooltip = false }) {
   const { isFavorite, toggleFavorite } = useFavorites()
   const { removeFromFavoritesQueue } = usePlayer()
   const [pending, setPending] = useState(false)
@@ -47,14 +48,16 @@ export default function FavoriteButton({ songId, className = '' }) {
     }
   }
 
-  return (
+  const label = active ? "Quitar de favoritos" : "Marcar como favorita"
+
+  const button = (
     <button
       type="button"
       onClick={handleClick}
       disabled={pending}
       aria-pressed={active}
-      aria-label={active ? 'Quitar de favoritos' : 'Marcar como favorita'}
-      title={active ? 'Quitar de favoritos' : 'Marcar como favorita'}
+      aria-label={label}
+      title={tooltip ? undefined : label}
       className={`shrink-0 rounded-full p-2 transition-opacity disabled:opacity-50 ${
         active ? 'Fucsia' : 'Volume hover:opacity-80'
       } ${className}`}
@@ -66,5 +69,14 @@ export default function FavoriteButton({ songId, className = '' }) {
         className="h-5 w-5"
       />
     </button>
+  )
+
+  if (!tooltip) return button
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={button} />
+      <TooltipContent side="top">{label}</TooltipContent>
+    </Tooltip>
   )
 }
