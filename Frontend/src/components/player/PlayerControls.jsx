@@ -99,6 +99,7 @@ export default function PlayerControls() {
     previous,
     toggleShuffle,
     cycleRepeat,
+    playPulse,
   } = usePlayer()
 
   // Solo el play/pause anima su ancho con flex-grow: en reposo es un círculo
@@ -107,15 +108,22 @@ export default function PlayerControls() {
   // los 220ms con el mismo spring que el TransportControls del player expandido.
   const [press, setPress] = useState(null)
   const timer = useRef()
+  // Ref con el último pulso visto: en el montaje arranca igual al actual, así no
+  // anima al aparecer (AppLayout se remonta por ruta y `playPulse` ya podría ser > 0).
+  const lastPulse = useRef(playPulse)
 
   useEffect(() => () => clearTimeout(timer.current), [])
 
-  const trigger = (type, cb) => {
-    setPress(type)
-    cb?.()
+  // El play/pause anima cuando llega un pulso del contexto: cubre el clic y la
+  // barra espaciadora, que llama a `togglePlay` sin pasar por acá.
+  useEffect(() => {
+    if (playPulse === lastPulse.current) return
+
+    lastPulse.current = playPulse
+    setPress('play')
     clearTimeout(timer.current)
     timer.current = setTimeout(() => setPress(null), RELEASE_DELAY)
-  }
+  }, [playPulse])
 
   const grow = (type) => (press === type ? 0.1 : 0)
 
@@ -141,7 +149,7 @@ export default function PlayerControls() {
         label={isPlaying ? "Pausar" : "Reproducir"}
         tooltip
         grow={grow('play')}
-        onClick={() => trigger('play', togglePlay)}
+        onClick={togglePlay}
         tone="solid"
         disabled={!hasQueue}
       >

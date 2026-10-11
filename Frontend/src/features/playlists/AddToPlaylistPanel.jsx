@@ -80,13 +80,13 @@ export default function AddToPlaylistPanel({ songId, className = '', tooltip = f
           aria-label={"Agregar a playlist"}
           title={tooltip ? undefined : "Agregar a playlist"}
           aria-pressed={open || inAnyPlaylist}
-          className={`rounded-full p-2 hover:opacity-80 ${
+          className={`shrink-0 rounded-full p-2 hover:opacity-80 ${
             open || inAnyPlaylist ? 'Fucsia' : 'Volume'
           } ${className}`}
         />
       }
     >
-      <img src={addToPlaylistIcon} alt="" aria-hidden="true" className="h-5 w-5" />
+      <img src={addToPlaylistIcon} alt="" aria-hidden="true" className="h-5 w-5 shrink-0" />
     </DropdownMenuTrigger>
   )
 

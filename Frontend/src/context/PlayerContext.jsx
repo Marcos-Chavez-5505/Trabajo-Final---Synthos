@@ -106,6 +106,10 @@ export default function PlayerProvider({ children }) {
   // Centro/radio desde donde crece la animación de apertura. Lo fija el botón
   // que llama a `expand(event)`; `null` hasta la primera apertura.
   const [expandedOrigin, setExpandedOrigin] = useState(null)
+  // Pulso de la acción play/pause: sube en cada `togglePlay`, venga del clic de
+  // un control o de la barra espaciadora. Los controles lo observan para correr
+  // su animación de pulsado también con teclado, no solo con mouse.
+  const [playPulse, setPlayPulse] = useState(0)
 
   const song = queue[index] ?? null
 
@@ -254,6 +258,7 @@ export default function PlayerProvider({ children }) {
   const togglePlay = useCallback(() => {
     if (!song) return
 
+    setPlayPulse((n) => n + 1)
     setIsPlaying((prev) => !prev)
   }, [song])
 
@@ -480,6 +485,7 @@ export default function PlayerProvider({ children }) {
       isIdle,
       isExpanded,
       expandedOrigin,
+      playPulse,
       hasQueue: queue.length > 0,
       playSongs,
       removeFromPlaylistQueue,
@@ -506,6 +512,7 @@ export default function PlayerProvider({ children }) {
       isIdle,
       isExpanded,
       expandedOrigin,
+      playPulse,
       playSongs,
       removeFromPlaylistQueue,
       removeFromFavoritesQueue,
