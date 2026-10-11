@@ -115,6 +115,7 @@ function SidebarProvider({
         event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
         (event.metaKey || event.ctrlKey)
       ) {
+        if (document.body.dataset.playerExpanded === 'true') return
         event.preventDefault()
         toggleSidebar()
       }
@@ -501,7 +502,22 @@ function SidebarTrigger({
           </Button>
         }
       />
-      <TooltipContent side="bottom">Ctrl+B</TooltipContent>
+      {/* <TooltipContent side="bottom">Ctrl+B</TooltipContent> */}
+      <TooltipContent>
+        Alternar sidebar
+        {/* <kbd data-slot="kbd">Ctrl+B</kbd> */}
+        <kbd 
+          data-slot="kbd"
+          className="
+          bg-light-muted text-site-muted-foreground site-rounded-sm font-site-sans pointer-events-none inline-flex 
+          h-5 w-fit min-w-5 items-center justify-center gap-1 px-1 text-xs font-medium select-none [&amp;_svg:not([class*='size-'])]:size-3 
+          [[data-slot=tooltip-content]_&amp;]:bg-site-background/20 [[data-slot=tooltip-content]_&amp;]:text-site-background 
+          dark:[[data-slot=tooltip-content]_&amp;]:bg-site-background/10
+          ">
+        Ctrl
+        </kbd>
+
+      </TooltipContent>
     </Tooltip>
   )
 }
