@@ -4,7 +4,7 @@ const MOBILE_BREAKPOINT = 768 // px, coincide con `md` de Tailwind
 
 /**
  * Devuelve 'mobile' o 'desktop' según el ancho de viewport actual.
- * Usado por AppLayout para alternar Sidebar (desktop) vs BottomNav (mobile).
+ * Usado por AppLayout y Home para alternar su composición según el ancho.
  */
 export default function useBreakpoint() {
   const [breakpoint, setBreakpoint] = useState(

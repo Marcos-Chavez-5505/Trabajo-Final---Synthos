@@ -1,8 +1,5 @@
-import useBreakpoint from '../../hooks/useBreakpoint.js'
 import usePlayer from '../../hooks/usePlayer.js'
 import Sidebar from './Sidebar.jsx'
-import BottomNav from './BottomNav.jsx'
-import MiniPlayerBar from './MiniPlayerBar.jsx'
 import TopBar from './TopBar.jsx'
 import PlayerBar from '../player/PlayerBar.jsx'
 import ExpandedPlayer from '../player/ExpandedPlayer.jsx'
@@ -23,12 +20,11 @@ function getDefaultSidebarOpen() {
 }
 
 /**
- * Layout raíz. Alterna Sidebar (desktop, shadcn/ui) vs BottomNav + MiniPlayerBar (mobile).
- * Sin lógica de negocio: solo composición visual.
+ * Layout raíz, solo desktop: Sidebar (shadcn/ui) + TopBar + contenido + PlayerBar.
+ * Sin lógica de negocio: solo composición visual. El mobile se rehará aparte
+ * (ver `docs/PENDIENTES.md` §8).
  */
 export default function AppLayout({ children }) {
-  const breakpoint = useBreakpoint()
-  const isMobile = breakpoint === 'mobile'
   const { song, isPlaying, currentTime, duration, seek, isExpanded, expandedOrigin, collapse } =
     usePlayer()
 
@@ -53,30 +49,17 @@ export default function AppLayout({ children }) {
     />
   )
 
-  if (isMobile) {
-    return (
-      <div className="flex h-dvh Surface">
-        <div className="flex flex-1 flex-col">
-          <main className="min-h-0 flex-1 overflow-y-auto pb-28">{children}</main>
-          <MiniPlayerBar />
-          <BottomNav />
-          {expandedPlayer}
-        </div>
-      </div>
-    )
-  }
-
   return (
     <SidebarProvider
       defaultOpen={getDefaultSidebarOpen()}
-      className="Surface h-dvh min-h-0"
+      className="Surface relative h-dvh min-h-0 overflow-hidden"
     >
       {/* Colapsa/expande el sidebar solo al cruzar el umbral de 1280px.
           El trigger y Ctrl+B siguen mandando sobre el estado manual. */}
       <SidebarAutoCollapse />
       <div className="isolate flex min-h-0 min-w-0 flex-1">
         <Sidebar />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <TopBar />
           <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
           {/* Dentro de la columna de contenido: el sidebar-gap (shadcn) reserva el
