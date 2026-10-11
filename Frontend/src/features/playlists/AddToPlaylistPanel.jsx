@@ -18,6 +18,7 @@ import {
   DropdownMenuGroupLabel,
   DropdownMenuCheckboxItem,
 } from '../../components/ui/dropdown-menu.tsx'
+import { Tooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip.tsx'
 
 /**
  * Menú de "agregar a playlist" del reproductor.
@@ -35,7 +36,7 @@ import {
  * corazón del reproductor, no desde acá, así que ofrecerlos duplicaba dos caminos
  * para lo mismo.
  */
-export default function AddToPlaylistPanel({ songId }) {
+export default function AddToPlaylistPanel({ songId, className = '', tooltip = false }) {
   const { user } = useAuth()
   const userId = user?.id ?? null
   const {
@@ -71,22 +72,34 @@ export default function AddToPlaylistPanel({ songId }) {
     }
   }
 
+  const trigger = (
+    <DropdownMenuTrigger
+      render={
+        <button
+          type="button"
+          aria-label={"Agregar a playlist"}
+          title={tooltip ? undefined : "Agregar a playlist"}
+          aria-pressed={open || inAnyPlaylist}
+          className={`rounded-full p-2 hover:opacity-80 ${
+            open || inAnyPlaylist ? 'Fucsia' : 'Volume'
+          } ${className}`}
+        />
+      }
+    >
+      <img src={addToPlaylistIcon} alt="" aria-hidden="true" className="h-5 w-5" />
+    </DropdownMenuTrigger>
+  )
+
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            aria-label="Agregar a playlist"
-            title="Agregar a playlist"
-            className={`rounded-full p-2 hover:opacity-80 ${
-              open || inAnyPlaylist ? 'Fucsia' : 'Volume'
-            }`}
-          />
-        }
-      >
-        <img src={addToPlaylistIcon} alt="" aria-hidden="true" className="h-5 w-5" />
-      </DropdownMenuTrigger>
+      {tooltip ? (
+        <Tooltip>
+          <TooltipTrigger render={trigger} />
+          <TooltipContent side="top">Agregar a playlist</TooltipContent>
+        </Tooltip>
+      ) : (
+        trigger
+      )}
 
       <DropdownMenuPortal>
         <DropdownMenuPositioner side="top" align="end">

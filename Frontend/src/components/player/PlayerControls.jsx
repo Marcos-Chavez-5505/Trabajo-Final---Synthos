@@ -6,6 +6,16 @@ import pauseIcon from '../../assets/pause.svg'
 import repeatIcon from '../../assets/repeat.svg'
 import repeatOneIcon from '../../assets/repeat_only_one.svg'
 import usePlayer from '../../hooks/usePlayer.js'
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip.tsx'
+import { motion } from 'motion/react'
+import { useEffect, useRef, useState } from 'react'
+
+// Mecánica de pulsado tomada del TransportControls del reproductor expandido:
+// spring de ancho, grow 1.1 mientras se sostiene el clic y suelta a los 220ms.
+// Acá la usa solo el play/pause de la barra (los demás botones no animan ancho).
+const SIDEBAR_SPRING = { stiffness: 300, damping: 20, mass: 0.6 }
+const SPRING = { type: 'spring', ...SIDEBAR_SPRING }
+const RELEASE_DELAY = 220
 
 const REPEAT_LABELS = {
   off: 'Repetir desactivado',
@@ -19,7 +29,13 @@ const TONES = {
   soft: () => 'Light hover:opacity-80',
 }
 
-/** Botón circular reutilizable por la barra desktop y el mini reproductor mobile. */
+/** Botón circular reutilizable por la barra desktop y el mini reproductor mobile.
+ *
+ * Con `grow` definido se renderiza como `motion.button` que anima su flex-grow
+ * (misma mecánica que TransportControls): el presionado se expande y los demás
+ * encogen dentro de un contenedor de ancho fijo. Sin `grow` (MiniPlayerBar) es un
+ * `<button>` plano como antes.
+ */
 export function ControlButton({
   label,
   onClick,
@@ -27,21 +43,47 @@ export function ControlButton({
   active = false,
   disabled = false,
   className = '',
+  tooltip = false,
+  grow,
   children,
 }) {
   const toneClass = (TONES[tone] ?? TONES.ghost)(active)
+  const isMotion = grow !== undefined
 
-  return (
+  const button = isMotion ? (
+    <motion.button
+      type="button"
+      initial={false}
+      animate={{ flexGrow: grow }}
+      transition={SPRING}
+      aria-label={label}
+      title={tooltip ? undefined : label}
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex min-w-0 shrink items-center justify-center rounded-full p-2 transition-opacity disabled:opacity-40 ${toneClass} ${className}`}
+    >
+      {children}
+    </motion.button>
+  ) : (
     <button
       type="button"
       aria-label={label}
-      title={label}
+      title={tooltip ? undefined : label}
       onClick={onClick}
       disabled={disabled}
       className={`flex shrink-0 items-center justify-center rounded-full p-2 transition-opacity disabled:opacity-40 ${toneClass} ${className}`}
     >
       {children}
     </button>
+  )
+
+  if (!tooltip) return button
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={button} />
+      <TooltipContent side="top">{label}</TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -59,12 +101,31 @@ export default function PlayerControls() {
     cycleRepeat,
   } = usePlayer()
 
+  // Solo el play/pause anima su ancho con flex-grow: en reposo es un círculo
+  // (grow 0, ancho natural) y al pulsarlo absorbe el espacio libre del
+  // contenedor de ancho fijo y se estira a píldora (rounded-full). Se suelta a
+  // los 220ms con el mismo spring que el TransportControls del player expandido.
+  const [press, setPress] = useState(null)
+  const timer = useRef()
+
+  useEffect(() => () => clearTimeout(timer.current), [])
+
+  const trigger = (type, cb) => {
+    setPress(type)
+    cb?.()
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setPress(null), RELEASE_DELAY)
+  }
+
+  const grow = (type) => (press === type ? 0.1 : 0)
+
   const repeatCurrent = repeat === 'track' ? repeatOneIcon : repeatIcon
 
   return (
-    <div className="flex min-w-0 items-center gap-0.5 sm:gap-1 [&>button]:min-w-0 [&>button]:shrink [&_img]:min-w-0">
+    <div className="flex min-w-0 w-60 items-center justify-center gap-0.5 sm:w-64 sm:gap-1 [&>button]:min-w-0 [&>button]:shrink [&_img]:min-w-0">
       <ControlButton
-        label="Aleatorio"
+        label={"Aleatorio"}
+        tooltip
         onClick={toggleShuffle}
         active={shuffle}
         disabled={!hasQueue}
@@ -72,13 +133,15 @@ export default function PlayerControls() {
         <img src={shuffleIcon} alt="" aria-hidden="true" className="h-5 w-5" />
       </ControlButton>
 
-      <ControlButton label="Anterior" onClick={previous} disabled={!hasQueue}>
+      <ControlButton label={"Anterior"} tooltip onClick={previous} disabled={!hasQueue}>
         <img src={previousIcon} alt="" aria-hidden="true" className="h-5 w-5" />
       </ControlButton>
 
       <ControlButton
-        label={isPlaying ? 'Pausar' : 'Reproducir'}
-        onClick={togglePlay}
+        label={isPlaying ? "Pausar" : "Reproducir"}
+        tooltip
+        grow={grow('play')}
+        onClick={() => trigger('play', togglePlay)}
         tone="solid"
         disabled={!hasQueue}
       >
@@ -90,12 +153,13 @@ export default function PlayerControls() {
         />
       </ControlButton>
 
-      <ControlButton label="Siguiente" onClick={next} disabled={!hasQueue}>
+      <ControlButton label={"Siguiente"} tooltip onClick={next} disabled={!hasQueue}>
         <img src={nextIcon} alt="" aria-hidden="true" className="h-5 w-5" />
       </ControlButton>
 
       <ControlButton
         label={REPEAT_LABELS[repeat]}
+        tooltip
         onClick={cycleRepeat}
         active={repeat !== 'off'}
         disabled={!hasQueue}

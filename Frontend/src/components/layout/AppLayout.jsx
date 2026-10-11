@@ -1,9 +1,14 @@
 import useBreakpoint from '../../hooks/useBreakpoint.js'
+import usePlayer from '../../hooks/usePlayer.js'
 import Sidebar from './Sidebar.jsx'
 import BottomNav from './BottomNav.jsx'
 import MiniPlayerBar from './MiniPlayerBar.jsx'
 import TopBar from './TopBar.jsx'
 import PlayerBar from '../player/PlayerBar.jsx'
+import ExpandedPlayer from '../player/ExpandedPlayer.jsx'
+import TransportControls from '../player/TransportControls.jsx'
+import ActionControls from '../player/ActionControls.jsx'
+import ProgressBar from '../player/ProgressBar.jsx'
 import SidebarAutoCollapse, { SIDEBAR_AUTO_COLLAPSE_QUERY } from './SidebarAutoCollapse.jsx'
 import { SidebarProvider } from '../ui/sidebar.tsx'
 
@@ -24,6 +29,29 @@ function getDefaultSidebarOpen() {
 export default function AppLayout({ children }) {
   const breakpoint = useBreakpoint()
   const isMobile = breakpoint === 'mobile'
+  const { song, isPlaying, currentTime, duration, seek, isExpanded, expandedOrigin, collapse } =
+    usePlayer()
+
+  // Overlay de reproducción expandida: se monta UNA vez en el layout raíz y lee
+  // el estado global (PlayerContext), así sobrevive a la navegación. Los
+  // controles entran por slots para reutilizar los componentes reales del player.
+  const expandedPlayer = (
+    <ExpandedPlayer
+      open={isExpanded}
+      onClose={collapse}
+      origin={expandedOrigin}
+      coverUrl={song?.coverUrl ?? ''}
+      title={song?.title ?? 'Nada reproduciendo'}
+      artist={song?.artist ?? '—'}
+      sourceName={song?.source}
+      isPlaying={isPlaying}
+      progressSlot={
+        <ProgressBar currentTime={currentTime} duration={duration} onSeek={seek} />
+      }
+      transportSlot={<TransportControls />}
+      actionsSlot={<ActionControls songId={song?.id} />}
+    />
+  )
 
   if (isMobile) {
     return (
@@ -32,6 +60,7 @@ export default function AppLayout({ children }) {
           <main className="min-h-0 flex-1 overflow-y-auto pb-28">{children}</main>
           <MiniPlayerBar />
           <BottomNav />
+          {expandedPlayer}
         </div>
       </div>
     )
@@ -54,6 +83,7 @@ export default function AppLayout({ children }) {
               ancho con transition-[width], así que el reproductor se adapta a su
               lado derecho y se ensancha al contraerse el sidebar. */}
           <PlayerBar />
+          {expandedPlayer}
         </div>
       </div>
     </SidebarProvider>
