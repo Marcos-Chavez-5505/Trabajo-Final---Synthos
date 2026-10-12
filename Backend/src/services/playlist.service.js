@@ -1,4 +1,5 @@
 const prisma = require("../prisma/prismaClient");
+const crypto = require("node:crypto");
 
 const SONG_INCLUDE = {
 	songArtists: true,
@@ -18,13 +19,15 @@ const PLAYLIST_INCLUDE = {
 	},
 };
 
-async function createPlaylist(userId, { name, description, isPublic }) {
+async function createPlaylist(userId, { name, description, isPublic, type }) {
+	const finalType = type === "colab" ? "colab" : "personal";
+
 	return prisma.playlist.create({
 		data: {
 			name,
 			description: description ?? null,
 			idCreator: userId,
-			type: "personal",
+			type: finalType,
 			isPublic: isPublic ?? false,
 		},
 		include: PLAYLIST_INCLUDE,
@@ -153,10 +156,54 @@ async function deletePlaylist(id) {
 	return prisma.playlist.delete({ where: { id } });
 }
 
+
+async function generateInvitationToken(playlistId) {
+	const token = crypto.randomBytes(32).toString("hex");
+
+	return prisma.playlist.update({
+		where: { id: playlistId },
+		data: { tokenInvitation: token },
+		select: { id: true, name: true, tokenInvitation: true },
+	});
+}
+
+async function getPlaylistByToken(token) {
+	return prisma.playlist.findFirst({
+		where: { tokenInvitation: token, type: "colab" },
+		include: {
+			creator: {
+				select: { id: true, username: true, pictureUrl: true },
+			},
+			members: {
+				select: { idUser: true },
+			},
+		},
+	});
+}
+
+async function addCollaborator(playlistId, userId) {
+	const existing = await prisma.playlistMember.findUnique({
+		where: {
+			idPlaylist_idUser: { idPlaylist: playlistId, idUser: userId },
+		},
+	});
+
+	if (existing) return { alreadyMember: true };
+
+	await prisma.playlistMember.create({
+		data: { idPlaylist: playlistId, idUser: userId, role: "colaborator" },
+	});
+
+	return { joined: true };
+}
+
 module.exports = {
 	createPlaylist,
 	getPlaylistById,
 	getUserPlaylists,
 	updatePlaylist,
 	deletePlaylist,
+    generateInvitationToken,
+	getPlaylistByToken,
+	addCollaborator,
 };
