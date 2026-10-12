@@ -9,7 +9,12 @@ async function searchUsers(req, res, next) {
 		// (optionalAuthenticate) la búsqueda sigue siendo pública, sin indicador.
 		const viewerId = req.user ? Number(req.user.sub) : null;
 
-		const results = await userService.searchUsers(query, page, pageSize, viewerId);
+		const results = await userService.searchUsers(
+			query,
+			page,
+			pageSize,
+			viewerId,
+		);
 
 		res.status(200).json(results);
 	} catch (error) {

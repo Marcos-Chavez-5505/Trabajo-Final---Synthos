@@ -1,6 +1,7 @@
 const prisma = require("../prisma/prismaClient");
 const { Prisma } = require("@prisma/client");
 const followService = require("./follow.service");
+const { isBase64DataUrl, uploadBase64 } = require("./image.service");
 
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
@@ -161,7 +162,20 @@ async function updateUser(id, { username, biography, pictureUrl }) {
 	}
 
 	if (pictureUrl !== undefined) {
-		data.pictureUrl = pictureUrl === null ? null : String(pictureUrl);
+		if (pictureUrl === null) {
+			// Borra la foto
+			data.pictureUrl = null;
+		} else if (isBase64DataUrl(pictureUrl)) {
+			// Si es una imagen nueva la sube a ImageKit
+			const uploaded = await uploadBase64(
+				pictureUrl,
+				`avatar-${id}-${Date.now()}`,
+			);
+			data.pictureUrl = uploaded.url;
+		} else {
+			// Ya es una URL (o el frontend no cambió la foto) la guarda nomas
+			data.pictureUrl = String(pictureUrl);
+		}
 	}
 
 	return prisma.user.update({
