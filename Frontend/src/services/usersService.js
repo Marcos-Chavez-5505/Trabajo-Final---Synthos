@@ -1,4 +1,4 @@
-import { get, post, del, patch, ApiError } from './api.js'
+import { get, post, del, patch, postForm, ApiError } from './api.js'
 
 // Tamaño de página de la búsqueda de personas. Igual que en `songsService`, con
 // el catálogo completo se ven varias páginas; contra el backend real es el
@@ -86,14 +86,41 @@ export async function searchUsers(query = '', page = 1, pageSize = SEARCH_PAGE_S
  * Traduce los nombres de la UI a los del backend (`bio`→`biography`,
  * `avatarUrl`→`pictureUrl`) y devuelve el usuario en el shape del frontend.
  *
+ * `avatarUrl` es opcional a propósito: si no viene, la clave no se manda y el
+ * backend no toca `pictureUrl` (su update es parcial). La foto no se setea por
+ * acá sino con `uploadProfilePicture`; mandar `null` sí la quita.
+ *
  * @returns {Promise<object>}
  */
 export async function updateProfile({ username, bio, avatarUrl }) {
   const data = await patch('/users/me', {
     username,
     biography: bio,
-    pictureUrl: avatarUrl,
+    ...(avatarUrl !== undefined ? { pictureUrl: avatarUrl } : {}),
   })
+
+  return toUser(data)
+}
+
+/**
+ * Sube la foto de perfil y devuelve el usuario ya actualizado.
+ *
+ * El archivo va multipart en el campo `picture` a `POST /users/me/picture` (ver
+ * TS-21 en el plan): la imagen viaja una sola vez y el backend devuelve la misma
+ * estructura que `PATCH /users/me`, así que la sesión se actualiza sin volver a
+ * pedir `/users/me`.
+ *
+ * `file` tiene que venir recortado y comprimido desde
+ * `features/profile/profileImage.js`: el backend corta en 2 MB.
+ *
+ * @param {File} file
+ * @returns {Promise<object>}
+ */
+export async function uploadProfilePicture(file) {
+  const form = new FormData()
+  form.append('picture', file, file.name)
+
+  const data = await postForm('/users/me/picture', form)
 
   return toUser(data)
 }

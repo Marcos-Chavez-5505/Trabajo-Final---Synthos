@@ -8,7 +8,10 @@ import {
   logoutUser as logoutService,
   registerUser as registerService,
 } from '../services/authService.js'
-import { updateProfile as updateProfileService } from '../services/usersService.js'
+import {
+  updateProfile as updateProfileService,
+  uploadProfilePicture as uploadProfilePictureService,
+} from '../services/usersService.js'
 
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -74,9 +77,24 @@ export default function AuthProvider({ children }) {
     [user],
   )
 
+  // La foto se sube a un endpoint propio (no viaja en el PATCH del perfil) pero
+  // el backend devuelve el usuario completo, así que la sesión se actualiza acá
+  // igual que con `updateProfile` y el avatar nuevo se ve en toda la app.
+  const uploadProfilePicture = useCallback(
+    async (file) => {
+      if (!user) {
+        throw new Error('No hay sesión activa.')
+      }
+      const updated = await uploadProfilePictureService(file)
+      setUser(updated)
+      return updated
+    },
+    [user],
+  )
+
   const value = useMemo(
-    () => ({ user, loading, register, login, logout, updateProfile }),
-    [user, loading, register, login, logout, updateProfile],
+    () => ({ user, loading, register, login, logout, updateProfile, uploadProfilePicture }),
+    [user, loading, register, login, logout, updateProfile, uploadProfilePicture],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
