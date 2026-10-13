@@ -250,15 +250,14 @@ view user_top_genre {
   song_count BigInt?
 }
 
-view RoomAvgRating {
-  id_room    Int
+view HostAvgRating {
+  id_host    Int
   avg_rating Decimal?
 
-  // La vista se crea a mano en la migracion add_room_avg_rating_view, con este
-  // nombre en snake_case. Sin el @@map, Prisma la buscaria como "RoomAvgRating".
-  @@map("room_avg_rating")
+  // La vista se crea a mano en la migracion replace_room_avg_rating_with_host_avg_rating,
+  // con este nombre en snake_case.
+  @@map("host_avg_rating")
 }
-
 enum PlaylistType {
   personal
   colab

@@ -4,7 +4,7 @@
 // anfitrión). Es idempotente: se puede volver a correr sin duplicar nada.
 //
 // Por qué un seed y no datos volados en el frontend: `GET /api/rooms?sort=rating`
-// ordena por `room_avg_rating.avg_rating`, que es una VISTA sobre `host_rating`.
+// ordena por `host_avg_rating.avg_rating`, que es una VISTA sobre `host_rating`.
 // Si la tabla no tiene filas, la vista devuelve `COALESCE(AVG(...), 0)` = 0 para
 // toda sala y los dos criterios de orden dan exactamente la misma lista: la
 // pantalla de TS-17 no se puede comprobar. Hace falta historial real de
@@ -24,7 +24,7 @@
 //
 // La PK de `host_rating` es [id_room, id_rater, id_host]: una calificación por
 // persona y sala. Los ratings repetidos del mismo `rater` a un mismo anfitrión se
-// accumulating en filas distintas de salas distintas, que es el caso real.
+// acumulan en filas distintas de salas distintas, que es el caso real.
 
 const bcrypt = require("bcryptjs");
 
@@ -36,10 +36,6 @@ const SALT_ROUNDS = 10;
 // Datos de prueba
 // ---------------------------------------------------------------------------
 
-// Anfitriones. Los passwords son todos "Demo1234" (el mismo que usa
-// `mocks/users.js` en el frontend) y van hasheados con bcrypt, igual que
-// `auth.service.js`. Son cuentas reales de la base: se puede iniciar sesión con
-// cualquiera para ver la sala desde adentro.
 const HOSTS = [
 	{ email: "host.rock@example.com", username: "rock_total" },
 	{ email: "host.jazz@example.com", username: "jazz_callejero" },
@@ -48,33 +44,21 @@ const HOSTS = [
 	{ email: "host.pop@example.com", username: "pop_radiante" },
 ];
 
-// Quienes califican. No son anfitriones de ninguna sala: su único rol en estos
-// datos es ser `id_rater`, para que el promedio tenga más de una fuente y el
-// orden por rating sea un promedio de verdad y no el mismo número repetido.
 const RATERS = [
 	{ email: "rater.uno@example.com", username: "uno_que_escucha" },
 	{ email: "rater.dos@example.com", username: "dos_que_escucha" },
 	{ email: "rater.tres@example.com", username: "tres_que_escucha" },
 ];
 
-// Salas. Los ratings van en `ratings: [5, 4, 4]` y se combinan con `RATERS` en
-// ese orden para producir las filas de `host_rating`.
-//
-// El test manual es: con "Mejor calificado" el promedio tiene que estar ordenado
-// de mayor a menor, y con "Alfabético" por nombre, y las dos listas tienen que
-// ser DISTINTAS. Los `ratings` de cada sala están elegidos para que eso se vea:
-// alfabéticamente empiezan por "Ambiente total" (peor calificada) y el mejor
-// promedio es "Electro 404", que va fourth alfabético.
 const ROOMS = [
 	{
 		code: "ELECTRO404",
 		name: "Electro 404",
-		description: "Basses yhits de club, sin hablar mucho.",
+		description: "Basses y hits de club, sin hablar mucho.",
 		playlistName: "Electro 404 (fuente)",
 		songs: [43886, 306166],
 		host: "electro_pura",
 		maxCapacity: 20,
-		// Promedio 5,00 — la sala mejor calificada.
 		ratings: [5, 5, 5],
 	},
 	{
@@ -85,7 +69,6 @@ const ROOMS = [
 		songs: [25706],
 		host: "jazz_callejero",
 		maxCapacity: 12,
-		// Promedio 4,33
 		ratings: [5, 4, 4],
 	},
 	{
@@ -96,7 +79,6 @@ const ROOMS = [
 		songs: [26747, 81740, 43886],
 		host: "rock_total",
 		maxCapacity: 30,
-		// Promedio 3,67
 		ratings: [4, 4, 3],
 	},
 	{
@@ -107,7 +89,6 @@ const ROOMS = [
 		songs: [306166],
 		host: "ambiente_total",
 		maxCapacity: 8,
-		// Promedio 2,33
 		ratings: [3, 2, 2],
 	},
 	{
@@ -118,10 +99,6 @@ const ROOMS = [
 		songs: [25706, 26747],
 		host: "pop_radiante",
 		maxCapacity: 15,
-		// Sin calificaciones a propósito: la vista `room_avg_rating` lo tiene que
-		// resolver a 0 con su `COALESCE`, y la pantalla tiene que mostrar "Sin
-		// calificar" en vez de "0". Si se rompe el COALESCE, esta sala aparece
-		// con `null` o desaparece del `JOIN` y el seed sirve de alarma.
 		ratings: [],
 	},
 ];
@@ -130,9 +107,6 @@ const ROOMS = [
 // Helpers
 // ---------------------------------------------------------------------------
 
-// `upsert` por el campo único en vez de `create` + `findFirst`: dos corridas del
-// seed no rompen nada y no hay que buscar a mano el id que se insertó la
-// primera vez.
 async function upsertUser(tx, { email, username }, passwordHash) {
 	const user = await tx.user.upsert({
 		where: { email },
@@ -144,13 +118,7 @@ async function upsertUser(tx, { email, username }, passwordHash) {
 	return user;
 }
 
-// `playlist.name` NO es único en el schema: dos personas pueden tener playlists
-// con el mismo nombre sin que sea un problema, así que el nombre no sirve como
-// clave.
 async function upsertPlaylist(tx, { name, creatorId, songIds }) {
-	// Por eso `upsert` no sirve acá: `PlaylistWhereUniqueInput` solo acepta
-	// `id`, no `name`. La clave lógica del seed es (nombre + creador), que es
-	// única entre los anfitriones del `ROOMS`. Va `findFirst` + `create`/`update`.
 	const existente = await tx.playlist.findFirst({
 		where: { name, idCreator: creatorId },
 		select: { id: true },
@@ -177,8 +145,6 @@ async function upsertPlaylist(tx, { name, creatorId, songIds }) {
 				select: { id: true },
 			});
 
-	// `playlist_song` tiene PK [id_playlist, id_song] y `position` es NOT NULL:
-	// hay que upsertear las canciones una por una para poderles dar posición.
 	for (const [position, idSong] of songIds.entries()) {
 		await tx.playlistSong.upsert({
 			where: { idPlaylist_idSong: { idPlaylist: playlist.id, idSong } },
@@ -217,9 +183,6 @@ async function upsertRoom(tx, room, { hostId, playlistId }) {
 		select: { id: true },
 	});
 
-	// El anfitrión tiene que estar en `room_member` con role `host`: es lo que
-	// lo convierte en anfitrión de la sala (y lo que TS-11 va a leer para
-	// deshabilitar que se califique a sí mismo).
 	await tx.roomMember.upsert({
 		where: { idRoom_idUser: { idRoom: record.id, idUser: hostId } },
 		update: { role: "host" },
@@ -229,13 +192,8 @@ async function upsertRoom(tx, room, { hostId, playlistId }) {
 	return record;
 }
 
-// Las calificaciones se dan de alta por PK compuesta, así que `upsert` las hace
-// idempotentes sin borrar el historial existente.
 async function seedRatings(tx, { roomId, hostId, ratings, raterIds }) {
 	for (const [index, rating] of ratings.entries()) {
-		// Los ratings se reparten entre los raters. Si hay más ratings que
-		// raters, un rater repite en otra combinación de sala; acá, con 3 de
-		// cada, el reparto es uno a uno.
 		const raterId = raterIds[index % raterIds.length];
 
 		await tx.hostRating.upsert({
@@ -257,8 +215,6 @@ async function main() {
 
 	const resumen = await prisma.$transaction(
 		async (tx) => {
-			// 1) Personas. Los anfitriones primero: son los creadores de las
-			//    playlists fuente.
 			const hosts = new Map();
 			for (const host of HOSTS) {
 				const created = await upsertUser(tx, host, passwordHash);
@@ -271,7 +227,6 @@ async function main() {
 			}
 			const raterIds = raters.map((r) => r.id);
 
-			// 2) Salas: playlist fuente → room → memberships → calificaciones.
 			const salas = [];
 			for (const room of ROOMS) {
 				const hostId = hosts.get(room.host);
@@ -319,10 +274,16 @@ async function main() {
 	// Verificación con el mismo criterio de orden que usa el endpoint, para que
 	// el seed deje claro qué tiene que verse en `/salas`.
 	const ordenadas = await prisma.$queryRaw`
-		SELECT room.name, room_avg_rating.avg_rating
+		SELECT
+			room.name,
+			COALESCE(host_avg_rating.avg_rating, 0) AS avg_rating
 		FROM room
-		JOIN room_avg_rating ON room_avg_rating.id_room = room.id
-		ORDER BY room_avg_rating.avg_rating DESC
+		JOIN room_member host_member
+			ON host_member.id_room = room.id AND host_member.role = 'host'
+		LEFT JOIN host_avg_rating
+			ON host_avg_rating.id_host = host_member.id_user
+		WHERE room.is_private = false
+		ORDER BY avg_rating DESC, room.name ASC
 	`;
 	console.log("\nComo las va a devolver ?sort=rating:");
 	for (const row of ordenadas) {

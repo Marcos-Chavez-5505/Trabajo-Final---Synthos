@@ -26,14 +26,14 @@ function validateQuery(query) {
 }
 
 function validateSortType(sortType) {
-	const validTypes = ["alphabetical", "rating"];
+	const validTypes = ["alphabetical", "name", "rating"];
 	if (
 		typeof sortType !== "string" ||
 		sortType.trim() === "" ||
 		!validTypes.includes(sortType.trim())
 	) {
 		const error = new Error(
-			"Unknown sort type, only supported types: alphabetical (default) | rating",
+			"Unknown sort type, only supported types: alphabetical (default) | name | rating",
 		);
 		error.code = 400;
 		throw error;
