@@ -236,47 +236,47 @@ escrituras (playlist, favorito, follow) se revirtieron.
 
 ---
 
-## 7. La foto de perfil se guarda como base64 dentro de una columna de texto
+## 7. La foto de perfil se guardaba como base64 dentro de una columna de texto
 
-**Estado:** la edición de perfil sí conecta con el backend de punta a punta — `ProfileEdit.jsx` →
-`useAuth().updateProfile()` → `usersService.updateProfile()` → `PATCH /api/users/me` →
-`userController.updateMe` → `userService.updateUser`. El service traduce los nombres de la UI a los del
-backend (`bio`→`biography`, `avatarUrl`→`pictureUrl`), valida username (3-50 caracteres, no tomado) y
-persiste con un `update` parcial: solo toca los campos que llegan definidos. Devuelve con
-`ME_USER_SELECT`, que incluye justo los campos que `toUser` necesita, así que `setUser` actualiza
-sidebar, header y perfil sin recargar.
+**Estado: cerrado (2026-10-13, TS-21).** La foto ya no viaja en el JSON ni entra a la base: va por
+`POST /api/users/me/picture` (multipart) a ImageKit y lo que se persiste es la URL pública. Contrato
+completo en `ESPECIFICACIONES-BACKEND.md` §7.1; resumen de la tarea en `plan/sprint-2-plan.md` (TS-21).
 
-Lo que queda mal es el trato de la foto.
+**Lo que había:** `ProfileEdit.jsx` leía el archivo con `FileReader.readAsDataURL()` y mandaba el data
+URI completo dentro del `PATCH`. El backend lo aceptaba sin límite de tamaño ni validar que fuera una
+imagen y lo escribía tal cual en `prisma.user.pictureUrl` (`String?`): un JPEG de 2 MB producía un body
+de ~2,7 MB contra una columna de texto.
 
-**Contexto:** `ProfileEdit.jsx` lee el archivo con `FileReader.readAsDataURL()` y manda el data URI
-completo dentro del `PATCH` JSON. El backend lo acepta sin límite de tamaño ni validar que sea una
-imagen, y `prisma.user.pictureUrl` es un `String?`, o sea lo escribe tal cual. Un JPEG de 2 MB produce
-un body de ~2.7 MB contra una columna de texto: funciona, pero es lo que revienta en cuanto alguien
-suba una foto de un celular moderno. Además, cuando el username está tomado,
-`Backend/src/services/user.service.js` lanza `"Ese nombre de usuario ya está en uso."` con
-`error.code = 400` y el frontend lo pinta tal cual.
+**Lo que hay ahora:**
 
-**Qué hacer:** mover la foto a un upload real —endpoint de multipart en el backend que guarde el binario
-y devuelva una URL— y mandar solo esa URL en `pictureUrl`. Si el proyecto no va a sumar almacenamiento de
-archivos todavía, el arreglo barato es al menos acotar tamaño y tipo en ambos lados, para que la columna no
-reciba un data URI arbitrario.
+- `POST /api/users/me/picture` con `multer` (memoria + `fileFilter`), tope de 2 MB, JPG/PNG/WEBP, y
+  `PATCH /users/me` rechaza con 400 cualquier data URL. `express.json()` volvió a su límite por defecto.
+- Recorte (1024 px) y compresión (≤1 MB) en el navegador, antes de subir: el body de una serverless
+  function de Vercel corta ~4,5 MB, así que el archivo crudo no era viable.
+- Un archivo por usuario en ImageKit (nombre determinista + `useUniqueFileName: false`), sin huérfanos.
+  Known: cambiar de formato (JPG → PNG) deja el archivo viejo.
+- Cliente de ImageKit perezoso: sin `IMAGEKIT_PRIVATE_KEY` el server arranca igual y el upload responde
+  500 en español.
 
-**Verificación:** subir una imagen de tamaño realista y confirmar que el `PATCH` pesa kilobytes y no
-megabytes. La base real ya está levantada (§5.7), así que no hay excusa para no probarlo.
+**Verificación:** con `curl` contra la base real y contra ImageKit (200 con la URL servible, 400 sin
+archivo / tipo no permitido / 3 MB, 401 sin token, 400 con data URL en el `PATCH`, `?v=` rompiendo caché
+y el contador de archivos en `/avatars` sin crecer al resubir), y con un smoke en Chrome real (5,9 MB →
+757 KB en el navegador, upload + guardado, avatar cargado en perfil y sidebar). Quedó un `PATCH` de
+kilobytes, como pedía este pendiente.
 
 ### 7.1 Feedback y validación de la edición de perfil
 
-Menor, va junto con lo anterior:
-
-- `ProfileEdit.jsx:86` deshabilita el botón Guardar con `loading`, que es el flag de carga de la sesión
-  (`AuthContext`), no un estado de submit. Mientras guardás no se bloquea nada, así que un doble click
-  manda dos PATCH. Le falta un `saving` propio.
+- [x] ~~`ProfileEdit.jsx:86` deshabilita el botón Guardar con `loading`~~ → resuelto: estado de submit
+  propio (`saving`), botón bloqueado y `finally` que lo rehabilita si falla el guardado.
 - El error de username tomado se muestra crudo desde el service. Hoy coincide porque los dos textos
   están en español, pero es acoplamiento por coincidencia; conviene un mapa de errores o un `code`
-  estable que el frontend pueda traducir.
-- `ProfileEdit.jsx:79` tiene un `TODO: falta token de color para placeholder` que es deuda de la regla 11
+  estable que el frontend pueda traducir. **Sigue abierto**: el catch-all de `app.js` responde
+  `{ status, message }` sin `code`.
+- `ProfileEdit.jsx` tiene un `TODO: falta token de color para placeholder` que es deuda de la regla 11
   (los literales solo viven en `styles/tokens.css`); de paso el `placeholder` está hardcodeado a
-  `placeholder-neutral-500` en los inputs.
+  `placeholder-neutral-500` en los inputs. **Sigue abierto**.
+- Nuevo: si se quiere barra de progreso real en la subida, `services/api.js` tiene que pasar de `fetch`
+  a `XMLHttpRequest` (no hay `upload.onprogress`). Hoy es estado textual, suficiente con ≤1 MB.
 
 ---
 

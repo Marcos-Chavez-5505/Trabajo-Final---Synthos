@@ -56,8 +56,8 @@ src/
   app.js              cors, express.json, montaje de rutas, /api/health, manejo de errores
   routes/             Sólo rutas + middleware. Un archivo por recurso
   controller/         HTTP: valida input, decide status code y arma la respuesta
-  services/           Reglas de negocio y Prisma. No conocen req/res
-  middlewares/        authenticate (JWT) y prismaErrorHandler (traduce códigos P2xxx)
+  services/           Reglas de negocio y Prisma. No conocen req/res (incluye image.service.js: ImageKit)
+  middlewares/        authenticate (JWT), uploadAvatar (multipart del avatar) y prismaErrorHandler (traduce códigos P2xxx)
   prisma/prismaClient.js  Instancia de Prisma con adapter-pg
   utils/validation.js     Validadores compartidos (getId, validateCursor, validateRegisterInput, …)
   const/baseUrl.js    Resto sin usar: app.js monta todo en /api, no en /api/v1
@@ -113,7 +113,7 @@ El orden de las capas va de la UI hacia la red. **Nunca se salta una capa**: los
 Sólo dos, y son transversales:
 
 - **`AuthProvider`** (`context/AuthContext.jsx`): `user`, `loading`, `register`, `login`, `logout`,
-  `updateProfile`. Al montar llama `getCurrentUser()` para rehidratar la sesión. También registra el
+  `updateProfile`, `uploadProfilePicture`. Al montar llama `getCurrentUser()` para rehidratar la sesión. También registra el
   handler de 401: si un request autenticado recibe 401, limpia la sesión y deja `user` en `null`; el
   redirect lo hace `RequireAuth`, no el provider (que está fuera del Router).
 - **`PlayerProvider`** (`context/PlayerContext.jsx`): un único `<audio>` HTML5 con `queue`, `index`,
@@ -146,6 +146,8 @@ feature, no infraestructura.
   el usuario cacheado) para que la sesión sobreviva al refresh.
 - `setUnauthorizedHandler(fn)`: se dispara una sola vez ante un 401 **con token adjunto**.
 - `ApiError`: lleva `status` y `code` del backend, así la UI puede mostrar el mensaje real.
+- `postForm(path, formData)`: multipart. `request()` detecta que el body es un `FormData` y lo manda
+  crudo, sin `Content-Type`, para que el browser ponga el `boundary` (subida de la foto de perfil).
 
 Los services de dominio (`authService`, `songsService`, `usersService`, `playlistsService`) son la
 capa que se edita al migrar un módulo de mock a la API real; nada fuera de `services/` cambia.
@@ -158,7 +160,7 @@ Una carpeta por dominio, con sus pantallas, componentes y hooks:
 |---|---|
 | `auth/` | `Login`, `Register` |
 | `home/` | `Home` (elige `HomeDesktop`/`HomeMobile` por breakpoint) |
-| `profile/` | `ProfileView` (propio), `ProfilePublic` (ajeno), `ProfileEdit` |
+| `profile/` | `ProfileView` (propio), `ProfilePublic` (ajeno), `ProfileEdit` + `profileImage.js` (recorte/compresión de la foto antes de subirla) |
 | `playlists/` | Biblioteca y detalle, formularios, `MisPlaylists` (sidebar), `FavoriteButton`, `AddToPlaylistPanel`, `useSongPlaylists` |
 | `search/` | `Search` + pestañas `SearchSongs` / `SearchPeople` / `SearchTabs` |
 | `social/` | `useFollow`, `FollowButton`, `FollowList`, `FollowStats`, `ProfileSummary` |

@@ -193,7 +193,8 @@ campos que `GET /api/users/me`.
 |---|---|---|---|
 | `GET /search` | opcional | query: `query`, `page`, `pageSize` | `{ items, total, page, pageSize, totalPages }`. `items` viene de un `$queryRaw`, así que trae **`picture_url` y `genre_name` en snake_case**; `query` vacío = todos los usuarios. **Con sesión** (Bearer) cada ítem suma la relación en los **dos sentidos**: `isFollowing` (el que busca ya lo sigue) y `followsMe` (esa persona ya lo sigue a él), resueltos con dos `EXISTS` en la misma query (jamás una consulta por resultado) |
 | `GET /me` | `JWT` | — | `user` con `email`, o 404 |
-| `PATCH /me` | `JWT` | body: `username`, `biography`, `pictureUrl` (sólo los presentes) | `user` actualizado. 400 si el username es inválido o ya está usado |
+| `PATCH /me` | `JWT` | body: `username`, `biography`, `pictureUrl` (sólo los presentes) | `user` actualizado. 400 si el username es inválido o ya está usado, si `pictureUrl` es una data URL (base64) o si no es una URL `http(s)` |
+| `POST /me/picture` | `JWT` | `multipart/form-data`, campo `picture`: JPG, PNG o WEBP de hasta 2 MB | `user` actualizado (mismo shape que `PATCH /me`, con `pictureUrl` ya apuntando al CDN). 400 si no llega archivo / el tipo no está permitido / excede 2 MB, 401 sin sesión, 500 si falla la subida |
 | `GET /:id` | — | — | `{ id, username, pictureUrl, biography, registrationDate, followers[], following[], followerCount, followingCount }`. 404 si no existe, 400 si el id no es un entero |
 | `GET /:id/followers` | — | — | `{ status, followers: [{ id, username, pictureUrl }] }` — **array completo, sin paginar** |
 | `GET /:id/following` | — | — | `{ status, following: [{ id, username, pictureUrl }] }` — ídem |
@@ -203,6 +204,43 @@ campos que `GET /api/users/me`.
 No existe un endpoint `isFollowing` directo para un perfil: el Frontend lo deriva de la lista de
 seguidores. La búsqueda (`GET /search`) sí trae la relación completa por resultado cuando hay sesión
 (`isFollowing` + `followsMe`, TS-10b); el perfil público sigue sin él.
+
+### 7.1 Foto de perfil (`POST /me/picture`) — TS-21
+
+**Almacenamiento:** ImageKit (servicio en nube; el despliegue es en Vercel y no hay disco). Requiere
+`IMAGEKIT_PRIVATE_KEY` en el entorno. Sin esa variable el server **igual arranca** (el cliente de
+ImageKit se instancia de forma perezosa, solo cuando alguien sube una foto) y el endpoint responde
+500 con un mensaje en español; el resto de la API no se ve afectada.
+
+**Tope de tamaño 2 MB**, aplicado por el middleware de multipart antes de tocar la red externa. El
+Frontend recorta y recomprime en el navegador a ≤1 MB (`features/profile/profileImage.js`) porque el
+body de una serverless function de Vercel corta ~4,5 MB: una foto de celular de 3-8 MB en base64 no
+entraría. `express.json()` quedó con su límite por defecto de 100 KB: la foto ya no viaja en el JSON
+del `PATCH`.
+
+**Un archivo por usuario, cero huérfanos:** el upload va con `useUniqueFileName: false` y el nombre es
+determinista (`avatars/avatar-<id de usuario>.<ext>`), así que ImageKit reemplaza el archivo del
+usuario en sitio y no hay que borrar nada. La URL guardada suma `?v=<timestamp>` porque el nombre no
+cambia entre subidas y sin ese query el navegador y la CDN seguirían sirviendo el avatar anterior.
+Cambiar de formato (JPG → PNG) deja el archivo viejo en ImageKit hasta que el usuario vuelva a subir
+una foto en ese formato.
+
+**`pictureUrl` es una columna de texto:** `PATCH /me` rechaza con 400 cualquier data URL
+(`data:image/...;base64,...`). La imagen entra solo por el endpoint multipart.
+
+```bash
+TOKEN=$(curl -s -X POST localhost:3000/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"host.rock@example.com","password":"Demo1234"}' | jq -r .token)
+
+curl -X POST localhost:3000/api/users/me/picture \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "picture=@foto.png"
+
+curl -X PATCH localhost:3000/api/users/me \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"pictureUrl":null}'          # quita la foto (el archivo queda en ImageKit)
+```
 
 ---
 

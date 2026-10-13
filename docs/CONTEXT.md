@@ -28,8 +28,8 @@ Idioma de dominio, UI, comentarios, nombres de archivos y mensajes de error: **e
 │       ├── app.js                # express + rutas + middlewares de error
 │       ├── routes/*.js           # 6 routers
 │       ├── controller/*.js       # 7 controllers (HTTP: valida + formatea)
-│       ├── services/*.js         # 7 services (Prisma + lógica)
-│       ├── middlewares/          # auth.middleware (JWT), errorHandler (Prisma)
+│       ├── services/*.js         # services (Prisma + lógica; image.service = ImageKit)
+│       ├── middlewares/          # auth.middleware (JWT), upload.middleware (multipart), errorHandler (Prisma)
 │       ├── prisma/prismaClient.js# singleton con adapter-pg
 │       ├── utils/validation.js   # validadores compartidos
 │       ├── const/baseUrl.js      # "localhost:3000/api/v1" (huérfano, no se usa)
@@ -45,7 +45,7 @@ Idioma de dominio, UI, comentarios, nombres de archivos y mensajes de error: **e
 
 ## 3. Backend
 
-**Stack:** Express **5** (CommonJS, `"type": "commonjs"`), Prisma **7** con `@prisma/adapter-pg`, PostgreSQL 17, `bcrypt`, `jsonwebtoken`, `cors`, `dotenv`, `nodemon` (dev). `mongoose` está en dependencies pero **no se usa en ningún lado**.
+**Stack:** Express **5** (CommonJS, `"type": "commonjs"`), Prisma **7** con `@prisma/adapter-pg`, PostgreSQL 17, `bcrypt`, `jsonwebtoken`, `cors`, `dotenv`, `multer` (multipart), `@imagekit/nodejs` (fotos de perfil), `nodemon` (dev). `mongoose` está en dependencies pero **no se usa en ningún lado**.
 
 **Scripts:** `npm run dev` (nodemon, NODE_ENV=development), `npm start`, `vercel-build` (`prisma generate`). No hay tests (`npm test` es el stub de npm).
 
@@ -54,7 +54,7 @@ Idioma de dominio, UI, comentarios, nombres de archivos y mensajes de error: **e
 **Auth:** JWT Bearer. `authenticate` (`middlewares/auth.middleware.js`) decodifica con `JWT_SECRET` y deja el payload en `req.user`; el id del usuario es **`req.user.sub` y llega como string** (hay que hacerle `Number()` para Prisma). `optionalAuthenticate` (mismo archivo) deja `req.user = null` si no viene header y solo 401 si el token está presente pero es inválido: lo usan endpoints públicos que enriquecen su respuesta con sesión (`GET /users/search`). `signToken` en `auth.controller.js`: payload `{ sub, email, username }`, expiración `JWT_EXPIRES_IN || "7d"`.
 
 **Errores:** `middlewares/errorHandler.js` mapea códigos Prisma a HTTP con mensajes en español:
-`P2000/P2005/P2006/P2007/P2009/P2011/P2012/P2013 → 400`, `P2002 → 409` (incluye los campos en conflicto), `P2003/P2014 → 409`, `P2001/P2015/P2025 → 404`, `P2008/P2010 → 500`; cualquier otro → 500. En development agrega `meta`/`details`. Detrás hay un handler unhandled que responde `{ status:"error", message }`.
+`P2000/P2005/P2006/P2007/P2009/P2011/P2012/P2013 → 400`, `P2002 → 409` (incluye los campos en conflicto), `P2003/P2014 → 409`, `P2001/P2015/P2025 → 404`, `P2008/P2010 → 500`; cualquier otro → 500. En development agrega `meta`/`details`. Detrás hay un handler unhandled que responde `{ status:"error", message }` con `Number.isInteger(err.code) ? err.code : 500` (Prisma, el driver y multer usan `code` string; si llegara tal cual, `res.status()` rompería la respuesta).
 
 **Forma de respuesta (parcialmente inconsistente — respetar la que ya tiene cada endpoint):**
 
@@ -77,7 +77,8 @@ GET    /api/songs/:id                  → song (findUniqueOrThrow)
 
 GET    /api/users/search?query=&page=&pageSize=  → { items, total, page, pageSize, totalPages } (auth opcional; con sesión cada item suma isFollowing y followsMe)
 GET    /api/users/me                   → authenticate
-PATCH  /api/users/me                   → authenticate (username/biography/pictureUrl)
+PATCH  /api/users/me                   → authenticate (username/biography/pictureUrl; pictureUrl solo URL http(s), una data URL da 400)
+POST   /api/users/me/picture           → authenticate, multipart campo `picture` (JPG/PNG/WEBP, ≤2MB) → usuario con la URL de ImageKit (400 archivo/tipo/tamaño, 500 si falla la subida)
 GET    /api/users/:id                  → usuario + followers[] + following[] + followerCount + followingCount
 GET    /api/users/:id/followers        → { followers: [user] }
 GET    /api/users/:id/following        → { following: [user] }
@@ -122,7 +123,7 @@ Tablas mapeadas a snake_case (`@@map`, `@map`), claves compuestas como `@@id([a,
 
 **Semillas:** `prisma.config.ts` → `db seed` corre `seed.js && seedRooms.js` (ambos idempotentes). `seed.js` puebla artista/canciones/géneros/moods desde `prisma/data/songs.json` (descarta canciones sin género o mood). `seedRooms.js` crea 5 anfitriones + 3 raters (contraseña **`Demo1234`**), playlists fuente, salas y `host_rating` (escala 1–5) para que el orden por rating sea comprobable.
 
-**Env:** `DATABASE_URL`, `POSTGRES_USER/PASSWORD/DB`, `PGADMIN_DEFAULT_EMAIL/PASSWORD`, `JWT_SECRET`, `JWT_EXPIRES_IN` (`.env.example`; el `.env` local solo tiene las primeras+ `JWT_SECRET`).
+**Env:** `DATABASE_URL`, `POSTGRES_USER/PASSWORD/DB`, `PGADMIN_DEFAULT_EMAIL/PASSWORD`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `IMAGEKIT_PRIVATE_KEY` (`.env.example`; el `.env` local solo tiene las primeras + `JWT_SECRET` + `IMAGEKIT_PRIVATE_KEY`). **La clave de ImageKit es opcional en el arranque**: `services/image.service.js` instancia el cliente de forma perezosa, así que sin la var el server levanta y solo falla la subida de fotos (500 con mensaje en español).
 
 **Setup local:** `docker compose up -d` → `npx prisma migrate dev --name x` → `npx prisma db seed` → `npm run dev` (pgadmin en localhost:8080, `npx prisma studio` como alternativa).
 
@@ -143,7 +144,7 @@ Tablas mapeadas a snake_case (`@@map`, `@map`), claves compuestas como `@@id([a,
 - `setUnauthorizedHandler(cb)`: un 401 **con token** limpia sesión una sola vez; un 401 sin token (login fallido) es un error normal.
 - `buildUrl` descarta `undefined/null/''` de los query params (el backend distingue `?query=` de ausente).
 - 204 → `null`; no-2xx → lanza `ApiError { message, status, code }` (el mensaje viene del backend y se muestra tal cual en la UI).
-- Helpers: `get/post/patch/put/del`.
+- Helpers: `get/post/patch/put/del` + `postForm` (multipart: si el body es `FormData` va crudo y sin `Content-Type`, para que el browser ponga el `boundary`).
 
 ### 4.2 Services (uno por dominio, único punto de traducción de contratos)
 
@@ -152,14 +153,14 @@ Tablas mapeadas a snake_case (`@@map`, `@map`), claves compuestas como `@@id([a,
 | `authService.js`      | `registerUser`, `loginUser`, `logoutUser`, `getCurrentUser`, `clearSession`                                                                                                                  | Sesión en`localStorage['synthos_auth'] = {token, user}`; `toUser()` traduce`pictureUrl→avatarUrl`, `biography→bio`, `id→String`. `getCurrentUser` valida contra `/users/me`: sin red devuelve el usuario cacheado, 401/404 limpia sesión, 5xx no borra pero no deja entrar. API devuelve `{success, user}` (no tira).              |
 | `songsService.js`     | `listSongs`, `getSongById`, `searchSongs`, `SEARCH_PAGE_SIZE=10`                                                                                                                               | `toSong()`: `url→audioUrl`, `artist.name→artist`, `songGenres[].genre.name→genre`, `album`/`source` = `null` (no existen en el esquema).                                                                                                                                                                                               |
 | `playlistsService.js` | CRUD playlists,`addSongToPlaylist`, `removeSongFromPlaylist`, `toggleFavorite`, `isFavorite`, `listFavoriteSongIds`, `subscribeToPlaylists`                                                | Favoritos = playlist`type==='favorites'` (la UI la llama **"Mis Favoritos"**); operaciones sobre ella se redirigen a `/favorites`. Idempotente: ignora 409/404. `ownerId` es obligatorio en la firma (chequeo defensivo; el dueño real sale del token).                                                                                    |
-| `usersService.js`     | `getUserById`, `searchUsers`, `updateProfile`, `getFollowCounts`, `isFollowing`, `listFollowers/listFollowing`, `followUser/unfollowUser`, `subscribeToFollow`, `SEARCH_PAGE_SIZE=4` | Traduce`bio→biography`, `avatarUrl→pictureUrl`. `searchUsers` suma la relación en los dos sentidos por resultado (los trae el backend con sesión, TS-10b): `isFollowing` + `followsMe`. `isFollowing` (perfil) se resuelve listando los seguidores del otro (no hay endpoint directo). `relationState` devuelve `{isFollowing, followerCount, followingCount}` (los contadores son del perfil mirado). No lee la sesión (evita ciclo con authService): recibe ids por parámetro.           |
+| `usersService.js`     | `getUserById`, `searchUsers`, `updateProfile`, `uploadProfilePicture`, `getFollowCounts`, `isFollowing`, `listFollowers/listFollowing`, `followUser/unfollowUser`, `subscribeToFollow`, `SEARCH_PAGE_SIZE=4` | Traduce`bio→biography`, `avatarUrl→pictureUrl`. `updateProfile` solo manda `pictureUrl` si viene (si no, el backend no toca la foto; `null` la quita). `uploadProfilePicture` va multipart a `/users/me/picture` y devuelve el usuario mapeado. `searchUsers` suma la relación en los dos sentidos por resultado (los trae el backend con sesión, TS-10b): `isFollowing` + `followsMe`. `isFollowing` (perfil) se resuelve listando los seguidores del otro (no hay endpoint directo). `relationState` devuelve `{isFollowing, followerCount, followingCount}` (los contadores son del perfil mirado). No lee la sesión (evita ciclo con authService): recibe ids por parámetro.           |
 | `roomsService.js`     | `listRooms({sort})`, `ROOM_SORTS`, `DEFAULT_ROOM_SORT`                                                                                                                                           | **`USE_MOCK = true`**: hoy consume `mocks/rooms.js`, no el endpoint. `toRoom()` ya acepta ambos shapes (snake_case del SQL crudo y el del mock), `avg_rating` llega como string Decimal → `Number()`, `hostRating: null` = "Sin calificar" (distinto de 0). Ordena en el clientecon `localeCompare('es')`, sin rating va al final. |
 
 Regla: **`mocks/` solo se importa desde su service** (hoy solo `roomsService` importa mocks).
 
 ### 4.3 Estado global
 
-- **`AuthContext`** (`context/AuthContext.jsx` + `authContext.js` que solo crea el contexto): `{ user, loading, register, login, logout, updateProfile }`. Al montar llama `getCurrentUser()`; registra el handler de 401 (limpia sesión y `user=null`; no navega porque está fuera del Router).
+- **`AuthContext`** (`context/AuthContext.jsx` + `authContext.js` que solo crea el contexto): `{ user, loading, register, login, logout, updateProfile, uploadProfilePicture }`. Al montar llama `getCurrentUser()`; registra el handler de 401 (limpia sesión y `user=null`; no navega porque está fuera del Router). Las dos últimas(setUser con la respuesta del backend) son las que mantienen avatar y perfil al día sin recargar.
 - **`PlayerContext`** (`context/PlayerContext.jsx`, 452 líneas): un solo `<audio>` HTML5. Estado: `queue, index, isPlaying, currentTime, duration, shuffle, repeat ('off'|'track'|'list'), song, hasQueue`. Acciones: `playSongs(songs, startIndex, source)`, `next/previous/seek/togglePlay/toggleShuffle/cycleRepeat`, y sincronización con la fuente de la cola: `removeFromPlaylistQueue(songId, playlistId)`, `removeFromFavoritesQueue(songId)`, `clearQueueIfSource(playlistId)`. Detalles clave: `queueSourceRef` = `{playlistId, isFavorites} | null` (cola sin origen nunca se toca); `pendingSkipRef` = si se quita la canción que suena, sigue sonando y se descarta en el próximo `next()`; `historyRef` para `previous()` y shuffle con memoria de 10; `repeat 'track'` se maneja en el evento `ended`; `sameSong()` compara ids como string (number del backend vs string del storage). Cola inicial = primera tanda de `listSongs()` (TODO: reemplazar por la selección real del usuario).
 - No hay Context de playlists/follow: se resuelven con hooks + suscripciones.
 
@@ -171,6 +172,7 @@ Regla: **`mocks/` solo se importa desde su service** (hoy solo `roomsService` im
 4. **Optimismo**: `useFollow.toggle()` cambia el estado al instante y revierte si el service falla.
 5. **Estado en la URL**: `?q=` (TopBar/`/buscar`), `?tipo=canciones|personas`, `?page=`, `?sort=` (salas). Compartible + botón atrás funciona; los defaults no se escriben en la URL.
 6. **`useDebounce(value, 300)`** en inputs de búsqueda.
+7. **Trabajo pesado en el navegador, no en la red** (foto de perfil, TS-21): `features/profile/profileImage.js` recorta (1024 px) y recomprime (≤1 MB) el archivo del `<input type="file">` con `canvas`, devuelve un `File` listo para `FormData` y tira con mensajes en español (incluido el `DOMException` de `createImageBitmap`, que viene en inglés). Es un helper de la feature, no un service: no habla con la API.
 
 ### 4.5 Rutas (`routes/AppRoutes.jsx`)
 
@@ -247,6 +249,8 @@ npm run dev                 # localhost:5173, proxy /api → :3000
 - `GET /api/songs/:id` usa `findUniqueOrThrow` → el error lo maneja el mapeador de Prisma (404 vía `P2025`).
 - El Sidebar no se remonta ante mutaciones → por eso existen `subscribeToPlaylists`/`subscribeToFollow`; mantener ese patrón ante nuevas mutaciones compartidas.
 - Backend: `PUT /playlists/:id` con `addSongs` de un id no numérico devuelve 500 (`P2023` sin mapear en `errorHandler`); id numérico inexistente → 409.
+- Fotos de perfil (TS-21): cambiar de formato (JPG → PNG) deja el archivo viejo en ImageKit, porque el nombre es determinista y solo se reemplaza el del formato actual. Quitar la foto tampoco borra el archivo (se reutiliza). No hay transformaciones de ImageKit: se sirve el archivo tal cual (el cliente ya lo manda recortado).
+- El error de validación se muestra crudo desde el service (`PENDIENTES.md` §7.1): el catch-all responde `{ status, message }` sin `code` estable.
 
 ## 8. Reglas del repo (AGENTS.md, condensadas)
 

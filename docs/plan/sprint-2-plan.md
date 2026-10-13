@@ -23,7 +23,7 @@
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
 | D1  | **Destinatario de una recomendación.** El modelo de contenido guarda autor, texto, canción y fecha, pero no destinatario.                                                                                                                             | Guardarlo en`content_playement` o agregar campo nuevo.                                                                                                                 | TS-19 (B1, B2)       |
 | D2  | **Visitante externo** (ni emisor ni receptor): ¿ve las recomendaciones en el perfil público?                                                                                                                                                          | Sí / No. Regla actual: dueño ve todas las recibidas, emisor solo las suyas.                                                                                            | TS-19 (B1, F2)       |
-| D3  | **Almacenamiento de fotos de perfil.** No hay infraestructura de subida. El despliegue es en Vercel, **el disco local no persiste**: favorece servicio externo.                                                                                   | Disco del servidor / servicio en nube (Cloudinary, S3, etc.) / imagen embebida.                                                                                          | TS-21 (B3)           |
+| D3  | **Almacenamiento de fotos de perfil.** No hay infraestructura de subida. El despliegue es en Vercel, **el disco local no persiste**: favorece servicio externo.                                                                                   | **resuelta (2026-10-13):** servicio en nube **ImageKit** + endpoint dedicado `POST /api/users/me/picture` (multipart) + recorte/recompresión en el cliente. Ver TS-21. | TS-21 (B3)           |
 | D4  | **Detección de estado de ánimo** (escaneo facial con IA). No hay código ni dependencias de IA.                                                                                                                                                       | Mock total (elige humor de lista) / cámara real + clasificación simulada / detección en navegador (modelo liviano) / API de visión externa / en backend.             | TS-20 (F9)           |
 | D5  | **Crear calificaciones de anfitrión.** Existe la tabla y la vista de promedio, pero **no hay endpoint para crear**; los datos vienen del seed.                                                                                                   | Agregar tarea backend (propuesta B10 en TS-11) / dejar solo seed.                                                                                                        | TS-11 en producción |
 | D6  | **"Calificaciones positivas".** El alcance dice positivas, la vista actual promedia todas.                                                                                                                                                              | Promedio de todas / solo positivas (ej. 4 a 5).                                                                                                                          | TS-11, TS-17         |
@@ -448,7 +448,7 @@
 ## TS-21 — Subir foto de perfil desde dispositivo o cámara (ex B3 + F3)
 
 **Contexto:** el usuario elige una imagen de su dispositivo o toma una foto, la previsualiza y la guarda como foto de perfil. Sin foto elegida se mantiene el avatar por defecto.
-**Bloqueada en backend por D3** (almacenamiento).
+**D3 resuelta:** servicio en nube **ImageKit** (Vercel no tiene disco). Contrato completo en `ESPECIFICACIONES-BACKEND.md` §7.1.
 
 **Backend (B3)**
 
@@ -457,8 +457,8 @@
 - **Códigos:** `200`; `400` si no viene archivo, formato no permitido o supera el tamaño máximo; `401` sin sesión; `500` si falla el guardado.
 - **Necesita:** solución de almacenamiento (D3). El endpoint existente de editar perfil ya acepta una URL de foto: esta tarea solo agrega la subida.
 - **Criterios de aceptación:**
-  - [ ] Imagen válida se sube y la URL devuelta muestra la foto en el navegador.
-  - [ ] Archivos que no son imagen o exceden el máximo se rechazan con mensaje claro.
+  - [x] Imagen válida se sube y la URL devuelta muestra la foto en el navegador.
+  - [x] Archivos que no son imagen o exceden el máximo se rechazan con mensaje claro.
 
 **Frontend (F3)**
 
@@ -466,12 +466,23 @@
 - **Endpoint:** usa B3.
 - **Falta:** enviar el archivo al endpoint; validar tipo y tamaño antes de enviar; progreso; errores claros; no permitir guardar si la subida falló; habilitar cámara donde el dispositivo lo soporte.
 - **Criterios de aceptación:**
-  - [ ] La foto se sube como archivo y aparece en el perfil y en el resto de la app (ej. junto al nombre en la barra lateral).
-  - [ ] Imagen demasiado grande o formato no permitido: mensaje claro.
-  - [ ] Sin foto: avatar por defecto.
-  - [ ] Guardar sin tocar la foto no rompe nada.
+  - [x] La foto se sube como archivo y aparece en el perfil y en el resto de la app (ej. junto al nombre en la barra lateral).
+  - [x] Imagen demasiado grande o formato no permitido: mensaje claro.
+  - [x] Sin foto: avatar por defecto.
+  - [x] Guardar sin tocar la foto no rompe nada.
 
 **Dependencias:** TS-05 (perfil).
+
+**Estado: entregada (B3 + F3), con D3 resuelta.**
+
+- **D3 → ImageKit.** El cliente se instancia **perezoso**: el SDK tira al construirse sin `IMAGEKIT_PRIVATE_KEY` y, como el módulo se importa en cascada desde `app.js`, armarlo al cargar tumbaba todo el arranque. Ahora sin la var el server levanta igual y el endpoint responde 500 en español.
+- **Contrato B3 respetado:** la foto entra por `POST /api/users/me/picture` en multipart (campo `picture`, `multer` con memoria y `fileFilter`), tope de **2 MB**, JPG/PNG/WEBP. `PATCH /users/me` **rechaza con 400** las data URLs: `pictureUrl` es una columna de texto, no un almacén (era la deuda de `PENDIENTES.md` §7).
+- **Recorte y compresión en el cliente** (`features/profile/profileImage.js`): la foto entra por `<input type="file">`, no por la red; se recorta a 1024 px de lado mayor y se comprime a ≤1 MB en pasos de escala. Es lo que hace viable la subida: el body de una serverless function de Vercel corta ~4,5 MB. Por eso `express.json()` volvió a su límite por defecto (antes se había globalizado a 10 MB).
+- **Cero huérfanos sin borrar nada:** el upload va con `useUniqueFileName: false` y nombre determinista (`avatars/avatar-<id>.<ext>`), así que ImageKit reemplaza el archivo del usuario en sitio. Se evaluó borrar el anterior y se descartó: la API de ImageKit no resuelve un `fileId` desde la URL (`path`, `fileName` y `search` de `GET /v1/files` solo matchean carpetas) y el listado por carpeta va con delay, así que "buscar y borrar" no es confiable. Known: cambiar de formato (JPG → PNG) deja el archivo viejo.
+- **Cache busting:** como el nombre no cambia, la URL guardada suma `?v=<timestamp>`; sin eso el avatar nuevo no se veía (verificado en navegador: la imagen servida era la anterior).
+- **F3:** previsualización con object URL (se revoca al reemplazar/desmontar), estado de submit propio (el `loading` de `useAuth` es el de la sesión y no bloqueaba nada, con lo que un doble click mandaba dos PATCH), botón "Tomar foto" con `capture="user"` oculto en desktop, "Quitar foto" que manda `pictureUrl: null` solo al guardar, y el `finally` que rehabilita el botón si falla el guardado.
+- **Verificación:** backend con `curl` contra la base real y contra ImageKit (200 con la URL, 400 sin archivo / tipo no permitido / 3 MB, 401 sin token, 400 con data URL en el PATCH, avatar servido con `?v=`, y **el contador de archivos en `/avatars` no crece al resubir**); frontend con `npm run lint` y `npm run build` limpios y un smoke en Chrome real (CDP): 5,9 MB → 757 KB en el navegador, `POST /api/users/me/picture` + `PATCH /api/users/me`, avatar cargado (717×478) en perfil y sidebar.
+- **Desviación menor:** "progreso" es estado textual ("Recortando…", "Subiendo…", "Guardando…") más el botón bloqueado, no un porcentaje: `api.js` va con `fetch` y no hay `onprogress`; con ≤1 MB la subida dura lo que cualquier request.
 
 ---
 
@@ -482,7 +493,7 @@
 3. TS-19 (B1 → B2 → F2 → F1), tras resolver D1 y D2
 4. TS-14 → TS-11 → TS-16 → TS-17 (F8 incluido); D5, D6 y D7 antes de cerrar TS-11/TS-17
 5. TS-15 → TS-18, **solo tras resolver D8**
-6. TS-21 (B3 → F3), tras resolver D3
+6. TS-21 (B3 → F3) — entregada, con D3 resuelta (ImageKit)
 7. TS-20 (B9 → F9), **en espera de D4**
 
 > Nota: B8 requiere B7 (necesita roles de colaborador reales). Si el agente prefiere, B5, B6, B7 y B8 pueden implementarse seguidos en backend y luego F4–F7 en frontend.
