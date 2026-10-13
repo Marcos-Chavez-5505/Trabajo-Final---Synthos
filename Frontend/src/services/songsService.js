@@ -1,4 +1,4 @@
-import { get } from './api.js'
+import { get } from "./api.js";
 
 // Contrato de la API real (ver docs/ESPECIFICACIONES-BACKEND.md):
 //   GET /api/songs             -> { songs, nextCursor, hasMore }
@@ -10,11 +10,11 @@ import { get } from './api.js'
 // Prisma. El mapeo vive acá y no en los componentes, para que la app no dependa
 // de cómo viene armado el payload (reglas 5 y 6 de AGENTS.md).
 
-const SONGS_PATH = '/songs'
+const SONGS_PATH = "/songs";
 
 // Tamaño de página para búsquedas. Con backend real pasa a ser el `pageSize` de
 // la query, que es lo que el endpoint espera.
-export const SEARCH_PAGE_SIZE = 10
+export const SEARCH_PAGE_SIZE = 10;
 
 /**
  * Convierte una canción del backend a la forma que usa la app.
@@ -32,22 +32,23 @@ export const SEARCH_PAGE_SIZE = 10
  *   se usa como `alt` de la carátula, que ya cae a `title`; `source` es la línea
  *   "Reproduciéndose desde", que se oculta si no viene.
  */
-function toSong(raw) {
-  if (!raw) return null
+export function toSong(raw) {
+	if (!raw) return null;
 
-  const genre = raw.songGenres?.find((entry) => entry.genre?.name)?.genre.name ?? null
+	const genre =
+		raw.songGenres?.find((entry) => entry.genre?.name)?.genre.name ?? null;
 
-  return {
-    id: raw.id,
-    title: raw.title,
-    artist: raw.artist?.name ?? null,
-    album: null,
-    genre,
-    duration: raw.duration ?? 0,
-    audioUrl: raw.url,
-    coverUrl: raw.coverUrl ?? null,
-    source: null,
-  }
+	return {
+		id: raw.id,
+		title: raw.title,
+		artist: raw.artist?.name ?? null,
+		album: null,
+		genre,
+		duration: raw.duration ?? 0,
+		audioUrl: raw.url,
+		coverUrl: raw.coverUrl ?? null,
+		source: null,
+	};
 }
 
 /**
@@ -60,9 +61,9 @@ function toSong(raw) {
  * @returns {Promise<object[]>} Canciones mapeadas a la forma del frontend.
  */
 export async function listSongs({ signal } = {}) {
-  const data = await get(SONGS_PATH, { signal })
+	const data = await get(SONGS_PATH, { signal });
 
-  return (data?.songs ?? []).map(toSong)
+	return (data?.songs ?? []).map(toSong);
 }
 
 /**
@@ -74,33 +75,38 @@ export async function listSongs({ signal } = {}) {
  * @throws {ApiError} 404 si el backend no la encuentra.
  */
 export async function getSongById(id, { signal } = {}) {
-  const data = await get(`${SONGS_PATH}/${id}`, { signal })
+	const data = await get(`${SONGS_PATH}/${id}`, { signal });
 
-  return toSong(data)
+	return toSong(data);
 }
 
 /**
-	 * Busca canciones por título, artista o género, paginadas por número de página.
-	 *
-	 * @param {string} query Texto a buscar. Vacío devuelve el catálogo paginado.
-	 * @param {number} [page] Página 1-based.
-	 * @param {number} [pageSize]
-	 * @param {AbortSignal} [signal]
-	 * @returns {Promise<{items: object[], total: number, page: number, pageSize: number, totalPages: number}>}
-	 */
-export async function searchSongs(query, page = 1, pageSize = SEARCH_PAGE_SIZE, { signal } = {}) {
-  const term = String(query ?? '').trim()
+ * Busca canciones por título, artista o género, paginadas por número de página.
+ *
+ * @param {string} query Texto a buscar. Vacío devuelve el catálogo paginado.
+ * @param {number} [page] Página 1-based.
+ * @param {number} [pageSize]
+ * @param {AbortSignal} [signal]
+ * @returns {Promise<{items: object[], total: number, page: number, pageSize: number, totalPages: number}>}
+ */
+export async function searchSongs(
+	query,
+	page = 1,
+	pageSize = SEARCH_PAGE_SIZE,
+	{ signal } = {},
+) {
+	const term = String(query ?? "").trim();
 
-  const data = await get(`${SONGS_PATH}/search`, {
-    params: { query: term, page, pageSize },
-    signal,
-  })
+	const data = await get(`${SONGS_PATH}/search`, {
+		params: { query: term, page, pageSize },
+		signal,
+	});
 
-  return {
-    items: (data?.items ?? []).map(toSong),
-    total: data?.total ?? 0,
-    page: data?.page ?? page,
-    pageSize: data?.pageSize ?? pageSize,
-    totalPages: data?.totalPages ?? 1,
-  }
+	return {
+		items: (data?.items ?? []).map(toSong),
+		total: data?.total ?? 0,
+		page: data?.page ?? page,
+		pageSize: data?.pageSize ?? pageSize,
+		totalPages: data?.totalPages ?? 1,
+	};
 }
