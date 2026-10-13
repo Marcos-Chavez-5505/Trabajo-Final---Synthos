@@ -5,11 +5,13 @@ const {
 	authenticate,
 	optionalAuthenticate,
 } = require("../middlewares/auth.middleware");
+const { uploadAvatar } = require("../middlewares/upload.middleware");
 const recommendationController = require("../controller/recommendation.controller");
 
 router.get("/search", optionalAuthenticate, userController.searchUsers);
 router.get("/me", authenticate, userController.getMe);
 router.patch("/me", authenticate, userController.updateMe);
+router.post("/me/picture", authenticate, uploadAvatar, userController.uploadMyPicture);
 router.get("/:id", userController.getUserById);
 
 router.get("/:id/followers", followController.getFollowers);

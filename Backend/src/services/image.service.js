@@ -1,22 +1,81 @@
 const ImageKit = require("@imagekit/nodejs");
+const { toFile } = require("@imagekit/nodejs");
 
-const key = process.env.IMAGEKIT_PRIVATE_KEY;
-const imagekit = new ImageKit({
-	privateKey: key,
-});
+// Carpeta de ImageKit donde viven los avatares.
+const AVATAR_FOLDER = "/avatars";
 
-// Detecta si el string es una data URL base64 ej: data:image/png;base64...
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+const EXTENSION_BY_TYPE = {
+	"image/jpeg": "jpg",
+	"image/png": "png",
+	"image/webp": "webp",
+};
+
+let cached = { key: null, client: null };
+
+function httpError(code, message) {
+	const error = new Error(message);
+	error.code = code;
+	return error;
+}
+
+function getClient() {
+	const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
+
+	if (!privateKey) {
+		throw httpError(
+			500,
+			"La subida de fotos no está disponible: falta IMAGEKIT_PRIVATE_KEY en el servidor.",
+		);
+	}
+
+	if (cached.key !== privateKey) {
+		cached = { key: privateKey, client: new ImageKit({ privateKey }) };
+	}
+
+	return cached.client;
+}
+
 function isBase64DataUrl(value) {
 	return typeof value === "string" && value.startsWith("data:image/");
 }
 
-async function uploadBase64(dataUrl, fileName) {
-	// ImageKit acepta la data URL completa tal cual, con el prefijo incluido
-	return imagekit.files.upload({
-		file: dataUrl,
-		fileName,
-		folder: "/avatars",
-	});
+function isAllowedImageType(mimetype) {
+	return ALLOWED_IMAGE_TYPES.includes(mimetype);
 }
 
-module.exports = { isBase64DataUrl, uploadBase64 };
+async function uploadAvatar(buffer, { userId, mimetype }) {
+	const extension = EXTENSION_BY_TYPE[mimetype];
+
+	if (!extension) {
+		throw httpError(400, "Formato de imagen no permitido.");
+	}
+
+	const fileName = `avatar-${userId}.${extension}`;
+
+	const client = getClient();
+
+	try {
+		const uploaded = await client.files.upload({
+			file: await toFile(buffer, fileName, { type: mimetype }),
+			fileName,
+			folder: AVATAR_FOLDER,
+			useUniqueFileName: false,
+			overwrite: true,
+		});
+
+		return `${uploaded.url}${uploaded.url.includes("?") ? "&" : "?"}v=${Date.now()}`;
+		
+	} catch (error) {
+		console.error("[image.service] Falló la subida del avatar:", error);
+		throw httpError(500, "No se pudo guardar la foto. Intentá de nuevo en un momento.");
+	}
+}
+
+module.exports = {
+	ALLOWED_IMAGE_TYPES,
+	isAllowedImageType,
+	isBase64DataUrl,
+	uploadAvatar,
+};

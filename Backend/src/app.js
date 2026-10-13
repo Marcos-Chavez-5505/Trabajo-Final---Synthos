@@ -13,8 +13,7 @@ const prismaErrorHandler = require("./middlewares/errorHandler");
 const app = express();
 
 app.use(cors());
-app.use(express.json({ limit: "10mb" })); // antes era 100kb
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json());
 
 //! TODOS LOS ENDPOINTS EMPIEZAN POR /API
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
@@ -28,7 +27,10 @@ app.use("/api/rooms", roomRoutes);
 app.use(prismaErrorHandler);
 app.use((err, req, res, next) => {
 	console.error("[Unhandled Error]", err);
-	res.status(err.code || 500).json({
+
+	const status = Number.isInteger(err.code) ? err.code : 500;
+
+	res.status(status).json({
 		status: "error",
 		message: err.message || "Ha ocurrido un error en el servidor",
 	});
