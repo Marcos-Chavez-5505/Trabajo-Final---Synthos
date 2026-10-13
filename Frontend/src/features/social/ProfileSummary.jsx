@@ -1,30 +1,30 @@
-import { Link, useLocation } from 'react-router-dom'
-import { motion } from 'motion/react'
-import Avatar from '../../components/ui/Avatar.jsx'
-import { cn } from '@/lib/utils'
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion } from "motion/react";
+import Avatar from "../../components/ui/Avatar.jsx";
+import { cn } from "@/lib/utils";
 import {
-  DropdownMenu,
-  DropdownMenuGroup,
-  DropdownMenuGroupLabel,
-  DropdownMenuItem,
-  DropdownMenuLinkItem,
-  DropdownMenuPopup,
-  DropdownMenuPositioner,
-  DropdownMenuPortal,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '../../components/ui/dropdown-menu.tsx'
+	DropdownMenu,
+	DropdownMenuGroup,
+	DropdownMenuGroupLabel,
+	DropdownMenuItem,
+	DropdownMenuLinkItem,
+	DropdownMenuPopup,
+	DropdownMenuPositioner,
+	DropdownMenuPortal,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu.tsx";
 import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebarLabelMotion,
-} from '../../components/ui/sidebar.tsx'
-import useAuth from '../../hooks/useAuth.js'
-import useFollow from './useFollow.js'
-import logoutIcon from '../../assets/logout.svg'
-import playlistIcon from '../../assets/playlist.svg'
-import userIcon from '../../assets/user.svg'
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
+	useSidebarLabelMotion,
+} from "../../components/ui/sidebar.tsx";
+import useAuth from "../../hooks/useAuth.js";
+import useFollow from "./useFollow.js";
+import logoutIcon from "../../assets/logout.svg";
+import playlistIcon from "../../assets/playlist.svg";
+import userIcon from "../../assets/user.svg";
 /**
  * Resumen del usuario de la sesión para el pie del Sidebar (TS-10).
  *
@@ -63,105 +63,120 @@ import userIcon from '../../assets/user.svg'
  * un service, igual que `MisPlaylists` de TS-09.
  */
 export default function ProfileSummary() {
-  const { user, logout } = useAuth()
-  const userId = user?.id ?? null
-  const { followerCount, followingCount } = useFollow(userId)
-  const onProfile = useLocation().pathname.startsWith('/perfil')
-  const labelSlides = useSidebarLabelMotion()
+	const { user, logout } = useAuth();
+	const userId = user?.id ?? null;
+	const { followerCount, followingCount } = useFollow(userId);
+	const onProfile = useLocation().pathname.startsWith("/perfil");
+	const labelSlides = useSidebarLabelMotion();
+	const navigate = useNavigate();
 
-  if (!user) return null
+	if (!user) return null;
 
-  const avatar = <Avatar src={user.avatarUrl} name={user.username} className="h-8 w-8" />
+	// Cerrar sesión desde el perfil público no lo cubre ningún guard: `/profile/:id`
+	// vive fuera de `Protected`, así que al quedar `user` en null nadie te saca
+	// de la página. Navegamos explícitamente para que el logout funcione igual
+	// desde cualquier ruta. `logoutUser` es best-effort, así que no hace falta
+	// try/catch: si el backend falla, la sesión local se cierra igual y llegamos
+	// acá. `replace` evita que el botón "atrás" te devuelva a la página logueado.
+	const handleLogout = async () => {
+		await logout();
+		navigate("/login", { replace: true });
+	};
 
-  const menu = (
-    <DropdownMenuPortal>
-      <DropdownMenuPositioner side="top" align="end">
-        <DropdownMenuPopup>
-          <DropdownMenuGroup>
-            <DropdownMenuGroupLabel>
-              <span className="truncate TextMedium">{user.username}</span>
-              {user.email && (
-                <span className="truncate TextTiny text-muted-foreground">
-                  {user.email}
-                </span>
-              )}
-            </DropdownMenuGroupLabel>
-          </DropdownMenuGroup>
+	const avatar = (
+		<Avatar src={user.avatarUrl} name={user.username} className="h-8 w-8" />
+	);
 
-          <DropdownMenuSeparator />
+	const menu = (
+		<DropdownMenuPortal>
+			<DropdownMenuPositioner side="top" align="end">
+				<DropdownMenuPopup>
+					<DropdownMenuGroup>
+						<DropdownMenuGroupLabel>
+							<span className="truncate TextMedium">{user.username}</span>
+							{user.email && (
+								<span className="truncate TextTiny text-muted-foreground">
+									{user.email}
+								</span>
+							)}
+						</DropdownMenuGroupLabel>
+					</DropdownMenuGroup>
 
-          <DropdownMenuLinkItem
-            render={<Link to="/perfil" />}
-            label="Mi perfil"
-            closeOnClick
-          >
-            <img src={userIcon} alt="" aria-hidden="true" />
-            Mi perfil
-          </DropdownMenuLinkItem>
+					<DropdownMenuSeparator />
 
-          <DropdownMenuLinkItem
-            render={<Link to="/playlists" />}
-            label="Mis playlists"
-            closeOnClick
-          >
-            <img src={playlistIcon} alt="" aria-hidden="true" />
-            Mis playlists
-          </DropdownMenuLinkItem>
+					<DropdownMenuLinkItem
+						render={<Link to="/perfil" />}
+						label="Mi perfil"
+						closeOnClick
+					>
+						<img src={userIcon} alt="" aria-hidden="true" />
+						Mi perfil
+					</DropdownMenuLinkItem>
 
-          <DropdownMenuSeparator />
+					<DropdownMenuLinkItem
+						render={<Link to="/playlists" />}
+						label="Mis playlists"
+						closeOnClick
+					>
+						<img src={playlistIcon} alt="" aria-hidden="true" />
+						Mis playlists
+					</DropdownMenuLinkItem>
 
-          <DropdownMenuItem
-            render={<button type="button" onClick={logout} />}
-            nativeButton
-            label="Cerrar sesión"
-          >
-            <img src={logoutIcon} alt="" aria-hidden="true" />
-            Cerrar sesión
-          </DropdownMenuItem>
-        </DropdownMenuPopup>
-      </DropdownMenuPositioner>
-    </DropdownMenuPortal>
-  )
+					<DropdownMenuSeparator />
 
-  return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <SidebarMenuButton
-                size="lg"
-                isActive={onProfile}
-                tooltip="Menú de la cuenta"
-              />
-            }
-          >
-            {avatar}
-            <motion.div
-              className={cn(
-                'min-w-0 flex-1',
-                !labelSlides && 'group-data-[collapsible=icon]:hidden',
-              )}
-              style={
-                labelSlides
-                  ? {
-                      opacity: labelSlides.opacity,
-                      clipPath: labelSlides.clipPath,
-                    }
-                  : undefined
-              }
-            >
-              <p className="truncate TextMedium">{user.username}</p>
-              <p className="truncate TextTiny text-muted-foreground">
-                {followerCount} {followerCount === 1 ? 'seguidor' : 'seguidores'} ·{' '}
-                {followingCount} {followingCount === 1 ? 'seguido' : 'seguidos'}
-              </p>
-            </motion.div>
-          </DropdownMenuTrigger>
+					<DropdownMenuItem
+						render={<button type="button" onClick={handleLogout} />}
+						nativeButton
+						label="Cerrar sesión"
+					>
+						<img src={logoutIcon} alt="" aria-hidden="true" />
+						Cerrar sesión
+					</DropdownMenuItem>
+				</DropdownMenuPopup>
+			</DropdownMenuPositioner>
+		</DropdownMenuPortal>
+	);
 
-          {menu}
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
-  )
+	return (
+		<SidebarMenu>
+			<SidebarMenuItem>
+				<DropdownMenu>
+					<DropdownMenuTrigger
+						render={
+							<SidebarMenuButton
+								size="lg"
+								isActive={onProfile}
+								tooltip="Menú de la cuenta"
+							/>
+						}
+					>
+						{avatar}
+						<motion.div
+							className={cn(
+								"min-w-0 flex-1",
+								!labelSlides && "group-data-[collapsible=icon]:hidden",
+							)}
+							style={
+								labelSlides
+									? {
+											opacity: labelSlides.opacity,
+											clipPath: labelSlides.clipPath,
+										}
+									: undefined
+							}
+						>
+							<p className="truncate TextMedium">{user.username}</p>
+							<p className="truncate TextTiny text-muted-foreground">
+								{followerCount}{" "}
+								{followerCount === 1 ? "seguidor" : "seguidores"} ·{" "}
+								{followingCount} {followingCount === 1 ? "seguido" : "seguidos"}
+							</p>
+						</motion.div>
+					</DropdownMenuTrigger>
+
+					{menu}
+				</DropdownMenu>
+			</SidebarMenuItem>
+		</SidebarMenu>
+	);
 }
