@@ -78,7 +78,8 @@ function buildUrl(path, params) {
  * @param {string} method
  * @param {string} path Ruta relativa a `/api` (ej. `/songs/search`).
  * @param {object} [options]
- * @param {object} [options.body] Se serializa a JSON si viene.
+ * @param {object|FormData} [options.body] Se serializa a JSON, salvo que sea un
+ *   `FormData`: en ese caso va crudo para que el browser ponga el `boundary`.
  * @param {object} [options.params] Query params. Los vacíos se descartan.
  * @param {AbortSignal} [options.signal] Para cancelar la petición.
  * @returns {Promise<any>} El JSON de la respuesta. Un 204 devuelve `null`.
@@ -86,15 +87,16 @@ function buildUrl(path, params) {
  */
 async function request(method, path, { body, params, signal } = {}) {
   const hasBody = body !== undefined
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
 
   const response = await fetch(buildUrl(path, params), {
     method,
     headers: {
       Accept: 'application/json',
-      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+      ...(hasBody && !isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
     },
-    body: hasBody ? JSON.stringify(body) : undefined,
+    body: hasBody ? (isFormData ? body : JSON.stringify(body)) : undefined,
     signal,
   })
 
@@ -142,4 +144,16 @@ export function put(path, body, { params, signal } = {}) {
 /** DELETE contra la API. */
 export function del(path, { params, signal } = {}) {
   return request('DELETE', path, { params, signal })
+}
+
+/**
+ * POST multipart contra la API.
+ *
+ * `body` es un `FormData` y va crudo a propósito: sin `Content-Type:
+ * application/json` porque el browser tiene que agregar el `boundary` del
+ * multipart (subida de la foto de perfil, TS-21). `request()` detecta el
+ * `FormData` y lo manda sin serializar.
+ */
+export function postForm(path, body, { params, signal } = {}) {
+  return request('POST', path, { body, params, signal })
 }
