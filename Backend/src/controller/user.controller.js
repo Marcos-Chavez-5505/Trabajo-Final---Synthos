@@ -5,8 +5,6 @@ async function searchUsers(req, res, next) {
 	try {
 		const { query = "", page, pageSize } = req.query;
 
-		// `sub` viene del JWT y siempre es string: Prisma espera Int. Sin sesión
-		// (optionalAuthenticate) la búsqueda sigue siendo pública, sin indicador.
 		const viewerId = req.user ? Number(req.user.sub) : null;
 
 		const results = await userService.searchUsers(
@@ -24,7 +22,6 @@ async function searchUsers(req, res, next) {
 
 async function getMe(req, res, next) {
 	try {
-		// `sub` viene del JWT y siempre es string: Prisma espera Int.
 		const user = await userService.getMe(Number(req.user.sub));
 
 		if (!user) {
@@ -75,4 +72,24 @@ async function updateMe(req, res, next) {
 	}
 }
 
-module.exports = { searchUsers, getMe, getUserById, updateMe };
+async function uploadMyPicture(req, res, next) {
+	try {
+		if (!req.file) {
+			return res.status(400).json({
+				status: "error",
+				message: "No se recibió ninguna imagen.",
+			});
+		}
+
+		const user = await userService.updateUserPicture(
+			Number(req.user.sub),
+			req.file,
+		);
+
+		res.status(200).json(user);
+	} catch (error) {
+		next(error);
+	}
+}
+
+module.exports = { searchUsers, getMe, getUserById, updateMe, uploadMyPicture };
