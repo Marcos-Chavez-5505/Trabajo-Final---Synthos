@@ -7,14 +7,24 @@ const SONG_INCLUDE = {
 	songMoods: true,
 };
 
+const USER_PREVIEW = {
+	id: true,
+	username: true,
+	pictureUrl: true,
+};
+
 const PLAYLIST_INCLUDE = {
-	creator: {
-		select: { id: true, username: true, pictureUrl: true },
+	creator: { select: USER_PREVIEW },
+	members: {
+		include: {
+			user: { select: USER_PREVIEW },
+		},
 	},
 	songs: {
 		orderBy: { position: "asc" },
 		include: {
 			song: { include: SONG_INCLUDE },
+			user: { select: USER_PREVIEW },
 		},
 	},
 };
@@ -22,15 +32,31 @@ const PLAYLIST_INCLUDE = {
 async function createPlaylist(userId, { name, description, isPublic, type }) {
 	const finalType = type === "colab" ? "colab" : "personal";
 
-	return prisma.playlist.create({
-		data: {
-			name,
-			description: description ?? null,
-			idCreator: userId,
-			type: finalType,
-			isPublic: isPublic ?? false,
-		},
-		include: PLAYLIST_INCLUDE,
+	return prisma.$transaction(async (tx) => {
+		const playlist = await tx.playlist.create({
+			data: {
+				name,
+				description: description ?? null,
+				idCreator: userId,
+				type: finalType,
+				isPublic: isPublic ?? false,
+			},
+		});
+
+		if (finalType === "colab") {
+			await tx.playlistMember.create({
+				data: {
+					idPlaylist: playlist.id,
+					idUser: userId,
+					role: "creator",
+				},
+			});
+		}
+
+		return tx.playlist.findUnique({
+			where: { id: playlist.id },
+			include: PLAYLIST_INCLUDE,
+		});
 	});
 }
 
@@ -55,6 +81,7 @@ async function getPlaylistById(id) {
 			position: 0,
 			addedDate: f.markedDate,
 			addedBy: null,
+			user: null,
 			song: f.song,
 		}));
 	}
@@ -64,12 +91,17 @@ async function getPlaylistById(id) {
 
 async function getUserPlaylists(userId) {
 	const playlists = await prisma.playlist.findMany({
-		where: { idCreator: userId },
+		where: {
+			OR: [
+				{ idCreator: userId },
+				{ members: { some: { idUser: userId } } },
+			],
+		},
 		orderBy: { creationDate: "desc" },
 		include: PLAYLIST_INCLUDE,
 	});
 
-	if (!playlists.some((playlist) => playlist.type === "favorites")) {
+	if (!playlists.some((p) => p.type === "favorites")) {
 		return playlists;
 	}
 
@@ -90,10 +122,69 @@ async function getUserPlaylists(userId) {
 				position: 0,
 				addedDate: f.markedDate,
 				addedBy: null,
+				user: null,
 				song: f.song,
 			})),
 		};
 	});
+}
+
+async function songExists(songId) {
+	const song = await prisma.song.findUnique({
+		where: { id: songId },
+		select: { id: true },
+	});
+	return Boolean(song);
+}
+
+async function addSongToPlaylist(playlistId, songId, userId) {
+	const existing = await prisma.playlistSong.findUnique({
+		where: {
+			idPlaylist_idSong: { idPlaylist: playlistId, idSong: songId },
+		},
+	});
+
+	if (existing) return { alreadyAdded: true };
+
+	const maxRow = await prisma.playlistSong.aggregate({
+		where: { idPlaylist: playlistId },
+		_max: { position: true },
+	});
+
+	const nextPosition = (maxRow._max.position ?? 0) + 1;
+
+	const created = await prisma.playlistSong.create({
+		data: {
+			idPlaylist: playlistId,
+			idSong: songId,
+			position: nextPosition,
+			addedBy: userId,
+		},
+		include: {
+			song: { include: SONG_INCLUDE },
+			user: { select: USER_PREVIEW },
+		},
+	});
+
+	return { created };
+}
+
+async function removeSongFromPlaylist(playlistId, songId) {
+	const existing = await prisma.playlistSong.findUnique({
+		where: {
+			idPlaylist_idSong: { idPlaylist: playlistId, idSong: songId },
+		},
+	});
+
+	if (!existing) return { notFound: true };
+
+	await prisma.playlistSong.delete({
+		where: {
+			idPlaylist_idSong: { idPlaylist: playlistId, idSong: songId },
+		},
+	});
+
+	return { removed: true };
 }
 
 async function updatePlaylist(id, { name, description, addSongs, removeSongs, reorder }) {
@@ -156,7 +247,6 @@ async function deletePlaylist(id) {
 	return prisma.playlist.delete({ where: { id } });
 }
 
-
 async function generateInvitationToken(playlistId) {
 	const token = crypto.randomBytes(32).toString("hex");
 
@@ -171,9 +261,7 @@ async function getPlaylistByToken(token) {
 	return prisma.playlist.findFirst({
 		where: { tokenInvitation: token, type: "colab" },
 		include: {
-			creator: {
-				select: { id: true, username: true, pictureUrl: true },
-			},
+			creator: { select: USER_PREVIEW },
 			members: {
 				select: { idUser: true },
 			},
@@ -203,7 +291,10 @@ module.exports = {
 	getUserPlaylists,
 	updatePlaylist,
 	deletePlaylist,
-    generateInvitationToken,
+	songExists,
+	addSongToPlaylist,
+	removeSongFromPlaylist,
+	generateInvitationToken,
 	getPlaylistByToken,
 	addCollaborator,
 };
