@@ -1,4 +1,5 @@
 const recommendationService = require("../services/recommendation.service");
+const { httpError } = require("../utils/errors");
 
 const MAX_TEXT_LENGTH = 280;
 
@@ -13,56 +14,55 @@ async function createRecommendation(req, res, next) {
 		const targetId = parseId(req.params.id);
 
 		if (!targetId) {
-			return res.status(400).json({
-				status: "error",
-				message: "Id inválido.",
-			});
+			throw httpError(400, "Id inválido.", "INVALID_ID");
 		}
 
 		if (authorId === targetId) {
-			return res.status(400).json({
-				status: "error",
-				message: "No podés recomendarte a vos mismo.",
-			});
+			throw httpError(
+				400,
+				"No podés recomendarte a vos mismo.",
+				"RECOMMENDATION_SELF",
+			);
 		}
 
 		const { songId, text } = req.body || {};
 
 		if (!Number.isInteger(songId) || songId <= 0) {
-			return res.status(400).json({
-				status: "error",
-				message: "El songId es obligatorio.",
-			});
+			throw httpError(
+				400,
+				"El songId es obligatorio.",
+				"RECOMMENDATION_SONG_REQUIRED",
+			);
 		}
 
 		if (typeof text !== "string" || text.trim().length === 0) {
-			return res.status(400).json({
-				status: "error",
-				message: "El texto es obligatorio.",
-			});
+			throw httpError(
+				400,
+				"El texto es obligatorio.",
+				"RECOMMENDATION_TEXT_REQUIRED",
+			);
 		}
 
 		if (text.length > MAX_TEXT_LENGTH) {
-			return res.status(400).json({
-				status: "error",
-				message: `El texto no puede superar los ${MAX_TEXT_LENGTH} caracteres.`,
-			});
+			throw httpError(
+				400,
+				`El texto no puede superar los ${MAX_TEXT_LENGTH} caracteres.`,
+				"RECOMMENDATION_TEXT_TOO_LONG",
+			);
 		}
 
 		const targetExists = await recommendationService.userExists(targetId);
 		if (!targetExists) {
-			return res.status(404).json({
-				status: "error",
-				message: "El usuario destino no existe.",
-			});
+			throw httpError(
+				404,
+				"El usuario destino no existe.",
+				"USER_NOT_FOUND",
+			);
 		}
 
 		const songExists = await recommendationService.songExists(songId);
 		if (!songExists) {
-			return res.status(404).json({
-				status: "error",
-				message: "La canción no existe.",
-			});
+			throw httpError(404, "La canción no existe.", "SONG_NOT_FOUND");
 		}
 
 		const mutual = await recommendationService.hasMutualFollow(
@@ -70,10 +70,11 @@ async function createRecommendation(req, res, next) {
 			targetId,
 		);
 		if (!mutual) {
-			return res.status(403).json({
-				status: "error",
-				message: "Necesitan seguirse mutuamente para recomendar.",
-			});
+			throw httpError(
+				403,
+				"Necesitan seguirse mutuamente para recomendar.",
+				"FOLLOW_REQUIRED",
+			);
 		}
 
 		const recommendation = await recommendationService.createRecommendation({
@@ -98,18 +99,12 @@ async function getRecommendations(req, res, next) {
 		const profileId = parseId(req.params.id);
 
 		if (!profileId) {
-			return res.status(400).json({
-				status: "error",
-				message: "Id inválido.",
-			});
+			throw httpError(400, "Id inválido.", "INVALID_ID");
 		}
 
 		const exists = await recommendationService.userExists(profileId);
 		if (!exists) {
-			return res.status(404).json({
-				status: "error",
-				message: "El usuario no existe.",
-			});
+			throw httpError(404, "El usuario no existe.", "USER_NOT_FOUND");
 		}
 
 		const recommendations =
@@ -133,18 +128,12 @@ async function getFollowStatus(req, res, next) {
 		const targetId = parseId(req.params.id);
 
 		if (!targetId) {
-			return res.status(400).json({
-				status: "error",
-				message: "Id inválido.",
-			});
+			throw httpError(400, "Id inválido.", "INVALID_ID");
 		}
 
 		const exists = await recommendationService.userExists(targetId);
 		if (!exists) {
-			return res.status(404).json({
-				status: "error",
-				message: "El usuario no existe.",
-			});
+			throw httpError(404, "El usuario no existe.", "USER_NOT_FOUND");
 		}
 
 		const status = await recommendationService.getFollowStatus(

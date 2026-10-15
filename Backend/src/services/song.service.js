@@ -1,4 +1,5 @@
 const prisma = require("../prisma/prismaClient");
+const { httpError } = require("../utils/errors");
 
 const LIMIT = 10;
 
@@ -108,9 +109,12 @@ async function getSongById(songId) {
 
 async function getRecommendationsByExpression(expression) {
 	if (!VALID_EXPRESSIONS.includes(expression)) {
-		const err = new Error("Expresión inválida.");
-		err.status = 400;
-		throw err;
+		throw httpError(
+			400,
+			`"${expression}" no es un estado de ánimo válido.`,
+			"INVALID_EXPRESSION",
+			{ allowed: VALID_EXPRESSIONS },
+		);
 	}
 
 	// IDs aleatorios de canciones que tengan ese mood

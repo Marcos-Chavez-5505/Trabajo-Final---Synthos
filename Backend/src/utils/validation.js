@@ -1,13 +1,16 @@
+const { httpError } = require("./errors");
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function getId(req) {
 	const id = req.params.id;
 	if (isNaN(Number(id)) || Number(id) < 0) {
-		const error = new Error(
-			`INVALID ID, MUST BE AN INTEGER GREATER THAN 0, RECEIVED ${id} OF TYPE ${typeof id}`,
+		throw httpError(
+			400,
+			"El id tiene que ser un número entero.",
+			"INVALID_ID",
+			{ received: String(id) },
 		);
-		error.code = 400;
-		throw error;
 	} else {
 		return Number(id);
 	}
@@ -17,11 +20,12 @@ function validateQuery(query) {
 	if (typeof query === "string" && query.trim() !== "") {
 		return query.trim();
 	} else {
-		const error = new Error(
-			`EXPECTED NON-EMPTY QUERY STRING RECEIVED ${query.trim()} OF TYPE ${typeof query}`,
+		throw httpError(
+			400,
+			"La búsqueda no puede ir vacía.",
+			"INVALID_QUERY",
+			{ received: typeof query === "string" ? query : typeof query },
 		);
-		error.code = 400;
-		throw error;
 	}
 }
 
@@ -32,11 +36,12 @@ function validateSortType(sortType) {
 		sortType.trim() === "" ||
 		!validTypes.includes(sortType.trim())
 	) {
-		const error = new Error(
-			"Unknown sort type, only supported types: alphabetical (default) | name | rating",
+		throw httpError(
+			400,
+			`El orden tiene que ser uno de: ${validTypes.join(", ")}.`,
+			"INVALID_SORT",
+			{ allowed: validTypes },
 		);
-		error.code = 400;
-		throw error;
 	} else {
 		return sortType.trim();
 	}

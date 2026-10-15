@@ -1,35 +1,35 @@
 const followService = require("../services/follow.service");
+const { httpError } = require("../utils/errors");
 
 function parseId(raw) {
 	const id = Number(raw);
 	return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+function requireId(raw) {
+	const id = parseId(raw);
+	if (!id) {
+		throw httpError(400, "Id inválido.", "INVALID_ID");
+	}
+	return id;
+}
+
 async function follow(req, res, next) {
 	try {
 		const followerId = req.user.sub;
-		const followedId = parseId(req.params.id);
-
-		if (!followedId) {
-			return res.status(400).json({
-				status: "error",
-				message: "Id inválido.",
-			});
-		}
+		const followedId = requireId(req.params.id);
 
 		if (followerId === followedId) {
-			return res.status(400).json({
-				status: "error",
-				message: "No podés seguirte a vos mismo.",
-			});
+			throw httpError(
+				400,
+				"No podés seguirte a vos mismo.",
+				"FOLLOW_SELF",
+			);
 		}
 
 		const exists = await followService.userExists(followedId);
 		if (!exists) {
-			return res.status(404).json({
-				status: "error",
-				message: "El usuario no existe.",
-			});
+			throw httpError(404, "El usuario no existe.", "USER_NOT_FOUND");
 		}
 
 		const result = await followService.followUser(followerId, followedId);
@@ -53,30 +53,21 @@ async function follow(req, res, next) {
 async function unfollow(req, res, next) {
 	try {
 		const followerId = req.user.sub;
-		const followedId = parseId(req.params.id);
-
-		if (!followedId) {
-			return res.status(400).json({
-				status: "error",
-				message: "Id inválido.",
-			});
-		}
+		const followedId = requireId(req.params.id);
 
 		const exists = await followService.userExists(followedId);
 		if (!exists) {
-			return res.status(404).json({
-				status: "error",
-				message: "El usuario no existe.",
-			});
+			throw httpError(404, "El usuario no existe.", "USER_NOT_FOUND");
 		}
 
 		const result = await followService.unfollowUser(followerId, followedId);
 
 		if (result.notFollowing) {
-			return res.status(404).json({
-				status: "error",
-				message: "No seguías a este usuario.",
-			});
+			throw httpError(
+				404,
+				"No seguías a este usuario.",
+				"NOT_FOLLOWING",
+			);
 		}
 
 		return res.status(200).json({
@@ -90,20 +81,11 @@ async function unfollow(req, res, next) {
 
 async function getFollowers(req, res, next) {
 	try {
-		const userId = parseId(req.params.id);
-		if (!userId) {
-			return res.status(400).json({
-				status: "error",
-				message: "Id inválido.",
-			});
-		}
+		const userId = requireId(req.params.id);
 
 		const exists = await followService.userExists(userId);
 		if (!exists) {
-			return res.status(404).json({
-				status: "error",
-				message: "El usuario no existe.",
-			});
+			throw httpError(404, "El usuario no existe.", "USER_NOT_FOUND");
 		}
 
 		const followers = await followService.getFollowers(userId);
@@ -116,20 +98,11 @@ async function getFollowers(req, res, next) {
 
 async function getFollowing(req, res, next) {
 	try {
-		const userId = parseId(req.params.id);
-		if (!userId) {
-			return res.status(400).json({
-				status: "error",
-				message: "Id inválido.",
-			});
-		}
+		const userId = requireId(req.params.id);
 
 		const exists = await followService.userExists(userId);
 		if (!exists) {
-			return res.status(404).json({
-				status: "error",
-				message: "El usuario no existe.",
-			});
+			throw httpError(404, "El usuario no existe.", "USER_NOT_FOUND");
 		}
 
 		const following = await followService.getFollowing(userId);

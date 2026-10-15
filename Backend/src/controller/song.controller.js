@@ -1,5 +1,6 @@
 const songService = require("../services/song.service");
 const { getId, validateCursor, validateQuery } = require("../utils/validation");
+const { httpError } = require("../utils/errors");
 
 async function getSongs(req, res, next) {
 	try {
@@ -41,22 +42,17 @@ async function getRecommendations(req, res, next) {
 		const { expression } = req.query;
 
 		if (!expression) {
-			return res.status(400).json({
-				status: "error",
-				message: "El parámetro expression es obligatorio.",
-			});
+			throw httpError(
+				400,
+				"El parámetro expression es obligatorio.",
+				"EXPRESSION_REQUIRED",
+			);
 		}
 
 		const songs = await songService.getRecommendationsByExpression(expression);
 
 		return res.status(200).json({ status: "success", songs });
 	} catch (error) {
-		if (error.status === 400) {
-			return res.status(400).json({
-				status: "error",
-				message: error.message,
-			});
-		}
 		next(error);
 	}
 }

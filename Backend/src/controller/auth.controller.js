@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const authService = require("../services/auth.service");
 const { validateRegisterInput } = require("../utils/validation");
+const { httpError } = require("../utils/errors");
 
 function signToken(user) {
 	return jwt.sign(
@@ -16,9 +17,7 @@ async function register(req, res, next) {
 
 		const validationErrors = validateRegisterInput({ email, username, password });
 		if (validationErrors.length > 0) {
-			return res.status(400).json({
-				status: "error",
-				message: "Datos inválidos.",
+			throw httpError(400, "Datos inválidos.", "REGISTER_INVALID", {
 				errors: validationErrors,
 			});
 		}
@@ -26,10 +25,11 @@ async function register(req, res, next) {
 		const existing = await authService.findUserByEmailOrUsername(email, username);
 		if (existing) {
 			const field = existing.email === email ? "email" : "username";
-			return res.status(400).json({
-				status: "error",
-				message: `El ${field} ya está registrado.`,
-			});
+			throw httpError(
+				400,
+				`El ${field} ya está registrado.`,
+				field === "email" ? "EMAIL_TAKEN" : "USERNAME_TAKEN",
+			);
 		}
 
 		const user = await authService.registerUser({ email, username, password });
@@ -49,19 +49,13 @@ async function login(req, res, next) {
 		const { email, password } = req.body || {};
 
 		if (typeof email !== "string" || typeof password !== "string") {
-			return res.status(401).json({
-				status: "error",
-				message: "Credenciales inválidas.",
-			});
+			throw httpError(401, "Credenciales inválidas.", "INVALID_CREDENTIALS");
 		}
 
 		const user = await authService.loginUser(email, password);
 
 		if (!user) {
-			return res.status(401).json({
-				status: "error",
-				message: "Credenciales inválidas.",
-			});
+			throw httpError(401, "Credenciales inválidas.", "INVALID_CREDENTIALS");
 		}
 
 		const token = signToken(user);

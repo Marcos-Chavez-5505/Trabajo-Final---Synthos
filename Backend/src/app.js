@@ -26,13 +26,17 @@ app.use("/api/rooms", roomRoutes);
 
 app.use(prismaErrorHandler);
 app.use((err, req, res, next) => {
-	console.error("[Unhandled Error]", err);
+	const status = Number.isInteger(err.httpStatus) ? err.httpStatus : 500;
 
-	const status = Number.isInteger(err.code) ? err.code : 500;
+	if (status >= 500) {
+		console.error("[Unhandled Error]", err);
+	}
 
 	res.status(status).json({
 		status: "error",
 		message: err.message || "Ha ocurrido un error en el servidor",
+		...(err.code ? { code: err.code } : {}),
+		...(err.extra || {}),
 	});
 });
 

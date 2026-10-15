@@ -1,4 +1,5 @@
 const favoriteService = require("../services/favorite.service");
+const { httpError } = require("../utils/errors");
 
 async function addFavorite(req, res, next) {
 	try {
@@ -6,26 +7,25 @@ async function addFavorite(req, res, next) {
 		const songId = Number(req.body?.songId ?? req.body?.idSong);
 
 		if (!Number.isInteger(songId) || songId <= 0) {
-			return res.status(400).json({
-				status: "error",
-				message: "El id de la canción es inválido.",
-			});
+			throw httpError(
+				400,
+				"El id de la canción es inválido.",
+				"INVALID_SONG_ID",
+			);
 		}
 
 		const result = await favoriteService.addFavorite(userId, songId);
 
 		if (result.notFound) {
-			return res.status(404).json({
-				status: "error",
-				message: "La canción no existe.",
-			});
+			throw httpError(404, "La canción no existe.", "SONG_NOT_FOUND");
 		}
 
 		if (result.conflict) {
-			return res.status(409).json({
-				status: "error",
-				message: "La canción ya está en favoritos.",
-			});
+			throw httpError(
+				409,
+				"La canción ya está en favoritos.",
+				"FAVORITE_ALREADY_EXISTS",
+			);
 		}
 
 		return res.status(201).json({
@@ -46,19 +46,21 @@ async function removeFavorite(req, res, next) {
 		const songId = Number(req.params.songId);
 
 		if (!Number.isInteger(songId) || songId <= 0) {
-			return res.status(400).json({
-				status: "error",
-				message: "El id de la canción es inválido.",
-			});
+			throw httpError(
+				400,
+				"El id de la canción es inválido.",
+				"INVALID_SONG_ID",
+			);
 		}
 
 		const result = await favoriteService.removeFavorite(userId, songId);
 
 		if (result.notFound) {
-			return res.status(404).json({
-				status: "error",
-				message: "Esa canción no estaba en favoritos.",
-			});
+			throw httpError(
+				404,
+				"Esa canción no estaba en favoritos.",
+				"FAVORITE_NOT_FOUND",
+			);
 		}
 
 		return res.status(200).json({

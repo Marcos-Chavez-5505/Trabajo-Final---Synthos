@@ -1,5 +1,6 @@
 const ImageKit = require("@imagekit/nodejs");
 const { toFile } = require("@imagekit/nodejs");
+const { httpError } = require("../utils/errors");
 
 // Carpeta de ImageKit donde viven los avatares.
 const AVATAR_FOLDER = "/avatars";
@@ -14,12 +15,6 @@ const EXTENSION_BY_TYPE = {
 
 let cached = { key: null, client: null };
 
-function httpError(code, message) {
-	const error = new Error(message);
-	error.code = code;
-	return error;
-}
-
 function getClient() {
 	const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
 
@@ -27,6 +22,7 @@ function getClient() {
 		throw httpError(
 			500,
 			"La subida de fotos no está disponible: falta IMAGEKIT_PRIVATE_KEY en el servidor.",
+			"IMAGEKIT_NOT_CONFIGURED",
 		);
 	}
 
@@ -49,7 +45,7 @@ async function uploadAvatar(buffer, { userId, mimetype }) {
 	const extension = EXTENSION_BY_TYPE[mimetype];
 
 	if (!extension) {
-		throw httpError(400, "Formato de imagen no permitido.");
+		throw httpError(400, "Formato de imagen no permitido.", "INVALID_IMAGE_TYPE");
 	}
 
 	const fileName = `avatar-${userId}.${extension}`;
@@ -69,7 +65,11 @@ async function uploadAvatar(buffer, { userId, mimetype }) {
 		
 	} catch (error) {
 		console.error("[image.service] Falló la subida del avatar:", error);
-		throw httpError(500, "No se pudo guardar la foto. Intentá de nuevo en un momento.");
+		throw httpError(
+			500,
+			"No se pudo guardar la foto. Intentá de nuevo en un momento.",
+			"IMAGE_UPLOAD_FAILED",
+		);
 	}
 }
 
