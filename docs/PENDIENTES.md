@@ -15,6 +15,10 @@ reporta 3 warnings preexistentes de `components/ui/*` (`only-export-components`)
 (MP3 de SoundHelix) y eventos del `<audio>` (`timeupdate`, `loadedmetadata`, `ended`), que solo
 se ejercitan a mano.
 
+> **Actualizado 2026-10-14:** el layout mobile ya no existe (ver §8), así que las líneas que hablaban de
+> `MiniPlayerBar`, `BottomNav` y del responsive alternado quedaron sin sentido y se sacaron de la lista.
+> `CONTEXT.md` §4.6 sigue describiendo el layout viejo y hay que corregirlo cuando se retome mobile.
+
 **Qué verificar:**
 
 - Reproducción real: play/pause y que suene audio; que `currentTime`/`duration` se actualicen.
@@ -23,8 +27,7 @@ se ejercitan a mano.
 - `next`/`previous` (incluido el "si pasaron más de 3s, reinicia" de `previous`) y el wrap de la cola.
 - Shuffle y repeat mantienen estado durante la sesión; los botones activos se ven sobre `Fucsia`.
 - `ProgressBar`: click, arrastre (`setPointerCapture`) y teclado (←/→ 5s, `Home`).
-- Que los SVG se vean en `PlayerBar` (desktop) y `MiniPlayerBar` (mobile), y que el mini quede por
-  encima de `BottomNav` sin tapar contenido.
+- Que los SVG se vean en `PlayerBar`.
 - Que las clases del design system (`Wall`, `Surface`, `Fucsia`, `Volume`, `SurfaceLight`,
   `TextRegluar`, `TextMedium`, `Elevation1`…) sigan pintando bien: ahora viven en
   `@layer components`, así que una utilidad Tailwind las puede sobrescribir
@@ -33,7 +36,7 @@ se ejercitan a mano.
   texto `#f2eefb` → `#f4f0f9` (`Lighter`), muted `#a89dc4` → `#b0a4b5` (`LightMuted`), texto sobre
   `Fucsia` `#1a0711` → `#1e1e1e` (`Surface`, 4.85:1 → 4.17:1), `ring`/`text-accent` `#e91e63` →
   `#ef2f62` (`Fucsia`) y `::selection` ahora en `Fucsia`.
-- Responsive: alternar `Sidebar` (desktop) vs `BottomNav` + mini player (mobile).
+- En un viewport angosto: que no se rompa nada, aunque hoy no haya experiencia mobile (§8).
 
 ---
 
@@ -160,11 +163,13 @@ y `playSongs(songs, startIndex, source)`), falta decidir el label y pintarlo.
   `TypeError` → 500. Ahora el service normaliza a `""` y devuelve el catálogo paginado.
 - `Number(cursor)` daba `NaN` si faltaba el cursor. Sin efecto al pasar a offset, pero ya no se castea.
 
-### 5.6 `mocks/songs.js` quedó sin uso
+### 5.6 `mocks/songs.js` — resuelto y eliminado (2026-10-14)
 
-Ningún módulo lo importa más. **No se borró**, a propósito y esperando poder validar contra el
-endpoint real con la base conectada. Cuando se borre, también se puede reducir `SEARCH_PAGE_SIZE` y la
-lógica de normalización de acentos de `songsService.js`, que ya no aplican.
+Se borraron `mocks/songs.js`, `mocks/playlists.js` y `mocks/users.js`: los tres estaban sin imports
+(solo `roomsService` importaba `mocks/rooms.js`, que sigue existiendo porque las salas son mock) y
+` songsService` ya no arrastra la lógica de normalización de acentos ni el `SEARCH_PAGE_SIZE` que los
+justificaba. El endpoint real ya está conectado y verificado (§5.7), que era la condición que faltaba
+para borrarlos.
 
 ### 5.7 Verificación contra la base real — mayormente cubierta
 
@@ -193,14 +198,13 @@ completo de las 14 páginas. Todas pasaron; el script se eliminó después.
 - Follow: `followers`/`following`, contadores en `GET /users/:id`, seguir 200 idempotente,
   dejar de seguir 200 y otra vez → 404. `GET /users/abc` → 400.
 
-**Bug encontrado y aún abierto:** `PUT /api/playlists/:id` con `addSongs` de un id **no numérico**
-responde **500** (`P2023` de Prisma sin mapear en `errorHandler`); con un id numérico inexistente
-responde 409 (FK `P2003`). Anotado en `REQUERIMIENTOS-BACKEND.md` §2 (avisos de errores).
+**Bug encontrado y ya resuelto (2026-10-14):** `PUT /api/playlists/:id` con `addSongs` de un id **no
+numérico** respondía 500 (`P2023` sin mapear). Ahora `errorHandler.js` mapea `P2023 → 400`.
 
-**Queda sin cubrir:** `PATCH /users/me`, `PUT /playlists/:id` con `name`/`description`/
-`removeSongs`/`reorder`, `POST /auth/logout`, y la prueba visual en navegador (§1). La suite dejó un
-usuario de prueba (`verifdocs`) porque no hay endpoint para dar de baja usuarios; el resto de las
-escrituras (playlist, favorito, follow) se revirtieron.
+**Sigue sin cubrir:** `PATCH /users/me` (ya verificado a mano en TS-21), `PUT /playlists/:id` con
+`name`/`description`/`removeSongs`/`reorder`, `POST /auth/logout`, y la prueba visual en navegador
+(§1). La suite dejó un usuario de prueba (`verifdocs`) porque no hay endpoint para dar de baja
+usuarios; el resto de las escrituras se revirtieron.
 
 ---
 
@@ -228,11 +232,15 @@ escrituras (playlist, favorito, follow) se revirtieron.
 
 1. **Listas sin paginar:** `GET /users/:id/followers|following` devuelven el array completo, no un envelope
    con `page`/`total`.
-2. **`isFollowing` en `GET /users/:id`:** hoy el perfil público hace dos llamadas (contadores + relación).
-   Incluir `isFollowing` para el usuario del token lo dejaría en una sola. (La búsqueda sí lo tiene;
-   ver §6.1.)
+2. ~~**`isFollowing` en `GET /users/:id`**~~ → **resuelto por otra vía (2026-10-14):** el perfil público
+   ya no deriva la relación de dos llamadas. `useFollow` consulta `GET /users/:id/follow-status`, que
+   devuelve los dos sentidos y `isMutual` en un solo request, y `usersService.isFollowing` (que bajaba
+   la lista completa de seguidores para mirar un id) se eliminó. Lo que **queda** es puramente cosmético:
+   `GET /users/:id` se pide 2-3 veces por visita al perfil (el perfil, los contadores de `useFollow` y la
+   relación), porque no hay un endpoint que devuelva usuario + contadores + relación juntos.
 3. **Respuesta de `follow`/`unfollow`:** sigue siendo `{ status, message }`, así que `useFollow` re-consulta
-   el estado (`relationState`).
+   el estado (`relationState` → `follow-status` + contadores). Con los códigos de error (§9) el mensaje ya
+   no es lo único que la UI puede usar.
 
 ---
 
@@ -266,17 +274,19 @@ kilobytes, como pedía este pendiente.
 
 ### 7.1 Feedback y validación de la edición de perfil
 
-- [x] ~~`ProfileEdit.jsx:86` deshabilita el botón Guardar con `loading`~~ → resuelto: estado de submit
-  propio (`saving`), botón bloqueado y `finally` que lo rehabilita si falla el guardado.
-- El error de username tomado se muestra crudo desde el service. Hoy coincide porque los dos textos
-  están en español, pero es acoplamiento por coincidencia; conviene un mapa de errores o un `code`
-  estable que el frontend pueda traducir. **Sigue abierto**: el catch-all de `app.js` responde
-  `{ status, message }` sin `code`.
-- `ProfileEdit.jsx` tiene un `TODO: falta token de color para placeholder` que es deuda de la regla 11
-  (los literales solo viven en `styles/tokens.css`); de paso el `placeholder` está hardcodeado a
-  `placeholder-neutral-500` en los inputs. **Sigue abierto**.
-- Nuevo: si se quiere barra de progreso real en la subida, `services/api.js` tiene que pasar de `fetch`
-  a `XMLHttpRequest` (no hay `upload.onprogress`). Hoy es estado textual, suficiente con ≤1 MB.
+Los tres primeros puntos quedaron resueltos el 2026-10-13/14 y ya no hacen falta como recordatorio:
+
+- Estado de submit propio (`saving`) con `finally` (TS-21).
+- Error de validación por **`code` estable** y no por texto: el backend responde
+  `{ status, message, code }` (ver §9) y el frontend traduce con `utils/mapError.js`, así que cambiar
+  la redacción de un mensaje ya no rompe ninguna pantalla.
+- Token de placeholder: `--ds-placeholder` en `styles/tokens.css` y la clase `.Placeholder` en
+  `utilities.css` reemplazaron a `placeholder-neutral-500` (deuda de la regla 11).
+
+Lo que sigue abierto:
+
+- Barra de progreso real en la subida: `services/api.js` tiene que pasar de `fetch` a
+  `XMLHttpRequest` (no hay `upload.onprogress`). Hoy es estado textual, suficiente con ≤1 MB.
 
 ---
 
@@ -310,3 +320,25 @@ ningún módulo referencia `BottomNav`, `MiniPlayerBar`, `HomeMobile` ni `useBre
 **Docs desactualizados por este cambio:** `CONTEXT.md` §4.6 (Layout) y `PENDIENTES.md` §1 (smoke test,
 líneas sobre `MiniPlayerBar`/`BottomNav`/responsive) todavía describen el mobile viejo; actualizar
 cuando se cierre la decisión.
+
+---
+
+## 9. Códigos de error estables (nuevo, 2026-10-14)
+
+**Estado: implementado.** Los errores de validación ya no dependen del texto en español para que la UI
+sepa qué pasó.
+
+- `Backend/src/utils/errors.js` expone `httpError(status, message, code, extra)`. El `code` es una cadena
+  estable (`USERNAME_TAKEN`, `IMAGE_TOO_LARGE`, `FOLLOW_REQUIRED`…) y viaja en el body; el status va en
+  `error.httpStatus`, así que ya no se confunde con el `code` de Prisma.
+- Todos los controllers lanzan `httpError` en vez de armar el JSON a mano, y el catch-all de `app.js`
+  responde `{ status, message, code }` (más `extra` si lo hay, como el `errors[]` del registro). Los 4xx ya
+  no ensucian el log: solo se loguea lo que es 500 o más.
+- `Frontend/src/utils/mapError.js` traduce **por `code`**, con el `message` del servidor como último
+  recurso. Los 13 lugares que pintaban `cause.message` crudo usan `mapApiError`.
+- `P2023` quedó mapeado a 400 en `errorHandler.js` (el bug de §5.7).
+
+**Lo que sigue:** el `message` todavía viene del backend y se muestra tal cual para los `code`
+desconocidos, así que un mensaje nuevo en inglés se vería en pantalla. La regla de la casa es
+español, pero no hay lint que loProteja.
+
