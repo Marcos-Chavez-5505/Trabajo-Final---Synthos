@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import MisPlaylists from '../../features/playlists/MisPlaylists.jsx'
 import ProfileSummary from '../../features/social/ProfileSummary.jsx'
 import roomIcon from '../../assets/join_music_room.svg'
+import moodIcon from '../../assets/microphone.svg'
 import logoSynthos from '../../assets/logo_synthos.svg'
 import {
   Sidebar as SidebarRoot,
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   // El resto de los ítems sigue con lucide-react, que es la deuda que ya está
   // anotada en docs/PENDIENTES.md §2.
   { label: 'Salas', to: '/salas', src: roomIcon },
+  { label: 'Ánimo', to: '/animo', src: moodIcon },
   { label: 'Perfil', to: '/perfil', icon: User },
 ]
 
