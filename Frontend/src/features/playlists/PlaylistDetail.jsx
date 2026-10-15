@@ -3,16 +3,20 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import useAuth from '../../hooks/useAuth.js'
 import useFavorites from '../../hooks/useFavorites.js'
 import usePlayer from '../../hooks/usePlayer.js'
+import Avatar from '../../components/ui/Avatar.jsx'
 import { getSongById } from '../../services/songsService.js'
 import {
   getPlaylistById,
+  listSentInvitations,
   removePlaylist,
+  removePlaylistMember,
   removeSongFromPlaylist,
   updatePlaylist,
 } from '../../services/playlistsService.js'
 import musicNoteIcon from '../../assets/music_note.svg'
 import PlaylistSongRow from './PlaylistSongRow.jsx'
 import PlaylistEditForm from './PlaylistEditForm.jsx'
+import InviteUserDialog from './InviteUserDialog.jsx'
 import { mapApiError } from '../../utils/mapError.js'
 
 /**
@@ -43,14 +47,20 @@ export default function PlaylistDetail() {
 
   const [playlistResponse, setPlaylistResponse] = useState({ key: null, playlist: null })
   const [songsResponse, setSongsResponse] = useState({ key: null, songs: [] })
+  const [invitations, setInvitations] = useState([])
+  const [inviting, setInviting] = useState(false)
   const [editing, setEditing] = useState(false)
   const [error, setError] = useState('')
+
+  const playlist = playlistResponse.key === `${userId}:${id}` ? playlistResponse.playlist : null
+  const loading = userId !== null && playlistResponse.key !== `${userId}:${id}`
+  const isCreator = playlist?.role === 'creator'
 
   const loadPlaylist = useCallback(() => {
     if (!userId) return Promise.resolve()
 
     return getPlaylistById(userId, id).then(
-      (playlist) => setPlaylistResponse({ key: `${userId}:${id}`, playlist }),
+      (loaded) => setPlaylistResponse({ key: `${userId}:${id}`, playlist: loaded }),
       (cause) => setError(mapApiError(cause))
     )
   }, [userId, id])
@@ -59,8 +69,17 @@ export default function PlaylistDetail() {
     loadPlaylist()
   }, [loadPlaylist])
 
-  const playlist = playlistResponse.key === `${userId}:${id}` ? playlistResponse.playlist : null
-  const loading = userId !== null && playlistResponse.key !== `${userId}:${id}`
+  const loadInvitations = useCallback(() => {
+    if (!userId || !playlist || playlist.role !== 'creator') return Promise.resolve()
+
+    return listSentInvitations(userId, id)
+      .then(setInvitations)
+      .catch((cause) => setError(mapApiError(cause)))
+  }, [userId, id, playlist])
+
+  useEffect(() => {
+    loadInvitations()
+  }, [loadInvitations])
 
   // La resolución de canciones se dispara sola cuando cambia el conjunto de ids.
   const songIdsKey = playlist ? playlist.songIds.join(',') : null
@@ -92,16 +111,20 @@ export default function PlaylistDetail() {
   const resolving = Boolean(songIdsKey) && !isSongsCurrent
 
   async function handleRemoveSong(songId) {
-    const updated = await removeSongFromPlaylist(userId, id, songId)
+    try {
+      const updated = await removeSongFromPlaylist(userId, id, songId)
 
-    // Solo si el backend confirmó el borrado: la cola nunca puede quedar más
-    // sincronizada que el servidor.
-    if (updated) {
-      setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
+      // Solo si el backend confirmó el borrado: la cola nunca puede quedar más
+      // sincronizada que el servidor.
+      if (updated) {
+        setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
 
-      // Solo si la cola es de esta playlist: si lo que suena es el catálogo, la
-      // búsqueda u otra playlist, esta canción sigue siendo válida ahí.
-      removeFromPlaylistQueue(songId, id)
+        // Solo si la cola es de esta playlist: si lo que suena es el catálogo, la
+        // búsqueda u otra playlist, esta canción sigue siendo válida ahí.
+        removeFromPlaylistQueue(songId, id)
+      }
+    } catch (cause) {
+      setError(mapApiError(cause))
     }
   }
 
@@ -122,6 +145,25 @@ export default function PlaylistDetail() {
       // sonaba era el catálogo, la búsqueda u otra playlist.
       clearQueueIfSource(id)
       navigate('/playlists')
+    }
+  }
+
+  async function handleInvited(result) {
+    // Invitar convierte una playlist personal en colaborativa, así que hay que
+    // recargarla: de eso dependen la marca, los participantes y qué acciones hay.
+    if (result.converted) await loadPlaylist()
+    loadInvitations()
+  }
+
+  async function handleRemoveMember(memberId) {
+    if (!window.confirm('¿Sacar a esta persona de la playlist?')) return
+
+    try {
+      await removePlaylistMember(userId, id, memberId)
+      await loadPlaylist()
+      loadInvitations()
+    } catch (cause) {
+      setError(mapApiError(cause))
     }
   }
 
@@ -161,6 +203,14 @@ export default function PlaylistDetail() {
                     {playlist.songIds.length}{' '}
                     {playlist.songIds.length === 1 ? 'canción' : 'canciones'}
                   </p>
+
+                  {playlist.isCollaborative && (
+                    <p className="TextFucsia TextMedium mt-1">
+                      {playlist.role === 'creator'
+                        ? 'Colaborativa. Vos sos quien la creó.'
+                        : `Colaborativa. La creó ${playlist.creator.username || 'alguien'}.`}
+                    </p>
+                  )}
                 </>
               )}
             </div>
@@ -181,9 +231,9 @@ export default function PlaylistDetail() {
                   Reproducir
                 </button>
 
-                {/* "Mis Favoritos" no se renombra ni se borra: la maneja el
-                    corazón de cada canción. */}
-                {!playlist.isFavorites && (
+                {/* Editar y borrar son del creador (D9). En una colaborativa los
+                    participantes solo agregan y quitan canciones. */}
+                {!playlist.isFavorites && isCreator && (
                   <>
                     <button
                       type="button"
@@ -202,9 +252,34 @@ export default function PlaylistDetail() {
                     </button>
                   </>
                 )}
+
+                {isCreator && !playlist.isFavorites && (
+                  <button
+                    type="button"
+                    onClick={() => setInviting(true)}
+                    className="rounded px-4 py-2 Volume Button hover:brightness-110"
+                  >
+                    Invitar
+                  </button>
+                )}
               </div>
             )}
           </header>
+
+          {isCreator && !playlist.isFavorites && (
+            <InviteUserDialog
+              open={inviting}
+              onOpenChange={setInviting}
+              playlistId={id}
+              userId={userId}
+              isCollaborative={playlist.isCollaborative}
+              excludeIds={[
+                ...playlist.members.map((member) => member.id),
+                ...invitations.map((invitation) => invitation.receiver.id),
+              ]}
+              onInvited={handleInvited}
+            />
+          )}
 
           {error && <p className="mt-6 rounded px-3 py-2 Salmon TextMedium">{error}</p>}
 
@@ -249,6 +324,7 @@ export default function PlaylistDetail() {
                         )
                       }
                       onRemove={() => handleRemoveSong(song.id)}
+                      canRemove={playlist.role !== null}
                     />
                   )}
                 </li>
@@ -264,9 +340,85 @@ export default function PlaylistDetail() {
                 : 'canciones ya no están disponibles y no se pueden reproducir.'}
             </p>
           )}
+
+          {playlist.isCollaborative && playlist.members.length > 0 && (
+            <section className="mt-10">
+              <h2 className="Header4">Participantes</h2>
+              <ul className="mt-4 flex flex-col gap-2">
+                {playlist.members.map((member) => (
+                  <li key={member.id}>
+                    <MemberRow
+                      member={member}
+                      canRemove={isCreator && member.role !== 'creator'}
+                      onRemove={() => handleRemoveMember(member.id)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {isCreator && invitations.length > 0 && (
+            <section className="mt-10">
+              <h2 className="Header4">Invitaciones</h2>
+              <ul className="mt-4 flex flex-col gap-2">
+                {invitations.map((invitation) => (
+                  <li key={invitation.receiver.id}>
+                    <div className="SurfaceLight CardRadius flex items-center gap-3 px-4 py-2">
+                      <Avatar
+                        src={invitation.receiver.avatarUrl}
+                        name={invitation.receiver.username}
+                        className="h-9 w-9"
+                      />
+
+                      <p className="text-foreground TextRegluar min-w-0 flex-1 truncate">
+                        {invitation.receiver.username}
+                      </p>
+
+                      <span className="text-muted-foreground TextTiny">
+                        {invitation.status === 'pendiente'
+                          ? 'Pendiente'
+                          : invitation.status === 'aceptada'
+                            ? 'Aceptó'
+                            : 'Rechazó'}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </>
       )}
     </section>
+  )
+}
+
+function MemberRow({ member, canRemove = false, onRemove }) {
+  return (
+    <div className="SurfaceLight CardRadius flex items-center gap-3 px-4 py-2">
+      <Avatar src={member.avatarUrl} name={member.username} className="h-9 w-9" />
+
+      <p className="text-foreground TextRegluar min-w-0 flex-1 truncate">
+        {member.username}
+      </p>
+
+      <span className="text-muted-foreground TextTiny">
+        {member.role === 'creator' ? 'Creador' : 'Colaborador'}
+      </span>
+
+      {canRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Sacar a ${member.username} de la playlist`}
+          title="Sacar de la playlist"
+          className="shrink-0 rounded px-2 py-1 TextMedium hover:opacity-70"
+        >
+          Echar
+        </button>
+      )}
+    </div>
   )
 }
 

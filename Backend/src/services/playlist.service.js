@@ -1,5 +1,4 @@
 const prisma = require("../prisma/prismaClient");
-const crypto = require("node:crypto");
 
 const SONG_INCLUDE = {
 	songArtists: true,
@@ -247,42 +246,138 @@ async function deletePlaylist(id) {
 	return prisma.playlist.delete({ where: { id } });
 }
 
-async function generateInvitationToken(playlistId) {
-	const token = crypto.randomBytes(32).toString("hex");
+const INVITATION_INCLUDE = {
+	playlist: {
+		select: { id: true, name: true, description: true, type: true },
+	},
+	sender: { select: USER_PREVIEW },
+	receiver: { select: USER_PREVIEW },
+};
 
-	return prisma.playlist.update({
-		where: { id: playlistId },
-		data: { tokenInvitation: token },
-		select: { id: true, name: true, tokenInvitation: true },
+async function findUserById(userId) {
+	return prisma.user.findUnique({
+		where: { id: userId },
+		select: USER_PREVIEW,
 	});
 }
 
-async function getPlaylistByToken(token) {
-	return prisma.playlist.findFirst({
-		where: { tokenInvitation: token, type: "colab" },
-		include: {
-			creator: { select: USER_PREVIEW },
-			members: {
-				select: { idUser: true },
+async function createInvitation(playlistId, senderId, receiverId) {
+	return prisma.$transaction(async (tx) => {
+		const playlist = await tx.playlist.findUnique({
+			where: { id: playlistId },
+			select: { type: true },
+		});
+
+		const alreadyMember = await tx.playlistMember.findUnique({
+			where: { idPlaylist_idUser: { idPlaylist: playlistId, idUser: receiverId } },
+		});
+
+		if (alreadyMember) return { alreadyMember: true };
+
+		let converted = false;
+
+		if (playlist.type === "personal") {
+			converted = true;
+
+			await tx.playlist.update({
+				where: { id: playlistId },
+				data: { type: "colab" },
+			});
+
+			await tx.playlistMember.create({
+				data: { idPlaylist: playlistId, idUser: senderId, role: "creator" },
+			});
+		}
+
+		await tx.playlistInvitation.upsert({
+			where: { idPlaylist_idReceiver: { idPlaylist: playlistId, idReceiver: receiverId } },
+			update: { idSender: senderId, status: "pendiente" },
+			create: {
+				idPlaylist: playlistId,
+				idSender: senderId,
+				idReceiver: receiverId,
+				status: "pendiente",
 			},
-		},
+		});
+
+		const invitation = await tx.playlistInvitation.findUnique({
+			where: { idPlaylist_idReceiver: { idPlaylist: playlistId, idReceiver: receiverId } },
+			include: INVITATION_INCLUDE,
+		});
+
+		return { invitation, converted };
 	});
 }
 
-async function addCollaborator(playlistId, userId) {
+async function listInvitationsByPlaylist(playlistId) {
+	return prisma.playlistInvitation.findMany({
+		where: { idPlaylist: playlistId },
+		orderBy: { createdAt: "desc" },
+		include: INVITATION_INCLUDE,
+	});
+}
+
+async function listPendingInvitations(userId) {
+	return prisma.playlistInvitation.findMany({
+		where: { idReceiver: userId, status: "pendiente" },
+		orderBy: { createdAt: "desc" },
+		include: INVITATION_INCLUDE,
+	});
+}
+
+async function acceptInvitation(playlistId, userId) {
+	const invitation = await prisma.playlistInvitation.findUnique({
+		where: { idPlaylist_idReceiver: { idPlaylist: playlistId, idReceiver: userId } },
+	});
+
+	if (!invitation || invitation.status !== "pendiente") return null;
+
+	return prisma.$transaction(async (tx) => {
+		await tx.playlistMember.upsert({
+			where: { idPlaylist_idUser: { idPlaylist: playlistId, idUser: userId } },
+			update: {},
+			create: { idPlaylist: playlistId, idUser: userId, role: "colaborator" },
+		});
+
+		return tx.playlistInvitation.update({
+			where: { idPlaylist_idReceiver: { idPlaylist: playlistId, idReceiver: userId } },
+			data: { status: "aceptada" },
+			include: INVITATION_INCLUDE,
+		});
+	});
+}
+
+async function rejectInvitation(playlistId, userId) {
+	const invitation = await prisma.playlistInvitation.findUnique({
+		where: { idPlaylist_idReceiver: { idPlaylist: playlistId, idReceiver: userId } },
+	});
+
+	if (!invitation || invitation.status !== "pendiente") return null;
+
+	return prisma.playlistInvitation.update({
+		where: { idPlaylist_idReceiver: { idPlaylist: playlistId, idReceiver: userId } },
+		data: { status: "rechazada" },
+		include: INVITATION_INCLUDE,
+	});
+}
+
+async function removeMember(playlistId, userId) {
 	const existing = await prisma.playlistMember.findUnique({
-		where: {
-			idPlaylist_idUser: { idPlaylist: playlistId, idUser: userId },
-		},
+		where: { idPlaylist_idUser: { idPlaylist: playlistId, idUser: userId } },
 	});
 
-	if (existing) return { alreadyMember: true };
+	if (!existing) return { removed: false };
 
-	await prisma.playlistMember.create({
-		data: { idPlaylist: playlistId, idUser: userId, role: "colaborator" },
-	});
+	await prisma.$transaction([
+		prisma.playlistMember.delete({
+			where: { idPlaylist_idUser: { idPlaylist: playlistId, idUser: userId } },
+		}),
+		prisma.playlistInvitation.deleteMany({
+			where: { idPlaylist: playlistId, idReceiver: userId },
+		}),
+	]);
 
-	return { joined: true };
+	return { removed: true };
 }
 
 module.exports = {
@@ -294,7 +389,11 @@ module.exports = {
 	songExists,
 	addSongToPlaylist,
 	removeSongFromPlaylist,
-	generateInvitationToken,
-	getPlaylistByToken,
-	addCollaborator,
+	findUserById,
+	createInvitation,
+	listInvitationsByPlaylist,
+	listPendingInvitations,
+	acceptInvitation,
+	rejectInvitation,
+	removeMember,
 };

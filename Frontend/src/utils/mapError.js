@@ -63,8 +63,16 @@ const BY_CODE = {
 	SONG_ALREADY_IN_PLAYLIST: "Esa canción ya estaba en la playlist.",
 	SONG_NOT_IN_PLAYLIST: "Esa canción no estaba en la playlist.",
 	SONG_ID_REQUIRED: "Falta la canción.",
-	INVALID_INVITATION: "Esa invitación no existe o venció.",
-	INVITATION_REQUIRES_COLLAB: "Solo las playlists colaborativas permiten invitaciones.",
+	PLAYLIST_ALREADY_MEMBER: "Esa persona ya participa de la playlist.",
+	PLAYLIST_MEMBER_NOT_FOUND: "Esa persona no participa de la playlist.",
+	CANNOT_REMOVE_CREATOR: "No podés echarte de tu propia playlist.",
+
+	// Invitaciones
+	INVITATION_FAVORITES_LOCKED: "No podés invitar a la playlist de favoritos.",
+	INVITATION_RECEIVER_REQUIRED: "Elegí a quién invitar.",
+	INVITATION_USER_NOT_FOUND: "No encontramos a esa persona.",
+	INVITATION_SELF: "No podés invitarte a vos mismo.",
+	INVITATION_NOT_FOUND: "No tenés una invitación pendiente para esa playlist.",
 
 	// Genéricos de validación
 	INVALID_ID: "Ese identificador no es válido.",

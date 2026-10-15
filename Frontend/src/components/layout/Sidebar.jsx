@@ -3,6 +3,7 @@ import { motion } from 'motion/react'
 import { Disc3, Flame, Home, ListMusic, Mic2, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import MisPlaylists from '../../features/playlists/MisPlaylists.jsx'
+import CollabPlaylists from '../../features/playlists/CollabPlaylists.jsx'
 import ProfileSummary from '../../features/social/ProfileSummary.jsx'
 import roomIcon from '../../assets/join_music_room.svg'
 import moodIcon from '../../assets/microphone.svg'
@@ -171,6 +172,11 @@ export default function Sidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Mis Playlists</SidebarGroupLabel>
           <MisPlaylists />
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Playlists Colaborativas</SidebarGroupLabel>
+          <CollabPlaylists />
         </SidebarGroup>
       </SidebarContent>
 

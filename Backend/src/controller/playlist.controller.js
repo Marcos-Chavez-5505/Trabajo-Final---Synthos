@@ -62,10 +62,21 @@ async function createPlaylist(req, res, next) {
 
 async function getPlaylistById(req, res, next) {
 	try {
+		const userId = req.user.sub;
 		const id = requireId(req.params.id);
 
 		const playlist = await playlistService.getPlaylistById(id);
 		if (!playlist) {
+			throw httpError(
+				404,
+				"La playlist no existe.",
+				"PLAYLIST_NOT_FOUND",
+			);
+		}
+
+		const isMember = playlist.members.some((m) => m.idUser === userId);
+
+		if (playlist.idCreator !== userId && !isMember && !playlist.isPublic) {
 			throw httpError(
 				404,
 				"La playlist no existe.",
@@ -295,12 +306,23 @@ async function removeSong(req, res, next) {
 			);
 		}
 
-		if (playlist.idCreator !== userId) {
-			throw httpError(
-				403,
-				"Solo el creador puede eliminar canciones.",
-				"NOT_PLAYLIST_CREATOR",
-			);
+		if (playlist.type === "personal") {
+			if (playlist.idCreator !== userId) {
+				throw httpError(
+					403,
+					"No sos el dueño de esta playlist.",
+					"NOT_PLAYLIST_OWNER",
+				);
+			}
+		} else {
+			const isMember = playlist.members.some((m) => m.idUser === userId);
+			if (!isMember) {
+				throw httpError(
+					403,
+					"No sos participante de esta playlist.",
+					"NOT_PLAYLIST_MEMBER",
+				);
+			}
 		}
 
 		const result = await playlistService.removeSongFromPlaylist(id, songId);
@@ -322,7 +344,81 @@ async function removeSong(req, res, next) {
 	}
 }
 
-async function generateInvitation(req, res, next) {
+async function createInvitation(req, res, next) {
+	try {
+		const userId = req.user.sub;
+		const id = requireId(req.params.id);
+		const receiverId = parseId(req.body?.userId);
+
+		if (!receiverId) {
+			throw httpError(400, "Elegí a quién invitar.", "INVITATION_RECEIVER_REQUIRED");
+		}
+
+		const playlist = await playlistService.getPlaylistById(id);
+		if (!playlist) {
+			throw httpError(
+				404,
+				"La playlist no existe.",
+				"PLAYLIST_NOT_FOUND",
+			);
+		}
+
+		if (playlist.idCreator !== userId) {
+			throw httpError(
+				403,
+				"No sos el creador de esta playlist.",
+				"NOT_PLAYLIST_CREATOR",
+			);
+		}
+
+		if (playlist.type === "favorites") {
+			throw httpError(
+				400,
+				"No podés invitar a la playlist de favoritos.",
+				"INVITATION_FAVORITES_LOCKED",
+			);
+		}
+
+		if (receiverId === userId) {
+			throw httpError(
+				400,
+				"No podés invitarte a vos mismo.",
+				"INVITATION_SELF",
+			);
+		}
+
+		const receiver = await playlistService.findUserById(receiverId);
+		if (!receiver) {
+			throw httpError(
+				404,
+				"No encontramos a esa persona.",
+				"INVITATION_USER_NOT_FOUND",
+			);
+		}
+
+		const invitation = await playlistService.createInvitation(id, userId, receiverId);
+
+		if (invitation.alreadyMember) {
+			throw httpError(
+				409,
+				"Esa persona ya participa de la playlist.",
+				"PLAYLIST_ALREADY_MEMBER",
+			);
+		}
+
+		return res.status(201).json({
+			status: "success",
+			invitation: invitation.invitation,
+			// `true` cuando la invitación convirtió una playlist personal en
+			// colaborativa, para que el frontend la recargue.
+			converted: invitation.converted,
+		});
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function listPlaylistInvitations(req, res, next) {
 	try {
 		const userId = req.user.sub;
 		const id = requireId(req.params.id);
@@ -344,80 +440,111 @@ async function generateInvitation(req, res, next) {
 			);
 		}
 
-		if (playlist.type !== "colab") {
+		const invitations = await playlistService.listInvitationsByPlaylist(id);
+
+		return res.status(200).json({ status: "success", invitations });
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function listReceivedInvitations(req, res, next) {
+	try {
+		const userId = req.user.sub;
+
+		const invitations = await playlistService.listPendingInvitations(userId);
+
+		return res.status(200).json({ status: "success", invitations });
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function acceptInvitation(req, res, next) {
+	try {
+		const userId = req.user.sub;
+		const id = requireId(req.params.idPlaylist);
+
+		const invitation = await playlistService.acceptInvitation(id, userId);
+		if (!invitation) {
 			throw httpError(
-				400,
-				"Solo las playlists colaborativas permiten invitaciones.",
-				"INVITATION_REQUIRES_COLLAB",
+				404,
+				"No tenés una invitación pendiente para esa playlist.",
+				"INVITATION_NOT_FOUND",
 			);
 		}
 
-		const updated = await playlistService.generateInvitationToken(id);
-		const link = `${process.env.FRONTEND_URL}/join/${updated.tokenInvitation}`;
-
-		return res.status(201).json({
-			status: "success",
-			token: updated.tokenInvitation,
-			link,
-		});
+		return res.status(201).json({ status: "success", invitation });
 	} catch (error) {
 		next(error);
 	}
 }
 
-async function previewInvitation(req, res, next) {
+async function rejectInvitation(req, res, next) {
 	try {
 		const userId = req.user.sub;
-		const { token } = req.params;
+		const id = requireId(req.params.idPlaylist);
 
-		const playlist = await playlistService.getPlaylistByToken(token);
-		if (!playlist) {
-			throw httpError(404, "Invitación inválida.", "INVALID_INVITATION");
+		const invitation = await playlistService.rejectInvitation(id, userId);
+		if (!invitation) {
+			throw httpError(
+				404,
+				"No tenés una invitación pendiente para esa playlist.",
+				"INVITATION_NOT_FOUND",
+			);
 		}
 
-		const isMember = playlist.members.some((m) => m.idUser === userId);
-
-		return res.status(200).json({
-			status: "success",
-			playlist: {
-				id: playlist.id,
-				name: playlist.name,
-				description: playlist.description,
-				creator: playlist.creator,
-			},
-			isMember,
-		});
+		return res.status(200).json({ status: "success", invitation });
 	} catch (error) {
 		next(error);
 	}
 }
 
-async function joinPlaylist(req, res, next) {
+async function removeMember(req, res, next) {
 	try {
 		const userId = req.user.sub;
-		const { token } = req.params;
+		const id = requireId(req.params.id);
+		const memberId = parseId(req.params.userId);
 
-		const playlist = await playlistService.getPlaylistByToken(token);
+		if (!memberId) {
+			throw httpError(400, "Id inválido.", "INVALID_ID");
+		}
+
+		const playlist = await playlistService.getPlaylistById(id);
 		if (!playlist) {
-			throw httpError(404, "Invitación inválida.", "INVALID_INVITATION");
+			throw httpError(
+				404,
+				"La playlist no existe.",
+				"PLAYLIST_NOT_FOUND",
+			);
 		}
 
-		const result = await playlistService.addCollaborator(playlist.id, userId);
-
-		if (result.alreadyMember) {
-			const updated = await playlistService.getPlaylistById(playlist.id);
-			return res.status(200).json({
-				status: "success",
-				message: "Ya eras participante de esta playlist.",
-				playlist: updated,
-			});
+		if (playlist.idCreator !== userId) {
+			throw httpError(
+				403,
+				"Solo el creador puede echar a alguien.",
+				"NOT_PLAYLIST_CREATOR",
+			);
 		}
 
-		const updated = await playlistService.getPlaylistById(playlist.id);
-		return res.status(201).json({
-			status: "success",
-			playlist: updated,
-		});
+		if (memberId === userId) {
+			throw httpError(
+				400,
+				"No podés echarte de tu propia playlist.",
+				"CANNOT_REMOVE_CREATOR",
+			);
+		}
+
+		const result = await playlistService.removeMember(id, memberId);
+		if (!result.removed) {
+			throw httpError(
+				404,
+				"Esa persona no participa de la playlist.",
+				"PLAYLIST_MEMBER_NOT_FOUND",
+			);
+		}
+
+		return res.status(200).json({ status: "success" });
 	} catch (error) {
 		next(error);
 	}
@@ -431,7 +558,10 @@ module.exports = {
 	deletePlaylist,
 	addSong,
 	removeSong,
-	generateInvitation,
-	previewInvitation,
-	joinPlaylist,
+	createInvitation,
+	listPlaylistInvitations,
+	listReceivedInvitations,
+	acceptInvitation,
+	rejectInvitation,
+	removeMember,
 };
