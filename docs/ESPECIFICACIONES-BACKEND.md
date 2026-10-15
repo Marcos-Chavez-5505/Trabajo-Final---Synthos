@@ -4,8 +4,30 @@
 > §1–5 documentan en detalle el endpoint de canciones (el primero implementado y verificado);
 > §6–10 cubren auth, usuarios y follow, favoritos, playlists y salas.
 >
-> Lo que todavía no existe (salas CRUD, chat, recomendaciones, playlists colaborativas…) vive en
+> Lo que todavía no existe (salas CRUD, chat, playlists colaborativas con rutas…) vive en
 > `REQUERIMIENTOS-BACKEND.md`.
+
+---
+
+## 0. Forma de los errores
+
+Todo endpoint responde los errores con el mismo cuerpo:
+
+```json
+{ "status": "error", "message": "Ese nombre de usuario ya está en uso.", "code": "USERNAME_TAKEN" }
+```
+
+- **`code` es un identificador estable** en mayúsculas y con guion bajo (`USERNAME_TAKEN`,
+  `IMAGE_TOO_LARGE`, `FOLLOW_REQUIRED`…). Es el contrato con el frontend: la UI traduce por `code`
+  (`Frontend/src/utils/mapError.js`) y **no debería depender del texto**. Cambiar la redacción de un
+  mensaje no rompe ninguna pantalla.
+- **`message`** es para el humano, siempre en español, y se muestra tal cual cuando el `code` no es
+  conocido por la UI.
+- **Campos extra:** algunos errores agregan datos al mismo body, como el `errors[]` de
+  `POST /auth/register` (`code: "REGISTER_INVALID"`) o el `allowed` de `INVALID_EXPRESSION`.
+- Los errores de Prisma viajan con su propio `code` (`P2002`, `P2023`…), ya que son la causa real.
+- El status sale de `error.httpStatus`, nunca de `error.code`: si se usara el `code` para el status,
+  un string como `P2023` haría revocar `res.status()` y devolvería un 500 en HTML.
 
 ---
 
@@ -16,6 +38,7 @@
 | `GET /api/songs` | `{ songs, nextCursor, hasMore }` | `listSongs()` → `PlayerContext` (cola inicial) y `HomeDesktop` (fila novedades) |
 | `GET /api/songs/search` | `{ items, total, page, pageSize, totalPages }` | `searchSongs()` → `SearchSongs` (fila de páginas numeradas) |
 | `GET /api/songs/:id` | objeto de la canción | `getSongById()` (sin consumidores por ahora) |
+| `GET /api/songs/recommendations` | `{ status, songs }` por estado de ánimo | `listSongsByMood(expression)` → `/animo` (TS-20). 400 `EXPRESSION_REQUIRED` / `INVALID_EXPRESSION` |
 
 El frontend mapea el payload crudo a su propia forma en `Frontend/src/services/songsService.js`
 (`url` → `audioUrl`, `artist.name` → `artist`, `songGenres[].genre.name` → `genre`), así que el backend
@@ -23,6 +46,10 @@ no expone campos con nombres pensados para el frontend.
 
 `GET /api/songs` sigue con cursor a propósito: alimenta la cola inicial y la fila de novedades, que
 consumen los primeros elementos y no necesitan saltar de página.
+
+`GET /api/songs/recommendations?expression=<ánimo>` (TS-20/B9) devuelve canciones aleatorias del catálogo de ese
+estado de ánimo, con `200 { status, songs }` o `[]` si no hay, y **400 "Expresión inválida."** si el `expression` no
+es un mood del catálogo. El plan lo pedía como `/api/songs/mood`: la ruta real es la canónica.
 
 ---
 
@@ -200,10 +227,43 @@ campos que `GET /api/users/me`.
 | `GET /:id/following` | — | — | `{ status, following: [{ id, username, pictureUrl }] }` — ídem |
 | `POST /:id/follow` | `JWT` | — | 200 `{ status, message }` (idempotente). 400 si el id es inválido o te seguís a vos mismo; 404 si el usuario no existe |
 | `DELETE /:id/follow` | `JWT` | — | 200 `{ status, message }`. 404 si no lo seguías |
+| `GET /:id/follow-status` | `JWT` | — | `{ status, viewerFollows, targetFollows, isMutual }`. 400 id inválido, 404 usuario inexistente. **Lo consume `useFollow`**: con un request resuelve los dos sentidos y la mutua |
+| `GET /:id/recommendations` | `JWT` | — | `{ status, recommendations[] }` de más reciente a más antigua, con texto, fecha, canción y emisor. Ver §7.2 |
+| `POST /:id/recommendations` | `JWT` | body: `songId`, `text` | 201 `{ status, recommendation }`. 400 si falta o viene vacío el texto o la canción, 404 si el usuario o la canción no existen, **403 si no hay follow mutuo**. Ver §7.2 |
 
 No existe un endpoint `isFollowing` directo para un perfil: el Frontend lo deriva de la lista de
 seguidores. La búsqueda (`GET /search`) sí trae la relación completa por resultado cuando hay sesión
 (`isFollowing` + `followsMe`, TS-10b); el perfil público sigue sin él.
+
+### 7.2 Recomendaciones entre personas (TS-19)
+
+**Dónde se guarda el destinatario:** en `content_playement` (la tabla que liga contenido con usuario). `content`
+guarda autor, texto, fecha y canción; cada recommendation es un `content` + una fila `content_playement` con el
+receptor, creada en la misma transacción. No hay campo nuevo en el esquema.
+
+**Visibilidad de `GET /users/:id/recommendations`:** el backend decide según quién pregunta.
+
+| Quién pregunta | Qué ve |
+| --- | --- |
+| El dueño del perfil | Todas las que recibió, de más reciente a más antigua |
+| Alguien que le recomendó | Solo las que él le envió (se filtra por `idAuthor`) |
+| Cualquier otro | Lista vacía |
+
+Orden `date: "desc"` en la consulta y también en el cliente (`useRecommendation`). La respuesta trae autor y
+canción en el mismo `include`: no hay llamadas extra.
+
+**Regla de envío (`POST /users/:id/recommendations`):** solo con **seguimiento mutuo**. Si seguís a la otra persona
+pero ella no te sigue, responde `403`. Es lo que habilita el formulario: la UI lo renderiza solo cuando
+`isMutual`.
+
+```bash
+curl -X POST localhost:3000/api/users/5/recommendations \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"songId":12,"text":"Esta va con todo lo que estabas escuchando"}'
+```
+
+**Contrato:** el plan de sprint 2 lo pedía como `POST /api/recommendations` (sin id en la ruta); quedó con el
+destinatario en el path, que es lo que consume `recommendationService`. Las rutas reales son las canónicas.
 
 ### 7.1 Foto de perfil (`POST /me/picture`) — TS-21
 
@@ -266,12 +326,37 @@ Frontend la trate como una playlist más. No se puede editar ni borrar (403).
 |---|---|---|
 | `GET /` | — | `{ status, playlists[] }` — las del usuario, con `creator` y `songs` ordenadas por posición |
 | `GET /:id` | — | `{ status, playlist }`. **404 si no es del dueño** |
-| `POST /` | body: `name` (obligatorio, ≤50), `description`, `isPublic` | 201 `{ status, playlist }` con `type: "personal"` |
+| `POST /` | body: `name` (obligatorio, ≤50), `description`, `isPublic`, `type` (`colab` o `personal`) | 201 `{ status, playlist }` con `creator` y `type` |
 | `PUT /:id` | body: `name?`, `description?`, `addSongs?`, `removeSongs?`, `reorder?` | 200 `{ status, playlist }`. 403 si no es el dueño o si es la de favoritos, 404 si no existe |
 | `DELETE /:id` | — | 200 `{ status, message }`. 403 si no es el dueño o si es la de favoritos |
+| `POST /:id/invitation` | — | 201 `{ status, token, link }`. 400 id inválido, 404 si no existe, **403 si no es el creador**, **400 si no es `colab`** |
+| `GET /join/:token` | — (público) | `{ status, playlist: { id, name, description, creator }, isMember }`. 404 token inválido o de una playlist que no es `colab` |
+| `POST /join/:token` | — | 201 si te uniste, 200 + mensaje si ya eras miembro, 404 token inválido |
 
 No hay sub-recursos `/songs`: las canciones llegan incluidas en `GET /` y `GET /:id`, y se agregan,
 quitan o reordenan en lote a través de `PUT /:id` (`addSongs`/`removeSongs`/`reorder`).
+
+### 9.1 Playlists colaborativas e invitaciones (TS-12/TS-13, backend)
+
+**Crear una colaborativa** es `POST /` con `type: "colab"`. Ojo: un `type` desconocido **no da 400**, cae en
+`personal` silenciosamente (la normalización está en `playlist.service.js`, no en el controller). El dueño queda en
+`Playlist.idCreator`; la fila `PlaylistMember` con rol `creator` **no** se inserta.
+
+**Permisos (D9, la más restrictiva):** `PUT /:id` y `DELETE /:id` validan `idCreator !== req.user.sub → 403`. **Los
+colaboradores no pueden editar**: aunque `PlaylistMember` los registre, `PUT` no mira la tabla de miembros, así que
+quien se unió por invitación recibe 403 al intentar agregar canciones. Es el ítem pendiente de TS-12/B8.
+
+**Invitaciones:** el token vive en `Playlist.tokenInvitation` y se genera con `crypto.randomBytes(32)`.
+
+- `POST /:id/invitation` solo para el creador y solo sobre playlists `colab`. **Regenera el token en cada pedido**
+  (D11), así que pedir el link otra vez **invalida los links anteriores**. Responde **201** (el plan decía 200).
+- El campo `link` se arma como `${process.env.FRONTEND_URL}/join/<token>`. **`FRONTEND_URL` no está en
+  `.env.example`**: sin ella el link sale `undefined/join/<token>`.
+- `POST /join/:token` inserta `PlaylistMember` con `role: "colaborator"` de forma idempotente (`alreadyMember`).
+
+⚠️ **Los paths no coinciden entre backend y frontend:** las rutas son `/api/playlists/join/:token`, pero el link que
+genera el backend apunta a `/join/<token>`, y **ninguna de las dos existe hoy en `AppRoutes.jsx`**, así que un enlace
+compartido cae en la ruta `*` y redirige a `/`. Cerrar ese desajuste es el primer paso de TS-13/F6.
 
 ---
 
@@ -279,4 +364,13 @@ quitan o reordenan en lote a través de `PUT /:id` (`addSongs`/`removeSongs`/`re
 
 | Endpoint | Auth | Request | Response |
 |---|---|---|---|
-| `GET /` | — | query: `sort` = `alphabetical` (default) \| `rating` | **Array plano** (sin envelope) de filas con `room.*` + `avg_rating`, desde la vista `room_avg_rating` |
+| `GET /` | — | query: `sort` = `alphabetical` (default) \| `rating` | **Array plano** (sin envelope) de filas con `room.*` + `avg_rating`, desde la vista `host_avg_rating` |
+
+Solo hay lectura. No existen crear/unirse/salir, buscar por texto (`query`), votar skip ni calificar al anfitrión:
+el frontend trabaja con `mocks/rooms.js` (`roomsService.USE_MOCK = true`) y las calificaciones vienen del seed
+(tabla `host_rating`).
+
+**Orden por calificación del anfitrión (`sort=rating`):** ambas consultas hacen `LEFT JOIN` con `room_member` para
+encontrar al anfitrión y luego con la vista **`host_avg_rating`** (`AVG(host_rating.rating)` agrupado por
+`id_host`, creada por la migración `20261013164336`, que reemplazó a la anterior `room_avg_rating`). Ordena por
+`avg_rating DESC, room.name ASC`, y trae `0` (no `NULL`) para los anfitriones sin calificar.

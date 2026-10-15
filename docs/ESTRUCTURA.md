@@ -60,6 +60,7 @@ src/
   middlewares/        authenticate (JWT), uploadAvatar (multipart del avatar) y prismaErrorHandler (traduce códigos P2xxx)
   prisma/prismaClient.js  Instancia de Prisma con adapter-pg
   utils/validation.js     Validadores compartidos (getId, validateCursor, validateRegisterInput, …)
+utils/errors.js         httpError(status, message, code): contrato de errores de la API
   const/baseUrl.js    Resto sin usar: app.js monta todo en /api, no en /api/v1
   db/schema.sql       Dump SQL de referencia. La app no lo ejecuta
   test.js             Script de prueba manual. No lo usa nadie
@@ -161,6 +162,7 @@ Una carpeta por dominio, con sus pantallas, componentes y hooks:
 | `auth/` | `Login`, `Register` |
 | `home/` | `Home` (elige `HomeDesktop`/`HomeMobile` por breakpoint) |
 | `profile/` | `ProfileView` (propio), `ProfilePublic` (ajeno), `ProfileEdit` + `profileImage.js` (recorte/compresión de la foto antes de subirla) |
+| `mood/` | `MoodScan` (pantalla `/animo`), `moodDetection.js` (face-api bajo demanda + mapeo de expresiones a los 3 estados), `MoodPicker`, `MoodResults` |
 | `playlists/` | Biblioteca y detalle, formularios, `MisPlaylists` (sidebar), `FavoriteButton`, `AddToPlaylistPanel`, `useSongPlaylists` |
 | `search/` | `Search` + pestañas `SearchSongs` / `SearchPeople` / `SearchTabs` |
 | `social/` | `useFollow`, `FollowButton`, `FollowList`, `FollowStats`, `ProfileSummary` |

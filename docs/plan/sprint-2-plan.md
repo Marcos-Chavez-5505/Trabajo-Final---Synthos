@@ -21,17 +21,17 @@
 
 | #   | Decisión                                                                                                                                                                                                                                                     | Opciones                                                                                                                                                                 | Bloquea              |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
-| D1  | **Destinatario de una recomendación.** El modelo de contenido guarda autor, texto, canción y fecha, pero no destinatario.                                                                                                                             | Guardarlo en`content_playement` o agregar campo nuevo.                                                                                                                 | TS-19 (B1, B2)       |
-| D2  | **Visitante externo** (ni emisor ni receptor): ¿ve las recomendaciones en el perfil público?                                                                                                                                                          | Sí / No. Regla actual: dueño ve todas las recibidas, emisor solo las suyas.                                                                                            | TS-19 (B1, F2)       |
+| D1  | **Destinatario de una recomendación.** El modelo de contenido guarda autor, texto, canción y fecha, pero no destinatario.                                                                                                                             | **resuelta:** en `content_playement` (`recommendation.service.js`). Sin campo nuevo.                                                                                  | TS-19 (B1, B2)       |
+| D2  | **Visitante externo** (ni emisor ni receptor): ¿ve las recomendaciones en el perfil público?                                                                                                                                                          | **resuelta: No.** `getRecommendationsForProfile` filtra por `idAuthor: viewerId` cuando el visor no es el dueño, así que un tercero recibe `[]`. Dueño ve todas las recibidas, emisor solo las suyas. | TS-19 (B1, F2)       |
 | D3  | **Almacenamiento de fotos de perfil.** No hay infraestructura de subida. El despliegue es en Vercel, **el disco local no persiste**: favorece servicio externo.                                                                                   | **resuelta (2026-10-13):** servicio en nube **ImageKit** + endpoint dedicado `POST /api/users/me/picture` (multipart) + recorte/recompresión en el cliente. Ver TS-21. | TS-21 (B3)           |
-| D4  | **Detección de estado de ánimo** (escaneo facial con IA). No hay código ni dependencias de IA.                                                                                                                                                       | Mock total (elige humor de lista) / cámara real + clasificación simulada / detección en navegador (modelo liviano) / API de visión externa / en backend.             | TS-20 (F9)           |
+| D4  | **Detección de estado de ánimo** (escaneo facial con IA). No hay código ni dependencias de IA.                                                                                                                                                       | **resuelta (2026-10-14): detección en el navegador** con face-api.js 0.22.2 desde CDN, cargado bajo demanda, modelo `tiny` (`tinyFaceDetector` + `faceExpressionNet`), y las 7 expresiones reducidas a los 3 estados del catálogo. Sin dependencia npm y sin backend; si el CDN no responde, la pantalla cae al selector manual. | TS-20 (F9)           |
 | D5  | **Crear calificaciones de anfitrión.** Existe la tabla y la vista de promedio, pero **no hay endpoint para crear**; los datos vienen del seed.                                                                                                   | Agregar tarea backend (propuesta B10 en TS-11) / dejar solo seed.                                                                                                        | TS-11 en producción |
 | D6  | **"Calificaciones positivas".** El alcance dice positivas, la vista actual promedia todas.                                                                                                                                                              | Promedio de todas / solo positivas (ej. 4 a 5).                                                                                                                          | TS-11, TS-17         |
 | D7  | **Respuesta real de `GET /api/rooms`.** El modelo de sala no tiene campo de anfitrión (se infiere por rol en la sala). Verificar que incluya nombre y calificación del anfitrión.                                                                  | Verificar / ajustar endpoint.                                                                                                                                            | TS-16, TS-17 (F8)    |
 | D8  | **Sincronización de sala.** Sin backend con WebSockets, "sincronizado" no es real.                                                                                                                                                                     | (a) sala de un solo usuario, miembros fake / (b)`BroadcastChannel`/`localStorage` entre pestañas / (c) UI y contrato listos, sync real fuera del sprint.            | TS-15, TS-18         |
-| D9  | **Permisos extra del creador de playlist.** El plan mock solo restringe eliminar canciones; B8 también reserva al creador editar nombre/descripción y borrar la playlist.                                                                             | Adoptar regla de B8 (propuesta, es la más estricta) / solo eliminar canciones.                                                                                          | TS-12                |
-| D10 | **Ruta de invitación.** `/playlists/join/:token` vs `/playlists/invitar/:token`.                                                                                                                                                                   | Elegir una y usarla en`AppRoutes.jsx` y en el link generado. Propuesta: `/playlists/invitar/:token` (consistente con rutas en español como `/perfil/seguidores`). | TS-13                |
-| D11 | **Invitación ya generada.** Si el creador pide otro link y ya existe uno.                                                                                                                                                                              | `409` / `200` con el mismo enlace.                                                                                                                                   | TS-13 (B6)           |
+| D9  | **Permisos extra del creador de playlist.** El plan mock solo restringe eliminar canciones; B8 también reserva al creador editar nombre/descripción y borrar la playlist.                                                                             | **resuelta: regla de B8** (la más estricta). `PUT /:id` y `DELETE /:id` dan 403 a todo lo que no sea `idCreator`.                                                                                                                    | TS-12                |
+| D10 | **Ruta de invitación.** `/playlists/join/:token` vs `/playlists/invitar/:token`.                                                                                                                                                                   | **resuelta: `/playlists/join/:token`** (lo que implementó el backend). **Ojo:** el link que arma `generateInvitation` apunta a `${FRONTEND_URL}/join/<token>`, que es una ruta distinta y hoy no existe en `AppRoutes`. | TS-13                |
+| D11 | **Invitación ya generada.** Si el creador pide otro link y ya existe uno.                                                                                                                                                                              | **resuelta: regenera el token** en cada pedido (sin `409`), así que los links anteriores quedan inválidos.                                                                                                                          | TS-13 (B6)           |
 | D12 | **Estado real de TS-10 en la búsqueda.** El plan mock dice que `UserRow` (con botón seguir) se usa en `SearchPeople`; F10 dice que la búsqueda no muestra estado de seguimiento. Probable causa: lo primero es mock, lo segundo es backend real. | **resuelta (verificado contra el código):** `UserRow` es un `<Link>` plano sin botón (también en `FollowList`); `SearchPeople` no muestra el estado. El plan-mock no se cumple → TS-10b es trabajo real. | TS-10b |
 
 **Decisión ya tomada:** orden cronológico de recomendaciones = **más reciente primero** (definido en B1; reemplaza el "definir y ser consistente" del plan mock).
@@ -121,6 +121,13 @@
 
 **Dependencias:** TS-14 (Crear sala) — depende conceptualmente de que exista una sala con participantes, pero el contrato de servicio puede escribirse antes.
 
+**Sin cambios: sigue pendiente.** Lo único que ya existe es la **visualización** del promedio del anfitrión
+(`RoomCard` con `hostRating` / "Sin calificar", alimentado por `avg_rating` de `GET /api/rooms`) y la vista
+`host_avg_rating` que creó la migración `20261013164336`. **D5 sigue abierta:** no hay `POST /api/rooms/:id/rating`
+(`room.routes.js` solo expone `GET /`), ni `rateHost` en `roomsService`, ni botón. **D6 sigue abierta:** el promedio
+actual es `AVG(rating)` sobre todas las calificaciones, no solo las positivas. El tercer criterio ("visible en el
+perfil del anfitrión") tampoco se cumple: los perfiles (`ProfileView`, `ProfilePublic`) no muestran calificación.
+
 ---
 
 ## TS-12 — Crear playlist colaborativa (feature 19, 50%)
@@ -142,9 +149,14 @@
 - **Respuesta:** igual que hoy, indicando que es colaborativa y quién es el creador.
 - **Códigos:** `201`, `400`, `401`; además `400` si el tipo de playlist no es válido.
 - **Criterios de aceptación:**
-  - [ ] Se puede crear una playlist marcada como colaborativa.
-  - [ ] Al consultarla se identifica como colaborativa y se ve su creador.
-  - [ ] Las playlists normales se crean igual que hasta ahora.
+  - [x] Se puede crear una playlist marcada como colaborativa.
+  - [x] Al consultarla se identifica como colaborativa y se ve su creador.
+  - [x] Las playlists normales se crean igual que hasta ahora.
+
+**B5: entregada en backend.** `playlist.service.js::createPlaylist` recibe `type` y normaliza a `colab` /
+`personal`; el `creator` viene en `PLAYLIST_INCLUDE`, así que la respuesta 201 ya identifica el tipo y el creador.
+**Desviación:** un `type` desconocido **no da 400** — cae en `personal` silenciosamente. Si se quiere el 400 del
+plan, hay que validar el tipo en el controller antes de llamar al service.
 
 **B8 — Aplicar permisos de playlist colaborativa** (**Revisar: ya existe parcialmente**: hoy la edición no valida membresía ni rol)
 
@@ -157,6 +169,13 @@
   - [ ] El creador puede todo.
   - [ ] Un usuario sin relación con la playlist recibe error al intentar editarla.
 
+**B8: parcial — por eso nada se tacha.** `PUT /:id` y `DELETE /:id` validan `existing.idCreator !== userId → 403`
+(la regla estricta de **D9**, ya resuelta), así que el criterio de "usuario sin relación recibe error" se cumple por
+el mismo camino. Lo que **no** existe es la parte de colaboradores: `PUT` no mira `PlaylistMember`, así que un
+participante que se unió por invitación recibe **403 al agregar canciones** (el primer criterio del bloque) y no hay
+ningún 403 específico para "quitar canciones" como evento distinguible. Al crear la playlist tampoco se inserta la
+fila `PlaylistMember` con rol `creator` (solo `idCreator` en `Playlist`); los roles `colaborator` los crea B7 al unirse.
+
 ### Frontend
 
 **F4 — Crear playlist colaborativa** (formulario de creación, ya existe; ajustar. **Revisar: ya existe parcialmente**: no distingue tipo)
@@ -166,6 +185,9 @@
 - **Criterios de aceptación:**
   - [ ] Puedo crear una playlist colaborativa y aparece en mi lista identificada como tal.
   - [ ] Las playlists normales se crean igual que antes.
+
+**F4: pendiente.** El backend ya acepta `type`, pero `playlistsService.createPlaylist(ownerId, { name, description })`
+no manda `type` y `PlaylistCreateForm.jsx` no ofrece la opción. Sin este ítem la feature queda inalcanzable desde la UI.
 
 **F7 — Ajustar el detalle de la playlist a la colaboración** (detalle y fila de canción, ya existen; ajustar. **Revisar: ya existe parcialmente**: asumen una única persona dueña)
 
@@ -177,6 +199,10 @@
   - [ ] El creador ve ambas cosas.
   - [ ] Un usuario sin relación no ve acciones de edición.
   - [ ] Si el servidor rechaza algo, el usuario entiende por qué.
+
+**F7: pendiente.** `PlaylistDetail.jsx` y `PlaylistSongRow.jsx` siguen asumiendo una única persona dueña: no
+distinguen una playlist `colab`, no leen los `members` que ya llegan en `PLAYLIST_INCLUDE`, y el borrado de canción
+se muestra sin mirar el rol (el backend igual lo rechaza con 403 por `idCreator`).
 
 **Dependencias:** TS-09 (Playlists personales, Sprint 1).
 
@@ -201,8 +227,13 @@
 - **Códigos:** `200`; `401` sin sesión; `403` si no es el creador; `404` si la playlist no existe; `400` si no es colaborativa; si ya existía un enlace: `409` o `200` con el mismo (**D11**).
 - **Necesita:** campo de token de invitación ya reservado en el modelo (sin usar); rol creador en tabla de miembros.
 - **Criterios de aceptación:**
-  - [ ] Solo el creador recibe el enlace; un usuario normal es rechazado.
-  - [ ] El enlace es usable por B7.
+  - [x] Solo el creador recibe el enlace; un usuario normal es rechazado.
+  - [x] El enlace es usable por B7.
+
+**B6: entregada en backend.** `POST /api/playlists/:id/invitation` valida id, existencia, `idCreator` (403) y
+`type === "colab"` (400), y devuelve `201 { status, token, link }`. **Dos desviaciones:** el plan decía `200` y
+devuelve `201`; y por **D11** cada pedido regenera el token (`crypto.randomBytes`), invalidando los links previos.
+El `link` se arma con `process.env.FRONTEND_URL`, que **no está en `.env.example`**.
 
 **B7 — Unirse por enlace de invitación**
 
@@ -211,9 +242,15 @@
 - **Códigos:** `200` unido (o ya era miembro, sin romper); `400` si falta o es inválido el código; `401` sin sesión; `404` si el código no corresponde a ninguna playlist.
 - **Necesita:** B6; tabla de miembros con rol colaborador. Permisos se aplican en B8.
 - **Criterios de aceptación:**
-  - [ ] Con enlace válido el usuario queda como miembro y aparece en participantes.
-  - [ ] Si ya era miembro, no se duplica.
-  - [ ] Enlace inválido o inexistente recibe error claro.
+  - [x] Con enlace válido el usuario queda como miembro y aparece en participantes.
+  - [x] Si ya era miembro, no se duplica.
+  - [x] Enlace inválido o inexistente recibe error claro.
+
+**B7: entregada en backend, con otra forma.** El plan pedía un único `POST /api/playlists/join` con el código en el
+body; lo implementado son **dos rutas con el token en el path**: `GET /api/playlists/join/:token` (preview público:
+`{ status, playlist: { id, name, description, creator }, isMember }`) y `POST /api/playlists/join/:token`
+(`201` unido, `200` con mensaje "Ya eras participante", `404` "Invitación inválida"). Además hay un
+`addCollaborator` que inserta `PlaylistMember` con `role: "colaborator"` y es idempotente. Resuelve **D10**.
 
 ### Frontend
 
@@ -226,6 +263,9 @@
   - [ ] **Solo el creador ve/genera el link.**
   - [ ] El enlace queda copiado y funciona con F6.
 
+**F5: pendiente.** `playlistsService.js` no expone `generateInviteLink` y `PlaylistDetail.jsx` no tiene el botón
+"Invitar". Todo el backend para generarlo ya está (B6).
+
 **F6 — Aceptar invitación y unirse**
 
 - **Componente:** pantalla de aceptación (ruta nueva, **D10**) con resumen de la playlist y botón de unirse.
@@ -234,6 +274,13 @@
 - **Criterios de aceptación:**
   - [ ] **Usuario que entra por el link queda como participante (no creador), con permisos de TS-12.**
   - [ ] **Link inválido/expirado (mock: token no encontrado) muestra error claro, no rompe la app ni deja pantalla en blanco.**
+
+**F6: pendiente, y es el eslabón roto de la feature.** No existe `joinPlaylistByInvite` en el service ni ruta en
+`AppRoutes`. El backend ya genera enlaces, así que hoy un link compartido **cae en `*` → `/`**: ni siquiera muestra
+el error que pide el segundo criterio. Antes de implementarla hay que cerrar el path, porque hoy conviven dos
+distintos: el backend expone `/api/playlists/join/:token` (D10) pero arma el link como
+`${FRONTEND_URL}/join/<token>` (`playlist.controller.js:220`), y `FRONTEND_URL` ni siquiera está en `.env.example`.
+La ruta de la SPA tiene que coincidir con una de las dos.
 
 **Dependencias:** TS-12.
 
@@ -260,6 +307,15 @@
 
 **Dependencias:** TS-09 (Playlists personales, Sprint 1).
 
+**⚠️ Pendiente, pero el trabajo existe sin integrar.** En `dev` no hay nada de TS-14: ni `CreateRoom.jsx`, ni
+`createRoom`/`joinRoom` en `roomsService`, ni rutas. La rama **`feat/ts14-crear-sala` (`77fe367`, sin mergear)** ya
+tiene `features/rooms/CreateRoom.jsx`, `features/rooms/RoomView.jsx`, `createRoom`/`joinRoom`/`getRoomById` con
+persistencia en `localStorage` (`synthos_mock_rooms`), las rutas `/salas/crear` y `/salas/:id`, y 46 líneas más en
+`PENDIENTES.md`. Es anterior a PR #65 (orden por rating), así que **rebasa con conflicto probable** en
+`Rooms.jsx`, `roomsService.js` y `RoomCard.jsx`: hay que decidir si se rescata esa rama o se rehace sobre `dev`.
+Ojo: esa rama trae `RoomView.jsx` (el componente de TS-15) pero **sin** `kickMember` ni `controlPlayback`, así que
+no avanza TS-15 ni TS-18.
+
 ---
 
 ## TS-15 — Administrar sala de escucha (feature 11, 75%)
@@ -279,6 +335,10 @@
 
 **⚠️ Bloqueada por D8** (sincronización).
 **Dependencias:** TS-14.
+
+**Sin cambios: sigue pendiente.** No hay `RoomView.jsx` en `dev` (solo existe en la rama `feat/ts14-crear-sala`), ni
+`kickMember`/`controlPlayback` en `roomsService`, ni control de reproducción por sala. **D8 sigue abierta:** sin
+backend con WebSockets, "lo que hace el anfitrión se refleja en todos" no es implementable de verdad.
 
 ---
 
@@ -300,6 +360,12 @@
 
 **Dependencias:** TS-14.
 
+**Sin cambios: sigue pendiente, y no es solo trabajo de frontend.** No existe `features/search/SearchRooms.jsx` ni
+`searchRooms()` en `roomsService` (solo `listRooms({ sort })`), y `/salas` no tiene input de búsqueda. Del lado del
+backend, `GET /api/rooms` **solo valida `sort`** (`validateSortType`): no acepta `query` ni devuelve el nombre del
+anfitrión, así que el criterio "por nombre de usuario anfitrión" no se puede cumplir filtrando en el cliente.
+**D7 sigue abierta.** Lo único reutilizable de TS-17 es el `?sort=` en la URL y el `RoomSortMenu`.
+
 ---
 
 ## TS-17 — Ordenar salas por calificación del anfitrión + conectar listado al backend (feature 16, 25%; ex F8)
@@ -314,12 +380,21 @@
 **Falta (F8):** **Inconsistencia: la funcionalidad existe solo en frontend con datos ficticios.** Quitar el modo de prueba del servicio; mapear la respuesta real a la forma que usa la UI (**D7**); estado de carga y de error propios de llamada real; manejar salas sin calificación; verificar que el orden del servidor se respeta sin reordenar en el navegador.
 **Criterios de aceptación:**
 
-- [ ] Nueva opción de orden "Mejor calificado" disponible junto a asc/desc.
-- [ ] Calificación del anfitrión visible en cada card de resultado (o "Sin calificar").
-- [ ] Ordenar por "Mejor calificado" funciona con datos del servidor.
+- [x] Nueva opción de orden "Mejor calificado" disponible junto a asc/desc.
+- [x] Calificación del anfitrión visible en cada card de resultado (o "Sin calificar").
+- [x] Ordenar por "Mejor calificado" funciona con datos del servidor.
 - [ ] La vista ficticia ya no se usa.
 
 **Dependencias:** TS-11 (Calificar anfitrión), TS-16 (Buscar salas). Criterio de "positiva": **D6**.
+
+**3 de 4 hechos; el que falta (F8) es el más chico.** `Rooms.jsx` ya tiene el `RoomSortMenu` con el criterio en la URL
+(`?sort=alphabetical|rating`) y `RoomCard` muestra `hostRating` con el caso "Sin calificar" (`hostRating === null`,
+distinto de 0). El backend dejó de ser ficticio para el orden: la migración `20261013164336` reemplazó la vista
+`room_avg_rating` por **`host_avg_rating`** (`AVG(host_rating.rating)` agrupado por anfitrión) y `room.service.js`
+hace `LEFT JOIN` con `room_member` + `ORDER BY avg_rating DESC, room.name ASC`.
+**Lo único que falta para cerrar F8 es apagar el flag:** `roomsService.USE_MOCK = true` sigue sirviendo
+`mocks/rooms.js`, aunque `toRoom()` ya mapea los dos shapes y `Rooms.jsx` ya tiene estados de carga y de error de
+llamada real. Ojo con **D6**: el promedio es de todas las calificaciones, no solo positivas (hoy solo hay seed).
 
 ---
 
@@ -342,6 +417,10 @@
 - [ ] Aplica la misma decisión de sincronización que TS-15 (**D8**).
 
 **Dependencias:** TS-15.
+
+**Sin cambios: sigue pendiente.** No hay `voteSkip` ni `getSkipVoteStatus`, no hay `RoomView.jsx` en `dev` y el
+esquema **no tiene dónde guardar los votos** (`CONTEXT.md` §3 lo lista como hueco). Depende de TS-15 y de **D8**, que
+sigue abierta.
 
 ---
 
@@ -366,9 +445,15 @@
 - **Necesita:** tablas de contenido (`content`), usuarios, seguimiento, relación con canciones. Ver D1.
 - **Regla:** dueño del perfil ve todas las recibidas; un emisor ve solo las que él hizo hacia esa persona; visitante externo según D2.
 - **Criterios de aceptación:**
-  - [ ] El dueño ve todas las recibidas en orden cronológico.
-  - [ ] Un usuario que recomendó hacia ese perfil ve solo la suya.
-  - [ ] Incluye los datos de la canción (sin llamadas extra).
+  - [x] El dueño ve todas las recibidas en orden cronológico.
+  - [x] Un usuario que recomendó hacia ese perfil ve solo la suya.
+  - [x] Incluye los datos de la canción (sin llamadas extra).
+
+**B1: entregada.** `GET /api/users/:id/recommendations` (`recommendation.service.js::getRecommendationsForProfile`)
+filtra por `viewerId`: si sos el dueño, todas las recibidas (`playements.some.idUser = profileId`); si no,
+solo las que vos enviaste (`idAuthor: viewerId`). Ordena `date: "desc"` y trae autor + canción en un solo
+`include`, así que no hay llamadas extra. **D2 quedó resuelta como "No":** un tercero no es ni emisor ni receptor y
+recibe `[]`.
 
 **B2 — Crear una recomendación**
 
@@ -378,9 +463,14 @@
 - **Necesita:** tablas de contenido, usuarios, seguimiento, canciones. Misma regla de destinatario que B1 (D1).
 - **Regla:** solo con seguimiento mutuo. Si yo la sigo pero ella no me sigue, no puedo recomendarle.
 - **Criterios de aceptación:**
-  - [ ] Se puede recomendar a alguien que me sigue y a quien sigo.
-  - [ ] Sin seguimiento mutuo se rechaza con mensaje claro.
-  - [ ] La recomendación aparece en el perfil del receptor (B1).
+  - [x] Se puede recomendar a alguien que me sigue y a quien sigo.
+  - [x] Sin seguimiento mutuo se rechaza con mensaje claro.
+  - [x] La recomendación aparece en el perfil del receptor (B1).
+
+**B2: entregada.** `POST /api/users/:id/recommendations` valida texto y canción no vacíos (400), existencia de
+usuario y canción (404) y `hasMutualFollow` (403) antes de insertar; responde **201** con la recomendación.
+**D1 quedó resuelta:** el destinatario se guarda en `content_playement` (`create` de `content` + `contentPlayement`
+en la misma transacción), sin campo nuevo.
 
 ### Frontend
 
@@ -390,9 +480,16 @@
 - **Endpoint:** usa B2.
 - **Casos:** enviar deshabilitado mientras procesa y si falta canción o texto; mensajes de éxito/error (en especial "no hay seguimiento mutuo", explicando por qué); texto con longitud máxima; cancelar/limpiar; búsqueda de canciones con estado vacío y de carga.
 - **Criterios de aceptación:**
-  - [ ] **Formulario oculto (o deshabilitado con explicación) si no hay follow mutuo** (usa TS-10).
-  - [ ] Con seguimiento mutuo se envía y se ve confirmación.
-  - [ ] Errores del servidor en lenguaje entendible.
+  - [x] **Formulario oculto (o deshabilitado con explicación) si no hay follow mutuo** (usa TS-10).
+  - [x] Con seguimiento mutuo se envía y se ve confirmación.
+  - [x] Errores del servidor en lenguaje entendible.
+
+**F1: entregada.** `ProfilePublic.jsx:185` renderiza la acción de recomendar solo cuando `follow.isMutual` (dato
+que trae `useFollow.relationState`), así que el criterio de "oculto sin follow mutuo" se cumple por render, no por
+un `disabled`. El formulario es `components/RecommendSongModal/RecommendSongModal.jsx` (texto con `maxLength`,
+botón bloqueado mientras envía o si falta canción/texto) + `components/SongSearchStep/SongSearchStep.jsx` para elegir
+la canción reutilizando la búsqueda existente (`hooks/useSongsSearch.jsx`). Los errores pasan por
+`utils/mapError.js`.
 
 **F2 — Ver recomendaciones en el perfil**
 
@@ -400,11 +497,27 @@
 - **Endpoint:** usa B1.
 - **Casos:** carga (esqueleto/spinner); lista vacía con mensaje amigable; error de red con reintento; datos del perfil y de la lista no se pisan; móvil y desktop.
 - **Criterios de aceptación:**
-  - [ ] **Orden cronológico consistente, más reciente primero.**
-  - [ ] **Visibilidad respetada:** dueño ve todo, emisor ve solo lo suyo en perfil ajeno.
-  - [ ] Canciones con título, artista y carátula sin llamadas extra.
+  - [x] **Orden cronológico consistente, más reciente primero.**
+  - [x] **Visibilidad respetada:** dueño ve todo, emisor ve solo lo suyo en perfil ajeno.
+  - [x] Canciones con título, artista y carátula sin llamadas extra.
+
+**F2: entregada.** `components/RecommendationSection/RecommendationSection.jsx` cubre esqueleto de carga, error con
+reintento y lista vacía con mensaje; el orden se refuerza en el cliente (`useRecommendation.jsx` ordena por fecha
+desc) además del `orderBy` del backend. Está montado en `ProfileView.jsx` (propio) y `ProfilePublic.jsx` (ajeno), cada
+uno con su `RecommendationProvider` para no pisarse entre sí.
 
 **Dependencias:** TS-10 (Seguir personas).
+
+**Estado: entregada completa (B1 + B2 + F1 + F2), con D1 y D2 resueltas.**
+
+- **Desviaciones de contrato:** el plan pedía `POST /api/recommendations` (sin id en la ruta) y quedó como
+  `POST /api/users/:id/recommendations`, que es lo que consume el frontend.
+- **Endpoint extra:** existe `GET /api/users/:id/follow-status` → `{ viewerFollows, targetFollows, isMutual }`,
+  que el plan no pedía. **Hoy ningún componente lo consume**: la pantalla resuelve el follow mutuo en el cliente con
+  `useFollow.relationState` (dos llamadas). Queda como endpoint disponible, no como pieza en uso.
+- **Nombre del service:** `services/recommendationService.js` (en singular), no `recommendationsService.js` como decía
+  el plan; y el estado no vive en el service sino en `context/recommendationContext.jsx` + `hooks/useRecommendation.jsx`,
+  siguiendo el patrón de las demás features (hook + contexto propio en vez de un Context global nuevo).
 
 ---
 
@@ -412,7 +525,7 @@
 
 **Contexto:** el usuario pide recomendaciones de música según su estado de ánimo, detectado por escaneo facial con IA (alegría, tristeza, calma, etc.).
 
-**⚠️ Bloqueada por D4** (quién detecta la emoción). Sin esa decisión no se pueden fijar criterios finales de detección. El endpoint de canciones por ánimo no depende de ella.
+**⚠️ Bloqueada por D4** (quién detecta la emoción). Sin esa decisión no se pueden fijar criterios finales de detección. **El endpoint de canciones por ánimo ya no depende de ella: está implementado (B9).**
 
 ### Backend
 
@@ -424,9 +537,15 @@
 - **Necesita:** tabla de estados de ánimo y su relación con canciones (ya existen en el esquema y seed). No depende de otras tareas.
 - **Nota:** el endpoint solo recibe el resultado de la detección y devuelve música.
 - **Criterios de aceptación:**
-  - [ ] Cada estado válido devuelve canciones del catálogo.
-  - [ ] Estado inválido recibe error claro.
-  - [ ] Respuesta con datos suficientes para reproducir y mostrar.
+  - [x] Cada estado válido devuelve canciones del catálogo.
+  - [x] Estado inválido recibe error claro.
+  - [x] Respuesta con datos suficientes para reproducir y mostrar.
+
+**B9: entregada, con otra ruta y otro parámetro.** Se implementó como
+`GET /api/songs/recommendations?expression=<ánimo>` (`song.service.js::getRecommendationsByExpression`): valida el
+ánimo contra la lista de estados válidos (400 "Expresión inválida" si no), trae canciones aleatorias del catálogo de
+ese ánimo con `SONG_INCLUDE` (datos de reproducción incluidos) y devuelve `200 { status, songs }` — o `[]` si no hay.
+El plan pedía `/api/songs/mood`; se documenta la ruta real como canónica.
 
 ### Frontend
 
@@ -437,11 +556,30 @@
 - **Endpoint:** usa B9 para canciones; la detección depende de D4.
 - **Casos:** permiso de cámara denegado con explicación y salida limpia; cámara no disponible (desktop sin webcam); ningún estado detectado con mensaje de reintento; carga durante detección y búsqueda; lista vacía para algún ánimo; volver a escanear; reproducir usa el reproductor global.
 - **Criterios de aceptación:**
-  - [ ] Flujo completo de punta a punta (cámara → ánimo → canciones → reproducir).
-  - [ ] Si se decide otro modo de detección (D4), la pantalla se adapta sin cambiar el resto de la experiencia.
-  - [ ] Permisos y errores de cámara se manejan sin dejar la app rota.
+- [x] Flujo completo de punta a punta (cámara → ánimo → canciones → reproducir).
+- [x] Si se decide otro modo de detección (D4), la pantalla se adapta sin cambiar el resto de la experiencia.
+- [x] Permisos y errores de cámara se manejan sin dejar la app rota.
 
 **Dependencias:** ninguna técnica dura, bloqueada por D4.
+
+**F9: entregada (con D4 resuelta).** `features/mood/`: `MoodScan.jsx` (pantalla), `moodDetection.js`
+(detector), `MoodPicker.jsx` (selector manual) y `MoodResults.jsx` (lista); ruta `/animo` y entrada
+"Ánimo" en el Sidebar con `microphone.svg`.
+
+- **Carga bajo demanda:** face-api.js 0.22.2 (664 KB) se inyecta como `<script>` la primera vez que se
+  entra a la pantalla, y los pesos (`tinyFaceDetector` + `faceExpressionNet`, ~500 KB) con
+  `loadFromUri` desde el mismo tag de versión. No es dependencia npm y no pesa en el bundle inicial.
+- **Modelo `tiny`:** solo detección + expresiones, sin landmarks. Las 7 expresiones se reducen a los 3
+  estados del catálogo (`moodFromExpressions`, función pura con umbral de confianza 0,55 y `neutral`
+  por defecto).
+- **Nunca se rompe:** sin cámara, permiso denegado, sin rostro, o CDN caído → el selector manual, que
+  es el mismo camino que usa la detección. La cámara se detiene siempre en el cleanup.
+- **Privacidad:** el frame no sale del dispositivo; es lo que dice la pantalla.
+- **Verificación:** smoke en Chrome con `--use-fake-device-for-media-stream`: la cámara arranca
+  (640×480), el detector carga script + pesos, el análisis responde "No detectamos un rostro" (la
+  cámara falsa no muestra ninguno), el selector manual trae `GET /songs/recommendations?expression=happy`
+  y pinta 20 `MediaCard`, y el play usa el reproductor global. El mapeo de expresiones se probó aparte
+  (11 casos). **Lo que no se pudo verificar automáticamente es la detección sobre un rostro real.**
 
 ---
 
@@ -488,12 +626,24 @@
 
 ## Orden de ejecución sugerido para el agente
 
-1. TS-10 (entregada) → TS-10b (B4 → F10, tras verificar D12)
-2. TS-12 (B5 → B8 → F4 → F7) → TS-13 (B6 → B7 → F5 → F6)
-3. TS-19 (B1 → B2 → F2 → F1), tras resolver D1 y D2
-4. TS-14 → TS-11 → TS-16 → TS-17 (F8 incluido); D5, D6 y D7 antes de cerrar TS-11/TS-17
-5. TS-15 → TS-18, **solo tras resolver D8**
-6. TS-21 (B3 → F3) — entregada, con D3 resuelta (ImageKit)
-7. TS-20 (B9 → F9), **en espera de D4**
+Estado al 2026-10-14, sobre `dev`: **entregadas** TS-10, TS-10b, TS-19 (completa), TS-20 (completa), TS-21, y la
+parte de backend de TS-12 (B5) y TS-13 (B6/B7). Con **D1, D2, D3, D4, D9, D10, D11 y D12 resueltas**.
+
+1. **TS-19**, **TS-20**, **TS-21**, **TS-10 / TS-10b**: entregadas.
+2. **TS-12** → queda F4 + F7 de frontend y el resto de B8. B5 ya está. Ojo: la lógica de roles de B8
+   (`addSong`/`removeSong`) **ya está escrita en `playlist.controller.js` pero sin rutas** en
+   `playlist.routes.js`: montar esas dos rutas es la parte chica de B8.
+3. **TS-13** → quedan F5 + F6. B6/B7 ya están; **arrancar por cerrar el path del link** (hoy el backend expone
+   `/api/playlists/join/:token` pero arma `${FRONTEND_URL}/join/:token`, y esa ruta no existe en `AppRoutes`), y de
+   paso agregar `FRONTEND_URL` a `.env.example`.
+4. **TS-14** → decidir si se rescata `feat/ts14-crear-sala` (rebasa con conflicto en `Rooms.jsx`/`roomsService.js`)
+   o se rehace sobre `dev`. Es el bloque que habilita TS-11, TS-15 y TS-18.
+5. **TS-16** → necesita backend: `GET /api/rooms` no acepta `query` ni trae el nombre del anfitrión (**D7**).
+6. **TS-17** → queda solo F8: apagar `roomsService.USE_MOCK`. Es lo más chico de toda la lista y el backend ya está.
+7. **TS-11** → detrás de **D5** (alta de `POST /api/rooms/:id/rating`) y **D6** (qué es "positiva").
+8. **TS-15** → **TS-18**, solo tras resolver **D8** (sincronización); sin eso, "se refleja en todos" no es real.
+
+> Nota: B8 requiere B7 (necesita roles de colaborador reales) y ambos ya existen, así que B8 se puede atacar ahora
+> mismo sin esperar a nada. El orden original (backend antes que frontend dentro de una feature) sigue valiendo.
 
 > Nota: B8 requiere B7 (necesita roles de colaborador reales). Si el agente prefiere, B5, B6, B7 y B8 pueden implementarse seguidos en backend y luego F4–F7 en frontend.
