@@ -1,5 +1,6 @@
 const userService = require("../services/user.service");
 const { getId } = require("../utils/validation");
+const { httpError } = require("../utils/errors");
 
 async function searchUsers(req, res, next) {
 	try {
@@ -25,10 +26,7 @@ async function getMe(req, res, next) {
 		const user = await userService.getMe(Number(req.user.sub));
 
 		if (!user) {
-			return res.status(404).json({
-				status: "error",
-				message: "Usuario no encontrado.",
-			});
+			throw httpError(404, "Usuario no encontrado.", "USER_NOT_FOUND");
 		}
 
 		res.status(200).json(user);
@@ -44,10 +42,7 @@ async function getUserById(req, res, next) {
 		const user = await userService.getUserById(id);
 
 		if (!user) {
-			return res.status(404).json({
-				status: "error",
-				message: "Usuario no encontrado.",
-			});
+			throw httpError(404, "Usuario no encontrado.", "USER_NOT_FOUND");
 		}
 
 		res.status(200).json(user);
@@ -75,10 +70,11 @@ async function updateMe(req, res, next) {
 async function uploadMyPicture(req, res, next) {
 	try {
 		if (!req.file) {
-			return res.status(400).json({
-				status: "error",
-				message: "No se recibió ninguna imagen.",
-			});
+			throw httpError(
+				400,
+				"No se recibió ninguna imagen.",
+				"MISSING_PICTURE",
+			);
 		}
 
 		const user = await userService.updateUserPicture(

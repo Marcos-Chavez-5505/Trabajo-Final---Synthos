@@ -40,6 +40,10 @@ function prismaErrorHandler(err, req, res, next) {
 			status: 400,
 			message: "Falta un argumento requerido en la petición.",
 		},
+		P2023: {
+			status: 400,
+			message: "Alguno de los valores enviados no es del tipo esperado.",
+		},
 
 		// --- Errores de conflicto y relaciones (409) ---
 		P2002: {

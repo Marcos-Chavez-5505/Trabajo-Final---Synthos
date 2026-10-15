@@ -1,6 +1,7 @@
 const prisma = require("../prisma/prismaClient");
 const { Prisma } = require("@prisma/client");
 const followService = require("./follow.service");
+const { httpError } = require("../utils/errors");
 const {
 	isBase64DataUrl,
 	uploadAvatar,
@@ -132,12 +133,6 @@ async function getMe(id) {
 	});
 }
 
-function httpError(code, message) {
-	const error = new Error(message);
-	error.code = code;
-	return error;
-}
-
 async function updateUser(id, { username, biography, pictureUrl }) {
 	const data = {};
 
@@ -145,7 +140,11 @@ async function updateUser(id, { username, biography, pictureUrl }) {
 		const value = String(username).trim();
 
 		if (value.length < 3 || value.length > 50) {
-			throw httpError(400, "El username debe tener entre 3 y 50 caracteres.");
+			throw httpError(
+				400,
+				"El username debe tener entre 3 y 50 caracteres.",
+				"USERNAME_LENGTH",
+			);
 		}
 
 		const taken = await prisma.user.findFirst({
@@ -154,7 +153,11 @@ async function updateUser(id, { username, biography, pictureUrl }) {
 		});
 
 		if (taken) {
-			throw httpError(400, "Ese nombre de usuario ya está en uso.");
+			throw httpError(
+				400,
+				"Ese nombre de usuario ya está en uso.",
+				"USERNAME_TAKEN",
+			);
 		}
 
 		data.username = value;
@@ -174,6 +177,7 @@ async function updateUser(id, { username, biography, pictureUrl }) {
 				throw httpError(
 					400,
 					"La foto se sube en POST /api/users/me/picture; acá solo se acepta la URL.",
+					"PICTURE_URL_NOT_ALLOWED",
 				);
 			}
 
@@ -181,6 +185,7 @@ async function updateUser(id, { username, biography, pictureUrl }) {
 				throw httpError(
 					400,
 					"La URL de la foto tiene que empezar por http:// o https://.",
+					"PICTURE_URL_INVALID",
 				);
 			}
 

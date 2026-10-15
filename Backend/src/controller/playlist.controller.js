@@ -1,4 +1,5 @@
 const playlistService = require("../services/playlist.service");
+const { httpError } = require("../utils/errors");
 
 function isFavoritesPlaylist(playlist) {
 	return playlist.type === "favorites";
@@ -9,30 +10,41 @@ function parseId(raw) {
 	return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+function requireId(raw) {
+	const id = parseId(raw);
+	if (!id) {
+		throw httpError(400, "Id inválido.", "INVALID_ID");
+	}
+	return id;
+}
+
 async function createPlaylist(req, res, next) {
 	try {
 		const userId = req.user.sub;
 		const { name, description, isPublic, type } = req.body || {};
 
 		if (typeof name !== "string" || name.trim().length === 0) {
-			return res.status(400).json({
-				status: "error",
-				message: "El nombre es obligatorio.",
-			});
+			throw httpError(
+				400,
+				"El nombre es obligatorio.",
+				"PLAYLIST_NAME_REQUIRED",
+			);
 		}
 
 		if (name.trim().length > 50) {
-			return res.status(400).json({
-				status: "error",
-				message: "El nombre no puede superar los 50 caracteres.",
-			});
+			throw httpError(
+				400,
+				"El nombre no puede superar los 50 caracteres.",
+				"PLAYLIST_NAME_TOO_LONG",
+			);
 		}
 
 		if (type !== "personal" && type !== "colab") {
-			return res.status(400).json({
-				status: "error",
-				message: "El tipo debe ser 'personal' o 'colab'.",
-			});
+			throw httpError(
+				400,
+				"El tipo debe ser 'personal' o 'colab'.",
+				"PLAYLIST_TYPE_INVALID",
+			);
 		}
 
 		const playlist = await playlistService.createPlaylist(userId, {
@@ -50,20 +62,15 @@ async function createPlaylist(req, res, next) {
 
 async function getPlaylistById(req, res, next) {
 	try {
-		const id = parseId(req.params.id);
-		if (!id) {
-			return res.status(400).json({
-				status: "error",
-				message: "Id inválido.",
-			});
-		}
+		const id = requireId(req.params.id);
 
 		const playlist = await playlistService.getPlaylistById(id);
 		if (!playlist) {
-			return res.status(404).json({
-				status: "error",
-				message: "La playlist no existe.",
-			});
+			throw httpError(
+				404,
+				"La playlist no existe.",
+				"PLAYLIST_NOT_FOUND",
+			);
 		}
 
 		return res.status(200).json({ status: "success", playlist });
@@ -86,48 +93,49 @@ async function getUserPlaylists(req, res, next) {
 async function updatePlaylist(req, res, next) {
 	try {
 		const userId = req.user.sub;
-		const id = parseId(req.params.id);
-
-		if (!id) {
-			return res.status(400).json({ status: "error", message: "Id inválido." });
-		}
+		const id = requireId(req.params.id);
 
 		const existing = await playlistService.getPlaylistById(id);
 		if (!existing) {
-			return res.status(404).json({
-				status: "error",
-				message: "La playlist no existe.",
-			});
+			throw httpError(
+				404,
+				"La playlist no existe.",
+				"PLAYLIST_NOT_FOUND",
+			);
 		}
 
 		if (existing.idCreator !== userId) {
-			return res.status(403).json({
-				status: "error",
-				message: "No sos el dueño de esta playlist.",
-			});
+			throw httpError(
+				403,
+				"No sos el dueño de esta playlist.",
+				"NOT_PLAYLIST_OWNER",
+			);
 		}
 
 		if (isFavoritesPlaylist(existing)) {
-			return res.status(403).json({
-				status: "error",
-				message: "La playlist de favoritos no se puede editar.",
-			});
+			throw httpError(
+				403,
+				"La playlist de favoritos no se puede editar.",
+				"FAVORITES_LOCKED",
+			);
 		}
 
 		const { name, description, addSongs, removeSongs, reorder } = req.body || {};
 
 		if (name !== undefined) {
 			if (typeof name !== "string" || name.trim().length === 0) {
-				return res.status(400).json({
-					status: "error",
-					message: "El nombre es obligatorio.",
-				});
+				throw httpError(
+					400,
+					"El nombre es obligatorio.",
+					"PLAYLIST_NAME_REQUIRED",
+				);
 			}
 			if (name.trim().length > 50) {
-				return res.status(400).json({
-					status: "error",
-					message: "El nombre no puede superar los 50 caracteres.",
-				});
+				throw httpError(
+					400,
+					"El nombre no puede superar los 50 caracteres.",
+					"PLAYLIST_NAME_TOO_LONG",
+				);
 			}
 		}
 
@@ -148,32 +156,31 @@ async function updatePlaylist(req, res, next) {
 async function deletePlaylist(req, res, next) {
 	try {
 		const userId = req.user.sub;
-		const id = parseId(req.params.id);
-
-		if (!id) {
-			return res.status(400).json({ status: "error", message: "Id inválido." });
-		}
+		const id = requireId(req.params.id);
 
 		const existing = await playlistService.getPlaylistById(id);
 		if (!existing) {
-			return res.status(404).json({
-				status: "error",
-				message: "La playlist no existe.",
-			});
+			throw httpError(
+				404,
+				"La playlist no existe.",
+				"PLAYLIST_NOT_FOUND",
+			);
 		}
 
 		if (existing.idCreator !== userId) {
-			return res.status(403).json({
-				status: "error",
-				message: "No sos el dueño de esta playlist.",
-			});
+			throw httpError(
+				403,
+				"No sos el dueño de esta playlist.",
+				"NOT_PLAYLIST_OWNER",
+			);
 		}
 
 		if (isFavoritesPlaylist(existing)) {
-			return res.status(403).json({
-				status: "error",
-				message: "La playlist de favoritos no se puede eliminar.",
-			});
+			throw httpError(
+				403,
+				"La playlist de favoritos no se puede eliminar.",
+				"FAVORITES_LOCKED",
+			);
 		}
 
 		await playlistService.deletePlaylist(id);
@@ -190,67 +197,66 @@ async function deletePlaylist(req, res, next) {
 async function addSong(req, res, next) {
 	try {
 		const userId = req.user.sub;
-		const id = parseId(req.params.id);
+		const id = requireId(req.params.id);
 		const songId = Number(req.body?.songId);
 
-		if (!id) {
-			return res.status(400).json({ status: "error", message: "Id inválido." });
-		}
-
 		if (!Number.isInteger(songId) || songId <= 0) {
-			return res.status(400).json({
-				status: "error",
-				message: "El songId es obligatorio.",
-			});
+			throw httpError(
+				400,
+				"El songId es obligatorio.",
+				"SONG_ID_REQUIRED",
+			);
 		}
 
 		const playlist = await playlistService.getPlaylistById(id);
 		if (!playlist) {
-			return res.status(404).json({
-				status: "error",
-				message: "La playlist no existe.",
-			});
+			throw httpError(
+				404,
+				"La playlist no existe.",
+				"PLAYLIST_NOT_FOUND",
+			);
 		}
 
 		if (isFavoritesPlaylist(playlist)) {
-			return res.status(400).json({
-				status: "error",
-				message: "La playlist de favoritos se gestiona desde /api/favorites.",
-			});
+			throw httpError(
+				400,
+				"La playlist de favoritos se gestiona desde /api/favorites.",
+				"FAVORITES_MANAGED_ELSEWHERE",
+			);
 		}
 
 		if (playlist.type === "personal") {
 			if (playlist.idCreator !== userId) {
-				return res.status(403).json({
-					status: "error",
-					message: "No sos el dueño de esta playlist.",
-				});
+				throw httpError(
+					403,
+					"No sos el dueño de esta playlist.",
+					"NOT_PLAYLIST_OWNER",
+				);
 			}
 		} else {
 			const isMember = playlist.members.some((m) => m.idUser === userId);
 			if (!isMember) {
-				return res.status(403).json({
-					status: "error",
-					message: "No sos participante de esta playlist.",
-				});
+				throw httpError(
+					403,
+					"No sos participante de esta playlist.",
+					"NOT_PLAYLIST_MEMBER",
+				);
 			}
 		}
 
 		const exists = await playlistService.songExists(songId);
 		if (!exists) {
-			return res.status(404).json({
-				status: "error",
-				message: "La canción no existe.",
-			});
+			throw httpError(404, "La canción no existe.", "SONG_NOT_FOUND");
 		}
 
 		const result = await playlistService.addSongToPlaylist(id, songId, userId);
 
 		if (result.alreadyAdded) {
-			return res.status(409).json({
-				status: "error",
-				message: "La canción ya estaba en la playlist.",
-			});
+			throw httpError(
+				409,
+				"La canción ya estaba en la playlist.",
+				"SONG_ALREADY_IN_PLAYLIST",
+			);
 		}
 
 		return res.status(201).json({
@@ -265,42 +271,46 @@ async function addSong(req, res, next) {
 async function removeSong(req, res, next) {
 	try {
 		const userId = req.user.sub;
-		const id = parseId(req.params.id);
+		const id = requireId(req.params.id);
 		const songId = parseId(req.params.songId);
 
-		if (!id || !songId) {
-			return res.status(400).json({ status: "error", message: "Id inválido." });
+		if (!songId) {
+			throw httpError(400, "Id inválido.", "INVALID_ID");
 		}
 
 		const playlist = await playlistService.getPlaylistById(id);
 		if (!playlist) {
-			return res.status(404).json({
-				status: "error",
-				message: "La playlist no existe.",
-			});
+			throw httpError(
+				404,
+				"La playlist no existe.",
+				"PLAYLIST_NOT_FOUND",
+			);
 		}
 
 		if (isFavoritesPlaylist(playlist)) {
-			return res.status(400).json({
-				status: "error",
-				message: "La playlist de favoritos se gestiona desde /api/favorites.",
-			});
+			throw httpError(
+				400,
+				"La playlist de favoritos se gestiona desde /api/favorites.",
+				"FAVORITES_MANAGED_ELSEWHERE",
+			);
 		}
 
 		if (playlist.idCreator !== userId) {
-			return res.status(403).json({
-				status: "error",
-				message: "Solo el creador puede eliminar canciones.",
-			});
+			throw httpError(
+				403,
+				"Solo el creador puede eliminar canciones.",
+				"NOT_PLAYLIST_CREATOR",
+			);
 		}
 
 		const result = await playlistService.removeSongFromPlaylist(id, songId);
 
 		if (result.notFound) {
-			return res.status(404).json({
-				status: "error",
-				message: "La canción no estaba en la playlist.",
-			});
+			throw httpError(
+				404,
+				"La canción no estaba en la playlist.",
+				"SONG_NOT_IN_PLAYLIST",
+			);
 		}
 
 		return res.status(200).json({
@@ -315,32 +325,31 @@ async function removeSong(req, res, next) {
 async function generateInvitation(req, res, next) {
 	try {
 		const userId = req.user.sub;
-		const id = parseId(req.params.id);
-
-		if (!id) {
-			return res.status(400).json({ status: "error", message: "Id inválido." });
-		}
+		const id = requireId(req.params.id);
 
 		const playlist = await playlistService.getPlaylistById(id);
 		if (!playlist) {
-			return res.status(404).json({
-				status: "error",
-				message: "La playlist no existe.",
-			});
+			throw httpError(
+				404,
+				"La playlist no existe.",
+				"PLAYLIST_NOT_FOUND",
+			);
 		}
 
 		if (playlist.idCreator !== userId) {
-			return res.status(403).json({
-				status: "error",
-				message: "No sos el creador de esta playlist.",
-			});
+			throw httpError(
+				403,
+				"No sos el creador de esta playlist.",
+				"NOT_PLAYLIST_CREATOR",
+			);
 		}
 
 		if (playlist.type !== "colab") {
-			return res.status(400).json({
-				status: "error",
-				message: "Solo las playlists colaborativas permiten invitaciones.",
-			});
+			throw httpError(
+				400,
+				"Solo las playlists colaborativas permiten invitaciones.",
+				"INVITATION_REQUIRES_COLLAB",
+			);
 		}
 
 		const updated = await playlistService.generateInvitationToken(id);
@@ -363,10 +372,7 @@ async function previewInvitation(req, res, next) {
 
 		const playlist = await playlistService.getPlaylistByToken(token);
 		if (!playlist) {
-			return res.status(404).json({
-				status: "error",
-				message: "Invitación inválida.",
-			});
+			throw httpError(404, "Invitación inválida.", "INVALID_INVITATION");
 		}
 
 		const isMember = playlist.members.some((m) => m.idUser === userId);
@@ -393,10 +399,7 @@ async function joinPlaylist(req, res, next) {
 
 		const playlist = await playlistService.getPlaylistByToken(token);
 		if (!playlist) {
-			return res.status(404).json({
-				status: "error",
-				message: "Invitación inválida.",
-			});
+			throw httpError(404, "Invitación inválida.", "INVALID_INVITATION");
 		}
 
 		const result = await playlistService.addCollaborator(playlist.id, userId);
