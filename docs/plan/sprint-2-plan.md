@@ -29,12 +29,20 @@
 | D6  | **"Calificaciones positivas".** El alcance dice positivas, la vista actual promedia todas.                                                                                                                                                              | Promedio de todas / solo positivas (ej. 4 a 5).                                                                                                                          | TS-11, TS-17         |
 | D7  | **Respuesta real de `GET /api/rooms`.** El modelo de sala no tiene campo de anfitrión (se infiere por rol en la sala). Verificar que incluya nombre y calificación del anfitrión.                                                                  | Verificar / ajustar endpoint.                                                                                                                                            | TS-16, TS-17 (F8)    |
 | D8  | **Sincronización de sala.** Sin backend con WebSockets, "sincronizado" no es real.                                                                                                                                                                     | (a) sala de un solo usuario, miembros fake / (b)`BroadcastChannel`/`localStorage` entre pestañas / (c) UI y contrato listos, sync real fuera del sprint.            | TS-15, TS-18         |
-| D9  | **Permisos extra del creador de playlist.** El plan mock solo restringe eliminar canciones; B8 también reserva al creador editar nombre/descripción y borrar la playlist.                                                                             | **resuelta: regla de B8** (la más estricta). `PUT /:id` y `DELETE /:id` dan 403 a todo lo que no sea `idCreator`.                                                                                                                    | TS-12                |
-| D10 | **Ruta de invitación.** `/playlists/join/:token` vs `/playlists/invitar/:token`.                                                                                                                                                                   | **resuelta: `/playlists/join/:token`** (lo que implementó el backend). **Ojo:** el link que arma `generateInvitation` apunta a `${FRONTEND_URL}/join/<token>`, que es una ruta distinta y hoy no existe en `AppRoutes`. | TS-13                |
-| D11 | **Invitación ya generada.** Si el creador pide otro link y ya existe uno.                                                                                                                                                                              | **resuelta: regenera el token** en cada pedido (sin `409`), así que los links anteriores quedan inválidos.                                                                                                                          | TS-13 (B6)           |
+| D9  | **Permisos del creador de playlist.** Editar nombre/descripción, borrar la playlist, invitar y echar son del creador. **Las canciones no**: en una colaborativa cualquier participante agrega y quita.                                                                             | **resuelta:** `PUT /:id` y `DELETE /:id` dan 403 a todo lo que no sea `idCreator`; `POST/DELETE /:id/songs` piden ser miembro. Invitar y echar, también solo del creador.                                                                                                                | TS-12                |
+| D10 | **Ruta de invitación.** `/playlists/join/:token` vs `/playlists/invitar/:token`.                                                                                                                                                                   | **obsoleta:** la invitación dejó de ser un link (ver D13). No hay ruta de invitación en el frontend: la invitación se elige a una persona y se acepta desde la sub-pestaña de `/playlists`.                                                                           | TS-13                |
+| D11 | **Invitación repetida a la misma persona.** Si el creador vuelve a invitar a alguien que ya fue invitado o que ya participates.                                                                                                                         | **resuelta: se reenvía.** La fila de `playlist_invitation` es única por (`playlist`, `receiver`), así que invitar de nuevo la deja en `pendiente` otra vez; si la persona ya es miembro, `409 PLAYLIST_ALREADY_MEMBER`.                                        | TS-13                |
 | D12 | **Estado real de TS-10 en la búsqueda.** El plan mock dice que `UserRow` (con botón seguir) se usa en `SearchPeople`; F10 dice que la búsqueda no muestra estado de seguimiento. Probable causa: lo primero es mock, lo segundo es backend real. | **resuelta (verificado contra el código):** `UserRow` es un `<Link>` plano sin botón (también en `FollowList`); `SearchPeople` no muestra el estado. El plan-mock no se cumple → TS-10b es trabajo real. | TS-10b |
 
 **Decisión ya tomada:** orden cronológico de recomendaciones = **más reciente primero** (definido en B1; reemplaza el "definir y ser consistente" del plan mock).
+
+### Decisión del usuario sobre TS-13 (2026-10-15)
+
+La invitación **no es un link**: es dirigida a una persona que ya existe en el sistema, con estado pendiente y
+Aceptar/Rechazar, y vive **dentro de la app**, en una sub-pestaña de `/playlists`. En una colaborativa
+**cualquier participante puede agregar y quitar canciones**; el creador conserva editar, borrar, invitar y echar.
+Además, **invitar convierte la playlist en colaborativa**: no existe el "miembro de una playlist personal".
+Esto reemplaza D10 y D11, y es lo que implementan B6/B7 y F5/F6.
 
 ---
 
@@ -154,133 +162,144 @@ perfil del anfitrión") tampoco se cumple: los perfiles (`ProfileView`, `Profile
   - [x] Las playlists normales se crean igual que hasta ahora.
 
 **B5: entregada en backend.** `playlist.service.js::createPlaylist` recibe `type` y normaliza a `colab` /
-`personal`; el `creator` viene en `PLAYLIST_INCLUDE`, así que la respuesta 201 ya identifica el tipo y el creador.
-**Desviación:** un `type` desconocido **no da 400** — cae en `personal` silenciosamente. Si se quiere el 400 del
-plan, hay que validar el tipo en el controller antes de llamar al service.
+`personal`; el `creator` viene en `PLAYLIST_INCLUDE`, así que la respuesta 201 ya identifica el tipo y el creador. El
+controller **valida el tipo**: sin `type`, o con uno que no sea `personal` o `colab`, responde `400 PLAYLIST_TYPE_INVALID`.
+Al crear una `colab` se inserta además la fila `playlist_member` con rol `creator`.
 
-**B8 — Aplicar permisos de playlist colaborativa** (**Revisar: ya existe parcialmente**: hoy la edición no valida membresía ni rol)
+**B8 — Aplicar permisos de playlist colaborativa**
 
-- **Endpoint:** modificar `PUT /api/playlists/:id` y `DELETE /api/playlists/:id`.
+- **Endpoint:** `POST /api/playlists/:id/songs`, `DELETE /api/playlists/:id/songs/:songId`, `PUT /:id` y `DELETE /:id`.
 - **Respuesta:** misma estructura que hoy.
-- **Códigos:** los actuales + `403` cuando un participante intenta algo reservado al creador (quitar canciones, y según D9, editar nombre/descripción o borrar la playlist) o cuando alguien sin relación intenta editarla.
+- **Códigos:** los actuales + `403 NOT_PLAYLIST_OWNER` / `403 NOT_PLAYLIST_MEMBER`.
 - **Necesita:** B5, B7; tabla de miembros con roles.
 - **Criterios de aceptación:**
-  - [ ] Un participante agrega canciones sin problema y recibe error al intentar quitar una.
-  - [ ] El creador puede todo.
-  - [ ] Un usuario sin relación con la playlist recibe error al intentar editarla.
+  - [x] Un participante agrega canciones sin problema.
+  - [x] El creador puede todo.
+  - [x] Un usuario sin relación con la playlist recibe error al intentar editarla.
 
-**B8: parcial — por eso nada se tacha.** `PUT /:id` y `DELETE /:id` validan `existing.idCreator !== userId → 403`
-(la regla estricta de **D9**, ya resuelta), así que el criterio de "usuario sin relación recibe error" se cumple por
-el mismo camino. Lo que **no** existe es la parte de colaboradores: `PUT` no mira `PlaylistMember`, así que un
-participante que se unió por invitación recibe **403 al agregar canciones** (el primer criterio del bloque) y no hay
-ningún 403 específico para "quitar canciones" como evento distinguible. Al crear la playlist tampoco se inserta la
-fila `PlaylistMember` con rol `creator` (solo `idCreator` en `Playlist`); los roles `colaborator` los crea B7 al unirse.
+**B8: entregada en backend.** `POST /:id/songs` y `DELETE /:id/songs/:songId` están montadas y aplican los roles: en una
+`personal` solo el dueño, en una `colab` cualquier miembro (agregar y quitar). `PUT /:id` y `DELETE /:id` siguen siendo
+del creador (**D9**) y ya no se usan para tocar canciones: el frontend va por las rutas de canciones.
 
 ### Frontend
 
-**F4 — Crear playlist colaborativa** (formulario de creación, ya existe; ajustar. **Revisar: ya existe parcialmente**: no distingue tipo)
+**F4 — Crear playlist colaborativa** (formulario de creación, ya existe; ajustar)
 
 - **Endpoint:** usa B5.
 - **Falta:** opción clara "colaborativa" con explicación breve de qué implica; validaciones iguales a las actuales (nombre obligatorio, etc.); botón deshabilitado mientras se crea; manejo de error del servidor.
 - **Criterios de aceptación:**
-  - [ ] Puedo crear una playlist colaborativa y aparece en mi lista identificada como tal.
-  - [ ] Las playlists normales se crean igual que antes.
+  - [x] Puedo crear una playlist colaborativa y aparece en mi lista identificada como tal.
+  - [x] Las playlists normales se crean igual que antes.
 
-**F4: pendiente.** El backend ya acepta `type`, pero `playlistsService.createPlaylist(ownerId, { name, description })`
-no manda `type` y `PlaylistCreateForm.jsx` no ofrece la opción. Sin este ítem la feature queda inalcanzable desde la UI.
+**F4: entregada.** `PlaylistCreateForm.jsx` tiene el selector "Solo vos / Colaborativa" con la explicación de qué implica,
+y `playlistsService.createPlaylist` manda `type` (antes no lo mandaba y toda creación devolvía `400 PLAYLIST_TYPE_INVALID`).
+`PlaylistTile` marca las colaborativas.
 
-**F7 — Ajustar el detalle de la playlist a la colaboración** (detalle y fila de canción, ya existen; ajustar. **Revisar: ya existe parcialmente**: asumen una única persona dueña)
+**F7 — Ajustar el detalle de la playlist a la colaboración** (detalle y fila de canción, ya existen; ajustar)
 
 - **Endpoint:** usa B8 (y los endpoints existentes de consulta).
 - **Falta:** ocultar/deshabilitar borrado y edición para quienes no son el creador; mostrar marca de colaborativa y rol del usuario actual; mensajes cuando el servidor rechaza (403); lista de participantes si el detalle la trae.
 - **Criterios de aceptación:**
-  - [ ] **UI oculta/deshabilita el botón eliminar canción para quien no es el creador original.**
-  - [ ] **Participante puede agregar canciones sin restricción** (ve agregar, no quitar).
-  - [ ] El creador ve ambas cosas.
-  - [ ] Un usuario sin relación no ve acciones de edición.
-  - [ ] Si el servidor rechaza algo, el usuario entiende por qué.
+  - [x] La UI oculta editar, eliminar y echar para quien no es el creador original.
+  - [x] Participante puede agregar y quitar canciones.
+  - [x] El creador ve todas las acciones.
+  - [x] Un usuario sin relación no ve acciones de edición.
+  - [x] Si el servidor rechaza algo, el usuario entiende por qué.
 
-**F7: pendiente.** `PlaylistDetail.jsx` y `PlaylistSongRow.jsx` siguen asumiendo una única persona dueña: no
-distinguen una playlist `colab`, no leen los `members` que ya llegan en `PLAYLIST_INCLUDE`, y el borrado de canción
-se muestra sin mirar el rol (el backend igual lo rechaza con 403 por `idCreator`).
+**F7: entregada.** `toPlaylist` expone `type`, `role`, `creator` y `members`, así que el detalle sabe si es colaborativa y
+qué rol tiene quien mira. Editar/Eliminar/Invitar/Echar son solo del creador; "Quitar" de una canción queda para los
+participantes. Los 403 se muestran con `mapApiError`, y `GET /playlists/:id` ahora exige sesión y responde `404` si no
+sos creador, ni miembro, ni la playlist es pública.
 
 **Dependencias:** TS-09 (Playlists personales, Sprint 1).
 
 ---
 
-## TS-13 — Invitar usuarios a playlist colaborativa (feature 20, 50%)
+## TS-13 — Invitar usuarios a playlist colaborativa (feature 20, 100%)
 
-**Contexto:** el creador de una playlist colaborativa genera un link de invitación. Quien entra con ese link se une como participante (solo agrega, no elimina).
+**Contexto (redefinido el 2026-10-15):** el creador de una playlist colaborativa invita **a una persona concreta que ya
+existe en la app**. No hay link ni pantalla fuera de la aplicación: la invitación queda pendiente y el destinatario la
+acepta o la rechaza desde una sub-pestaña de `/playlists`. Al aceptarla queda como participante (agrega y quita
+canciones); el creador conserva editar, borrar, invitar y echar.
+
 **Alcance:**
 
-- Generar link de invitación (solo visible/generable por el creador).
-- Pantalla/flujo de "unirse a playlist" vía ese link.
+- Invitar a una persona existente (solo el creador).
+- Bandeja de invitaciones recibidas con Aceptar/Rechazar.
 
-**Archivos (frontend):** `src/services/playlistsService.js` → `generateInviteLink(playlistId)`, `joinPlaylistByInvite(token)`. Ruta nueva en `AppRoutes.jsx` (según **D10**).
+**Archivos (frontend):** `src/services/playlistsService.js` → `sendInvitation`, `listSentInvitations`,
+`listReceivedInvitations`, `acceptPlaylistInvitation`, `rejectPlaylistInvitation`, `removePlaylistMember`.
+`features/playlists/InviteUserDialog.jsx` y `PlaylistInvitations.jsx`. **Sin ruta nueva en `AppRoutes.jsx`.**
 
 ### Backend
 
-**B6 — Generar enlace de invitación**
+**B6 — Invitar a una persona**
 
-- **Endpoint:** `POST /api/playlists/:id/invitation`.
-- **Respuesta:** `200` con enlace/código (y fecha de expiración si se define).
-- **Códigos:** `200`; `401` sin sesión; `403` si no es el creador; `404` si la playlist no existe; `400` si no es colaborativa; si ya existía un enlace: `409` o `200` con el mismo (**D11**).
-- **Necesita:** campo de token de invitación ya reservado en el modelo (sin usar); rol creador en tabla de miembros.
+- **Endpoint:** `POST /api/playlists/:id/invitation`, body `{ userId }`.
+- **Respuesta:** `201 { status, invitation }`.
+- **Códigos:** `401` sin sesión; `403 NOT_PLAYLIST_CREATOR` si no es el creador; `404 PLAYLIST_NOT_FOUND`;
+  `400 INVITATION_FAVORITES_LOCKED` si es la de favoritos; `400 INVITATION_SELF`; `404 INVITATION_USER_NOT_FOUND` si esa persona no existe;
+  `409 PLAYLIST_ALREADY_MEMBER`; reenviar a alguien ya invitado la deja `pendiente` otra vez (**D11**).
+- **Necesita:** tabla de invitaciones pendientes.
 - **Criterios de aceptación:**
-  - [x] Solo el creador recibe el enlace; un usuario normal es rechazado.
-  - [x] El enlace es usable por B7.
+  - [x] Solo el creador puede invitar; un participante recibe 403.
+  - [x] Solo se puede invitar a alguien que existe en el sistema.
 
-**B6: entregada en backend.** `POST /api/playlists/:id/invitation` valida id, existencia, `idCreator` (403) y
-`type === "colab"` (400), y devuelve `201 { status, token, link }`. **Dos desviaciones:** el plan decía `200` y
-devuelve `201`; y por **D11** cada pedido regenera el token (`crypto.randomBytes`), invalidando los links previos.
-El `link` se arma con `process.env.FRONTEND_URL`, que **no está en `.env.example`**.
+**B6: entregada en backend.** Nuevo modelo `PlaylistInvitation` (migración `20261015203304_playlist_invitation`) con
+clave primaria compuesta (`idPlaylist`, `idReceiver`) y estado `pendiente | aceptada | rechazada`, más
+`GET /:id/invitations` para que el creador vea a quién invitó y en qué estado.
 
-**B7 — Unirse por enlace de invitación**
+**Invitar convierte la playlist en colaborativa (decisión del usuario, 2026-10-15).** No hay un concepto de "miembro
+de una playlist personal": al invitar, `POST /:id/invitation` cambia el `type` a `colab` e inserta la fila
+`playlist_member` del creador, en la misma transacción que la invitación. La respuesta trae `converted: true` para que el
+frontend recargue. La única excepción es la playlist de favoritos, que no se puede invitar ni convertir. Sin migración:
+es un `UPDATE` sobre un enum que ya tenía `colab`.
 
-- **Endpoint:** `POST /api/playlists/join` (recibe enlace o código).
-- **Respuesta:** `200` con la playlist y confirmación de que el usuario ahora es participante.
-- **Códigos:** `200` unido (o ya era miembro, sin romper); `400` si falta o es inválido el código; `401` sin sesión; `404` si el código no corresponde a ninguna playlist.
-- **Necesita:** B6; tabla de miembros con rol colaborador. Permisos se aplican en B8.
+**B7 — Aceptar o rechazar la invitación**
+
+- **Endpoints:** `GET /api/playlists/invitations` (pendientes recibidas), `POST /api/playlists/invitations/:idPlaylist/accept`,
+  `POST /api/playlists/invitations/:idPlaylist/reject`.
+- **Respuesta:** `201` al aceptar, `200` al rechazar, con la invitación actualizada.
+- **Códigos:** `401` sin sesión; `404 INVITATION_NOT_FOUND` si no hay una invitación pendiente para esa playlist.
+- **Necesita:** B6. Permisos en B8.
 - **Criterios de aceptación:**
-  - [x] Con enlace válido el usuario queda como miembro y aparece en participantes.
+  - [x] Quien acepta queda como miembro y aparece en participantes.
   - [x] Si ya era miembro, no se duplica.
-  - [x] Enlace inválido o inexistente recibe error claro.
+  - [x] Sin invitación pendiente, el error es claro.
 
-**B7: entregada en backend, con otra forma.** El plan pedía un único `POST /api/playlists/join` con el código en el
-body; lo implementado son **dos rutas con el token en el path**: `GET /api/playlists/join/:token` (preview público:
-`{ status, playlist: { id, name, description, creator }, isMember }`) y `POST /api/playlists/join/:token`
-(`201` unido, `200` con mensaje "Ya eras participante", `404` "Invitación inválida"). Además hay un
-`addCollaborator` que inserta `PlaylistMember` con `role: "colaborator"` y es idempotente. Resuelve **D10**.
+**B7: entregada en backend.** Aceptar es una transacción: inserta el `PlaylistMember` con rol `colaborator` y marca la
+invitación como `aceptada` (o nada). También se agregó `DELETE /api/playlists/:id/members/:userId` para que el creador
+eche a un participante (solo del creador, con `400 CANNOT_REMOVE_CREATOR` si se intenta echar a uno mismo).
+
+**Lo que se borró:** el flujo por token (`generateInvitation`, `previewInvitation`, `joinPlaylist`,
+`generateInvitationToken`, `getPlaylistByToken`, `addCollaborator`) y con él `FRONTEND_URL`. La columna
+`playlist.token_invitation` se borró después en la migración `drop_token_invitation`.
 
 ### Frontend
 
-**F5 — Generar y compartir el enlace**
+**F5 — Invitar desde el detalle**
 
-- **Componente:** botón y mensaje "Invitar" en el detalle de la playlist colaborativa (componente pequeño nuevo).
-- **Endpoint:** usa B6.
-- **Casos:** botón solo visible/habilitado para el creador; deshabilitado mientras genera; confirmación visible de copia al portapapeles; error si falla; si el enlace ya existía, se reutiliza.
+- **Componente:** botón "Invitar" en el detalle de una colaborativa (solo del creador) que abre `InviteUserDialog`.
+- **Casos:** buscador de personas con debounce, se esconden quienes ya participan o ya tienen invitación abierta,
+  feedback de envío y error con `mapApiError`, lista de invitados con su estado (Pendiente / Aceptó / Rechazó).
 - **Criterios de aceptación:**
-  - [ ] **Solo el creador ve/genera el link.**
-  - [ ] El enlace queda copiado y funciona con F6.
+  - [x] Solo el creador ve el botón y puede invitar.
+  - [x] La invitación queda registrada y el invitado la ve.
 
-**F5: pendiente.** `playlistsService.js` no expone `generateInviteLink` y `PlaylistDetail.jsx` no tiene el botón
-"Invitar". Todo el backend para generarlo ya está (B6).
+**F5: entregada.** El botón "Invitar" está en toda playlist propia que no sea favoritos (en una personal, el diálogo
+avisa que al invitar deja de ser privada) y abre `InviteUserDialog`.
 
-**F6 — Aceptar invitación y unirse**
+**F6 — Bandeja de invitaciones**
 
-- **Componente:** pantalla de aceptación (ruta nueva, **D10**) con resumen de la playlist y botón de unirse.
-- **Endpoint:** usa B7.
-- **Casos:** token inválido/inexistente con mensaje claro; sin sesión → login y retorno a la invitación; botón deshabilitado mientras procesa; si ya era miembro, mensaje de que ya forma parte; tras unirse, acceso al detalle.
+- **Componente:** tercera sub-pestaña de `/playlists` (`?tab=invitaciones`) con la lista de pendientes y Aceptar/Rechazar.
+- **Casos:** Aceptar lleva al detalle de la playlist y la playlist pasa a la sub-pestaña "Colaborativas" y al grupo del
+  Sidebar; sin invitaciones, estado vacío.
 - **Criterios de aceptación:**
-  - [ ] **Usuario que entra por el link queda como participante (no creador), con permisos de TS-12.**
-  - [ ] **Link inválido/expirado (mock: token no encontrado) muestra error claro, no rompe la app ni deja pantalla en blanco.**
+  - [x] Quien acepta queda como participante, no creador, con los permisos de TS-12.
+  - [x] Sin invitaciones no se rompe la pantalla.
 
-**F6: pendiente, y es el eslabón roto de la feature.** No existe `joinPlaylistByInvite` en el service ni ruta en
-`AppRoutes`. El backend ya genera enlaces, así que hoy un link compartido **cae en `*` → `/`**: ni siquiera muestra
-el error que pide el segundo criterio. Antes de implementarla hay que cerrar el path, porque hoy conviven dos
-distintos: el backend expone `/api/playlists/join/:token` (D10) pero arma el link como
-`${FRONTEND_URL}/join/<token>` (`playlist.controller.js:220`), y `FRONTEND_URL` ni siquiera está en `.env.example`.
-La ruta de la SPA tiene que coincidir con una de las dos.
+**F6: entregada.** La lista se refresca sola porque `acceptPlaylistInvitation` y `rejectPlaylistInvitation` notifican
+por `subscribeToPlaylists`.
 
 **Dependencias:** TS-12.
 
@@ -626,24 +645,17 @@ El plan pedía `/api/songs/mood`; se documenta la ruta real como canónica.
 
 ## Orden de ejecución sugerido para el agente
 
-Estado al 2026-10-14, sobre `dev`: **entregadas** TS-10, TS-10b, TS-19 (completa), TS-20 (completa), TS-21, y la
-parte de backend de TS-12 (B5) y TS-13 (B6/B7). Con **D1, D2, D3, D4, D9, D10, D11 y D12 resueltas**.
+Estado al 2026-10-15, sobre `dev`: **entregadas** TS-10, TS-10b, TS-12, TS-13, TS-19 (completa), TS-20 (completa) y
+TS-21. Con **D1, D2, D3, D4, D9, D11, D12 resueltas**; **D10 quedó obsoleta** (la invitación es dirigida, no un link).
 
-1. **TS-19**, **TS-20**, **TS-21**, **TS-10 / TS-10b**: entregadas.
-2. **TS-12** → queda F4 + F7 de frontend y el resto de B8. B5 ya está. Ojo: la lógica de roles de B8
-   (`addSong`/`removeSong`) **ya está escrita en `playlist.controller.js` pero sin rutas** en
-   `playlist.routes.js`: montar esas dos rutas es la parte chica de B8.
-3. **TS-13** → quedan F5 + F6. B6/B7 ya están; **arrancar por cerrar el path del link** (hoy el backend expone
-   `/api/playlists/join/:token` pero arma `${FRONTEND_URL}/join/:token`, y esa ruta no existe en `AppRoutes`), y de
-   paso agregar `FRONTEND_URL` a `.env.example`.
-4. **TS-14** → decidir si se rescata `feat/ts14-crear-sala` (rebasa con conflicto en `Rooms.jsx`/`roomsService.js`)
+1. **TS-19**, **TS-20**, **TS-21**, **TS-10 / TS-10b**, **TS-12**, **TS-13**: entregadas.
+2. **TS-14** → decidir si se rescata `feat/ts14-crear-sala` (rebasa con conflicto en `Rooms.jsx`/`roomsService.js`)
    o se rehace sobre `dev`. Es el bloque que habilita TS-11, TS-15 y TS-18.
-5. **TS-16** → necesita backend: `GET /api/rooms` no acepta `query` ni trae el nombre del anfitrión (**D7**).
-6. **TS-17** → queda solo F8: apagar `roomsService.USE_MOCK`. Es lo más chico de toda la lista y el backend ya está.
-7. **TS-11** → detrás de **D5** (alta de `POST /api/rooms/:id/rating`) y **D6** (qué es "positiva").
-8. **TS-15** → **TS-18**, solo tras resolver **D8** (sincronización); sin eso, "se refleja en todos" no es real.
+3. **TS-16** → necesita backend: `GET /api/rooms` no acepta `query` ni trae el nombre del anfitrión (**D7**).
+4. **TS-17** → queda solo F8: apagar `roomsService.USE_MOCK`. Es lo más chico de toda la lista y el backend ya está.
+5. **TS-11** → detrás de **D5** (alta de `POST /api/rooms/:id/rating`) y **D6** (qué es "positiva").
+6. **TS-15** → **TS-18**, solo tras resolver **D8** (sincronización); sin eso, "se refleja en todos" no es real.
 
-> Nota: B8 requiere B7 (necesita roles de colaborador reales) y ambos ya existen, así que B8 se puede atacar ahora
-> mismo sin esperar a nada. El orden original (backend antes que frontend dentro de una feature) sigue valiendo.
-
-> Nota: B8 requiere B7 (necesita roles de colaborador reales). Si el agente prefiere, B5, B6, B7 y B8 pueden implementarse seguidos en backend y luego F4–F7 en frontend.
+> Decisión del usuario (2026-10-15) que queda para lo que viene: en una playlist colaborativa **cualquier participante
+> puede agregar y quitar canciones**, y el creador suma invitar y echar. Si alguna otra feature (salas, recomendaciones)
+> necesita otro reparto de permisos, es el mismo criterio para decidir.

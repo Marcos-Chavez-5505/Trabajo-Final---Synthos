@@ -23,7 +23,7 @@ romperlo.
 
 | Pieza | Estado | Nota |
 | --- | --- | --- |
-| Esquema Prisma | **completo** | Hay modelos para `Playlist`, `PlaylistSong`, `PlaylistMember`, `Favorite`, `Follow`, `Room`, `RoomMember`, `HostRating`, `Content`, `ContentPlayement`, `Mood`. El schema llega bastante más lejos que los endpoints. |
+| Esquema Prisma | **completo** | Hay modelos para `Playlist`, `PlaylistSong`, `PlaylistMember`, `PlaylistInvitation`, `Favorite`, `Follow`, `Room`, `RoomMember`, `HostRating`, `Content`, `ContentPlayement`, `Mood`. El schema llega bastante más lejos que los endpoints. |
 | Migraciones y seed | **aplicadas** | 6 migraciones (`20260930171420_init` … `20261003183946_add_room_avg_rating_view`); `prisma migrate status` → `Database schema is up to date!` (2026-10-08). 97 canciones, 35 géneros, 3 estados de ánimo. Los `CHECK` de `host_rating` (1–5) y de `follow` (no seguirse a uno mismo) están en la migración aplicada. |
 | `GET /api/songs` | listo | Cursor, con `LIMIT = 10` fijo en `song.service.js`. |
 | `GET /api/songs/search` | listo | Offset, contrato en `ESPECIFICACIONES-BACKEND.md` §2. |
@@ -32,7 +32,7 @@ romperlo.
 | `authenticate` | listo | JWT `Bearer`, deja el payload del token en `req.user`. |
 | `GET /api/users/search` | listo | Offset con `{ items, total, page, pageSize, totalPages }`, busca por `username` **y** por género vía las vistas `user_top_genre` / `user_genre_counts`. Los `items` salen de un `$queryRaw`, así que traen `picture_url` y `genre_name` en snake_case (el mapeo vive en `usersService`). Con sesión (auth **opcional**) cada item agrega la relación en los dos sentidos para el que busca, resuelta con dos `EXISTS` en la misma query: `isFollowing` y `followsMe` (TS-10b). |
 | Usuarios y follow | **listos** | `GET /users/me` (+ `PATCH`), `GET /users/:id` con contadores, `followers`/`following`, `POST`/`DELETE /:id/follow`. Contrato en ESPECIFICACIONES §7. |
-| Playlists y favoritos | **listos** | CRUD completo de `/api/playlists` (las canciones se agregan/quitan/reordenan en lote por `PUT /:id`) y `/api/favorites`. Contrato en ESPECIFICACIONES §8–§9. |
+| Playlists y favoritos | **listos** | CRUD completo de `/api/playlists` (con las subrutas de canciones, invitación y miembros de las colaborativas) y `/api/favorites`. Contrato en ESPECIFICACIONES §8–§9. |
 | Manejo de errores | con reparos | `errorHandler` mapea códigos Prisma a español. Además, `getId` y los validadores de `validation.js` lanzan con `error.code = 400` y el catch-all de `app.js` usa `res.status(err.code \|\| 500)`. Ver los avisos de §2. |
 
 ### 1.2 Lo que el frontend tiene contra la API real
@@ -49,7 +49,7 @@ con `register` que devuelve token, endpoints de usuarios) **ya se cerraron**. Lo
 | # | Hueco | Impacto |
 | --- | --- | --- |
 | 1 | No hay lote de canciones por id (`?ids=`) | Hidratar una playlist son N requests (REQ-SONG-1) |
-| 2 | No hay endpoints de salas CRUD, ni chat, ni recomendaciones, ni playlists colaborativas | Sprint 2 entero |
+| 2 | No hay endpoints de salas CRUD, ni chat, ni recomendaciones | Sprint 2 entero |
 | 3 | El esquema no tiene dónde guardar votos de skip ni mensajes de chat | Dos features sin soporte de datos |
 | 4 | ~~La foto de perfil se guarda como base64 en la columna `pictureUrl`~~ | **cerrado** (TS-21): `POST /api/users/me/picture` + ImageKit. Ver `PENDIENTES.md` §7 |
 
@@ -187,19 +187,25 @@ que ya aplica el mock. Verificado por humo: crear, name vacío/>50 → 400, ajen
 
 | Método | Ruta | Notas |
 | --- | --- | --- |
-| `GET` | `/api/playlists` | Las del usuario del token, con `creator` y `songs` ordenadas por posición. |
-| `POST` | `/api/playlists` | Body `{ name, description?, isPublic? }`. `type: personal`, `idCreator` del token. `201` con la playlist creada. |
-| `GET` | `/api/playlists/:id` | `404` si es de otro (no `403`). |
+| `GET` | `/api/playlists` | Las que creó el usuario del token **y** las colaborativas donde es miembro, con `creator`, `members` y `songs` ordenadas por posición. |
+| `POST` | `/api/playlists` | Body `{ name, description?, isPublic?, type }`, con `type` obligatorio (`personal` o `colab`, si no `400`). `idCreator` del token. `201` con la playlist creada; si es `colab`, también la fila de miembro con rol `creator`. |
+| `GET` | `/api/playlists/:id` | `404` si no es suya, no es miembro y no es pública (no `403`, para no filtrar existencia). |
 | `PUT` | `/api/playlists/:id` | Body `{ name?, description?, addSongs?, removeSongs?, reorder? }`. Dueño y no-favoritos; si no, `403`. |
 | `DELETE` | `/api/playlists/:id` | Dueño y no-favoritos. Borrar la fuente de una sala tiene `onDelete: Restrict` en `Room`: `409` con mensaje claro, no un 500 de Prisma (pendiente de probar cuando existan salas). |
-| `GET` | `/api/playlists/:id/members` | **Falta**: para las colaborativas (TS-12/TS-13). |
+| `POST` | `/api/playlists/:id/songs` | Body `{ songId }`. En una `personal` solo el dueño; en una `colab` cualquier miembro. `409` si ya estaba. |
+| `DELETE` | `/api/playlists/:id/songs/:songId` | Misma regla de membresía. `404` si la canción no estaba. |
+| `POST` | `/api/playlists/:id/invitation` | Body `{ userId }`. Solo del creador y solo sobre `colab`; `404` si esa persona no existe. |
+| `GET` | `/api/playlists/:id/invitations` | Solo del creador: a quién invitó y en qué estado. |
+| `DELETE` | `/api/playlists/:id/members/:userId` | Solo del creador. `400` si intenta echar a sí mismo. |
+| `GET` | `/api/playlists/invitations` | Invitaciones **pendientes** del usuario del token. |
+| `POST` | `/api/playlists/invitations/:idPlaylist/accept` | `201`; inserta el miembro `colaborator` y marca la invitación en la misma transacción. |
+| `POST` | `/api/playlists/invitations/:idPlaylist/reject` | `200`; marca la invitación como rechazada. |
 
-No existen (ni hacen falta) sub-recursos `/songs`: las canciones viajan en `GET /` y `GET /:id`, y se
-agregan/quitan/reordenan en lote por `PUT /:id` (§4.3).
+`members` viaja incluido en `GET /` y `GET /:id`, así que no hace falta un `/members` de solo lectura.
 
 - [x] `name` no vacío y de largo `<= 50`; si no, `400`, no un 500 de Prisma (verificado).
-- [x] `type` no lo manda el cliente: el service crea `personal`.
-- [ ] `members` (colaborativas) — depende de TS-12.
+- [x] `type` lo manda el cliente y es obligatorio; el controller lo valida (`400 PLAYLIST_TYPE_INVALID`).
+- [x] `members` de las colaborativas, con rol, en la respuesta de `GET /` y `GET /:id`.
 
 ### 4.3 [x] REQ-PLAYLIST-2 — Reglas que el esquema impone
 
@@ -403,8 +409,8 @@ sin imports, como pasó con `mocks/songs.js`) y se actualizan las casillas.
 | --- | --- | --- |
 | TS-10 Seguir personas | **hecho** (REQ-HTTP-1, REQ-USER-1, endpoints de follow verificados) | — |
 | TS-11 Calificar anfitrión | §7, ratings | salas |
-| TS-12 Playlist colaborativa | `PlaylistMember` + `tokenInvitation` | D1, D2 |
-| TS-13 Invitar a colaborativa | endpoints de invitación | TS-12 |
+| TS-12 Playlist colaborativa | `PlaylistMember` | **hecho** (B5, B8 y F4/F7 verificados contra la base real) |
+| TS-13 Invitar a colaborativa | `PlaylistInvitation` + endpoints de invitación | **hecho** (invitación dirigida con Aceptar/Rechazar, verificada contra la base real) |
 | TS-14/15/16 Salas | §7 completo | D5, D6 |
 | TS-17 Ordenar salas por calificación | `AVG(host_rating)` | TS-11 |
 | TS-18 Votar skip | votos de skip | **D5** |
