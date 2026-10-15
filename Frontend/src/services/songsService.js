@@ -95,7 +95,7 @@ export async function searchSongs(
 	pageSize = SEARCH_PAGE_SIZE,
 	{ signal } = {},
 ) {
-	//! El term puede ser songs (busca por artista, titulo o genero) y albums (busca por nombre de albums)
+	//! El term puede ser songs (por defecto, busca por artista, titulo o genero) y albums (busca por nombre de albums)
 	const term = String(query ?? "").trim();
 
 	const data = await get(`${SONGS_PATH}/search`, {
