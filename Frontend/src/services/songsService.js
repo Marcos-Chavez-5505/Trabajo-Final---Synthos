@@ -110,3 +110,23 @@ export async function searchSongs(
 		totalPages: data?.totalPages ?? 1,
 	};
 }
+
+/**
+ * Canciones para un estado de ánimo (TS-20, `GET /songs/recommendations`).
+ *
+ * El endpoint no pagina: devuelve hasta 20 canciones al azar del catálogo de ese
+ * ánimo, o una lista vacía si no hay ninguna.
+ *
+ * @param {string} expression Uno de `MOODS`; el backend responde 400 con
+ *   `INVALID_EXPRESSION` si no es un estado del catálogo.
+ * @param {{signal?: AbortSignal}} [options]
+ * @returns {Promise<object[]>} Canciones ya mapeadas con `toSong`.
+ */
+export async function listSongsByMood(expression, { signal } = {}) {
+	const data = await get(`${SONGS_PATH}/recommendations`, {
+		params: { expression },
+		signal,
+	});
+
+	return (data?.songs ?? []).map(toSong);
+}
