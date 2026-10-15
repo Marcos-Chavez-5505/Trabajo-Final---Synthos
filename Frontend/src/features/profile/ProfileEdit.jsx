@@ -219,16 +219,15 @@ export default function ProfileEdit({ onDone }) {
           placeholder="Nombre de usuario"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="w-full rounded px-3 py-2 Volume TextRegluar placeholder-neutral-500 outline-none"
+          className="w-full rounded px-3 py-2 Volume TextRegluar Placeholder outline-none"
         />
         <textarea
           placeholder="Contá algo sobre vos"
           value={bio}
           onChange={(e) => setBio(e.target.value)}
           rows={3}
-          className="w-full rounded px-3 py-2 Volume TextRegluar placeholder-neutral-500 outline-none"
+          className="w-full rounded px-3 py-2 Volume TextRegluar Placeholder outline-none"
         />
-        {/* TODO: falta token de color para placeholder */}
 
         {error && <p className="rounded px-3 py-2 Salmon TextMedium">{error}</p>}
 
