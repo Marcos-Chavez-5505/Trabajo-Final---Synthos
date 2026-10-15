@@ -324,39 +324,49 @@ Frontend la trate como una playlist más. No se puede editar ni borrar (403).
 
 | Endpoint | Request | Response |
 |---|---|---|
-| `GET /` | — | `{ status, playlists[] }` — las del usuario, con `creator` y `songs` ordenadas por posición |
-| `GET /:id` | — | `{ status, playlist }`. **404 si no es del dueño** |
-| `POST /` | body: `name` (obligatorio, ≤50), `description`, `isPublic`, `type` (`colab` o `personal`) | 201 `{ status, playlist }` con `creator` y `type` |
+| `GET /` | — | `{ status, playlists[] }` — las que creó **y** las colaborativas donde es miembro, con `creator`, `members` y `songs` ordenadas por posición |
+| `GET /:id` | — | `{ status, playlist }`. **404 si no es del creador, no es miembro y no es pública** |
+| `POST /` | body: `name` (obligatorio, ≤50), `description`, `isPublic`, `type` (`colab` o `personal`, **obligatorio**) | 201 `{ status, playlist }` con `creator` y `type`. 400 `PLAYLIST_TYPE_INVALID` |
 | `PUT /:id` | body: `name?`, `description?`, `addSongs?`, `removeSongs?`, `reorder?` | 200 `{ status, playlist }`. 403 si no es el dueño o si es la de favoritos, 404 si no existe |
 | `DELETE /:id` | — | 200 `{ status, message }`. 403 si no es el dueño o si es la de favoritos |
-| `POST /:id/invitation` | — | 201 `{ status, token, link }`. 400 id inválido, 404 si no existe, **403 si no es el creador**, **400 si no es `colab`** |
-| `GET /join/:token` | — (público) | `{ status, playlist: { id, name, description, creator }, isMember }`. 404 token inválido o de una playlist que no es `colab` |
-| `POST /join/:token` | — | 201 si te uniste, 200 + mensaje si ya eras miembro, 404 token inválido |
+| `POST /:id/songs` | body: `songId` | 201 `{ status, song }`. 403 `NOT_PLAYLIST_OWNER` (personal ajena) o `NOT_PLAYLIST_MEMBER` (colab sin membresía), 409 si ya estaba |
+| `DELETE /:id/songs/:songId` | — | 200 `{ status, message }`. 404 si no estaba, 403 si no sos miembro |
+| `POST /:id/invitation` | body: `userId` | 201 `{ status, invitation, converted }`. 400 id inválido / `INVITATION_SELF` / `INVITATION_FAVORITES_LOCKED`, 404 si no existe la playlist o la persona (`INVITATION_USER_NOT_FOUND`), 403 si no es el creador, 409 `PLAYLIST_ALREADY_MEMBER`. `converted: true` si la playlist era `personal` y pasó a `colab` |
+| `GET /:id/invitations` | — | `{ status, invitations[] }`. Solo el creador (403 si no) |
+| `DELETE /:id/members/:userId` | — | 200 `{ status }`. Solo el creador, 404 si no era miembro, 400 `CANNOT_REMOVE_CREATOR` |
+| `GET /invitations` | — | `{ status, invitations[] }` — las **pendientes** recibidas |
+| `POST /invitations/:idPlaylist/accept` | — | 201 `{ status, invitation }`. 404 `INVITATION_NOT_FOUND` si no hay pendiente |
+| `POST /invitations/:idPlaylist/reject` | — | 200 `{ status, invitation }`. 404 `INVITATION_NOT_FOUND` |
 
-No hay sub-recursos `/songs`: las canciones llegan incluidas en `GET /` y `GET /:id`, y se agregan,
-quitan o reordenan en lote a través de `PUT /:id` (`addSongs`/`removeSongs`/`reorder`).
+Las canciones se agregan y quitan con `POST|DELETE /:id/songs`, que son las rutas que aplican los roles;
+`PUT /:id` sigue siendo del creador y ya no se usa para tocar canciones.
 
 ### 9.1 Playlists colaborativas e invitaciones (TS-12/TS-13, backend)
 
-**Crear una colaborativa** es `POST /` con `type: "colab"`. Ojo: un `type` desconocido **no da 400**, cae en
-`personal` silenciosamente (la normalización está en `playlist.service.js`, no en el controller). El dueño queda en
-`Playlist.idCreator`; la fila `PlaylistMember` con rol `creator` **no** se inserta.
+**Crear una colaborativa** es `POST /` con `type: "colab"`, y el controller **valida el tipo**: sin `type`, o con uno
+que no sea `personal` o `colab`, responde `400 PLAYLIST_TYPE_INVALID`. Cuando es `colab`, se inserta la fila
+`PlaylistMember` con rol `creator` (el dueño se reconoce por `idCreator` y por esa fila).
 
-**Permisos (D9, la más restrictiva):** `PUT /:id` y `DELETE /:id` validan `idCreator !== req.user.sub → 403`. **Los
-colaboradores no pueden editar**: aunque `PlaylistMember` los registre, `PUT` no mira la tabla de miembros, así que
-quien se unió por invitación recibe 403 al intentar agregar canciones. Es el ítem pendiente de TS-12/B8.
+**Permisos (D9):** `PUT /:id` y `DELETE /:id` validan `idCreator !== req.user.sub → 403`. Editar el nombre, borrar la
+playlist, invitar y echar son del creador. **Las canciones no**: `POST /:id/songs` y `DELETE /:id/songs/:songId`
+dejan que cualquier miembro de una `colab` agregue y quite; en una `personal`, solo el dueño.
 
-**Invitaciones:** el token vive en `Playlist.tokenInvitation` y se genera con `crypto.randomBytes(32)`.
+**Invitaciones (redefinido el 2026-10-15):** no hay link. La invitación va **a una persona que ya existe**, con estado
+pendiente, en la tabla `playlist_invitation` (clave primaria `[id_playlist, id_receiver]`, enum `invitation_status`
+con `pendiente | aceptada | rechazada`).
 
-- `POST /:id/invitation` solo para el creador y solo sobre playlists `colab`. **Regenera el token en cada pedido**
-  (D11), así que pedir el link otra vez **invalida los links anteriores**. Responde **201** (el plan decía 200).
-- El campo `link` se arma como `${process.env.FRONTEND_URL}/join/<token>`. **`FRONTEND_URL` no está en
-  `.env.example`**: sin ella el link sale `undefined/join/<token>`.
-- `POST /join/:token` inserta `PlaylistMember` con `role: "colaborator"` de forma idempotente (`alreadyMember`).
-
-⚠️ **Los paths no coinciden entre backend y frontend:** las rutas son `/api/playlists/join/:token`, pero el link que
-genera el backend apunta a `/join/<token>`, y **ninguna de las dos existe hoy en `AppRoutes.jsx`**, así que un enlace
-compartido cae en la ruta `*` y redirige a `/`. Cerrar ese desajuste es el primer paso de TS-13/F6.
+- `POST /:id/invitation` solo para el creador y solo sobre `colab`. Invitar de nuevo a alguien que ya estaba invitado
+  deja la fila en `pendiente` otra vez (D11); si ya es miembro, `409 PLAYLIST_ALREADY_MEMBER`.
+- **Invitar convierte la playlist en colaborativa.** Si la playlist era `personal`, la misma transacción hace
+  `UPDATE playlist SET type = 'colab'` e inserta la fila `playlist_member` del creador, así que no existe el
+  concepto de "miembro de una playlist personal". La respuesta trae `converted: true`. La playlist de
+  favoritos queda fuera (`400 INVITATION_FAVORITES_LOCKED`).
+- `GET /invitations` lista solo las pendientes del usuario que pregunta; `POST /invitations/:idPlaylist/accept`
+  inserta el `PlaylistMember` con rol `colaborator` y marca la invitación en la misma transacción; `reject` la marca
+  como `rechazada`.
+- `DELETE /:id/members/:userId` saca al participante y borra sus invitaciones.
+- La columna `Playlist.tokenInvitation` **ya no existe** (migración `drop_token_invitation`): el flujo por token y
+  `FRONTEND_URL` se eliminaron por completo.
 
 ---
 

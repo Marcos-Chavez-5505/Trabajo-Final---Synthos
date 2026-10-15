@@ -340,5 +340,37 @@ sepa qué pasó.
 
 **Lo que sigue:** el `message` todavía viene del backend y se muestra tal cual para los `code`
 desconocidos, así que un mensaje nuevo en inglés se vería en pantalla. La regla de la casa es
-español, pero no hay lint que loProteja.
+español, pero no hay lint que lo proteja.
+
+## 10. Playlists colaborativas e invitaciones (nuevo, 2026-10-15)
+
+**Estado: implementado de punta a punta** (TS-12 y TS-13), verificado contra la base real con dos
+usuarios.
+
+- **Crear:** `POST /api/playlists` con `type: "colab"`; el controller valida el tipo (`400
+  PLAYLIST_TYPE_INVALID`) e inserta la fila `playlist_member` con rol `creator`. El frontend tenía un bug
+  abierto: no mandaba `type` y **toda creación devolvía 400**; ahora `playlistsService.createPlaylist`
+  manda el tipo y `PlaylistCreateForm` ofrece "Solo vos / Colaborativa".
+- **Permisos:** en una `colab` cualquier participante **agrega y quita** canciones
+  (`POST|DELETE /playlists/:id/songs`); editar, borrar, invitar y echar son del creador. `GET /:id` pide
+  sesión y responde `404` si no sos creador, ni miembro, ni es pública.
+- **Invitación dirigida (redefine TS-13):** no hay link. Se invita a una persona que ya existe
+  (`POST /:id/invitation` con `{ userId }`), la invitación queda pendiente en la tabla nueva
+  `playlist_invitation` y se acepta o rechaza desde la sub-pestaña **Invitaciones** de `/playlists`.
+  `DELETE /:id/members/:userId` saca a un participante. Migración `20261015203304_playlist_invitation`.
+- **Invitar convierte la playlist en colaborativa:** si la playlist era `personal`, la misma transacción la pasa a
+  `colab` e inserta la fila del creador; la respuesta trae `converted: true` y el detalle se recarga. No existe
+  el concepto de "miembro de una playlist personal"; la de favoritos es la única que no se puede invitar.
+- **Reparto de pantallas:** `toPlaylist` expone `type`, `role`, `creator` y `members`, así que el Sidebar y
+  `/playlists` separan "Mis Playlists" (las que creaste) de "Colaborativas" (donde participás), y el
+  detalle muestra participantes e invitados con su estado.
+
+**Lo que sigue:**
+
+- El buscador para invitar pide **2 letras** antes de pegarle a `GET /users/search`: con la query vacía ese
+  endpoint devuelve el catálogo completo. El backend sí pagina (`LIMIT`/`OFFSET`), pero el `ILIKE '%texto%'`
+  no puede usar un índice; con muchos usuarios, el arreglo es un índice trigram (`pg_trgm`).
+- `PUT /playlists/:id` sigue aceptando `addSongs`/`removeSongs` en lote y siendo del creador. El frontend
+  ya no lo usa para canciones, así que se puede dejar hasta que aparezca un caso en lote que lo necesite.
+- Sin E2E: el flujo se verificó con `curl` contra la base real, no en navegador (ver §1).
 
