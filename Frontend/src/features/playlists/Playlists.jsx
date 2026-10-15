@@ -8,6 +8,7 @@ import {
 import playlistIcon from '../../assets/playlist.svg'
 import PlaylistCreateForm from './PlaylistCreateForm.jsx'
 import PlaylistTile from './PlaylistTile.jsx'
+import { mapApiError } from '../../utils/mapError.js'
 
 /**
  * "Mis Playlists": la biblioteca personal (TS-09).
@@ -38,7 +39,7 @@ export default function Playlists() {
         if (active) setResponse({ key: userId, playlists, error: null })
       })
       .catch((cause) => {
-        if (active) setResponse({ key: userId, playlists: [], error: cause.message })
+        if (active) setResponse({ key: userId, playlists: [], error: mapApiError(cause) })
       })
 
     return () => {

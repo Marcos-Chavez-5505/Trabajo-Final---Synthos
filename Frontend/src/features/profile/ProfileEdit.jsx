@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Avatar from '../../components/ui/Avatar.jsx'
 import useAuth from '../../hooks/useAuth.js'
+import { mapApiError } from '../../utils/mapError.js'
 import { prepareProfileImage, previewUrlFor } from './profileImage.js'
 
 const ACCEPT = 'image/jpeg,image/png,image/webp'
@@ -119,7 +120,9 @@ export default function ProfileEdit({ onDone }) {
 
       onDone()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar el perfil.')
+      // Por `code`: el texto del servidor puede cambiar sin romper la pantalla
+      // (y el error de compresión de la foto, que es local, ya llega en español).
+      setError(mapApiError(err, 'No se pudo guardar el perfil.'))
     } finally {
       // Va en `finally` y no solo en el camino feliz: si el guardado falla y el
       // botón queda deshabilitado, el usuario no puede reintentar ni cancelar.

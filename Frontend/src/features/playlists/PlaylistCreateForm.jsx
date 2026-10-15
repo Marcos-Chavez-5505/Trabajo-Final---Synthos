@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { mapApiError } from '../../utils/mapError.js'
 
 /**
  * Formulario de creación de playlist. Se usa suelto en `/playlists`; la edición
@@ -25,7 +26,7 @@ export default function PlaylistCreateForm({ onCreate, onCancel }) {
     try {
       await onCreate({ name, description })
     } catch (cause) {
-      setError(cause.message)
+      setError(mapApiError(cause))
     } finally {
       setSaving(false)
     }

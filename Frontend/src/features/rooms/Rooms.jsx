@@ -12,6 +12,7 @@ import { listRooms, ROOM_SORTS, DEFAULT_ROOM_SORT } from '../../services/roomsSe
 import RoomCard from '../../components/cards/RoomCard.jsx'
 import roomIcon from '../../assets/join_music_room.svg'
 import threeDotsIcon from '../../assets/three_dots.svg'
+import { mapApiError } from '../../utils/mapError.js'
 
 /**
  * `/salas`: listado de salas ordenable (TS-17).
@@ -44,7 +45,7 @@ export default function Rooms() {
         if (active) setResponse({ key: sort, rooms, error: null })
       })
       .catch((cause) => {
-        if (active) setResponse({ key: sort, rooms: [], error: cause.message })
+        if (active) setResponse({ key: sort, rooms: [], error: mapApiError(cause) })
       })
 
     return () => {

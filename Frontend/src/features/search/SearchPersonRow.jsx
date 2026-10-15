@@ -3,6 +3,7 @@ import UserRow from '../../components/cards/UserRow.jsx'
 import FollowButton from '../social/FollowButton.jsx'
 import useAuth from '../../hooks/useAuth.js'
 import { followUser, unfollowUser } from '../../services/usersService.js'
+import { mapApiError } from '../../utils/mapError.js'
 
 /**
  * Resultado de la búsqueda de personas con botón seguir (TS-10b).
@@ -43,7 +44,7 @@ export default function SearchPersonRow({ person }) {
       setFollowing(next.isFollowing)
     } catch (cause) {
       setFollowing(previous)
-      setError(cause.message)
+      setError(mapApiError(cause))
     } finally {
       setPending(false)
     }
