@@ -1,233 +1,247 @@
-// Uso: node prisma/seedSongs.js [ruta/al/archivo.json]
-// Por defecto lee prisma/data/songs.json
+// Uso: node prisma/seedMusic.js [ruta/al/archivo.json]
 //
-// Puebla SOLO las tablas del modelo de SYNTHOS que tienen datos en el JSON:
-//   artist, song, genre, mood, song_artist, song_genre, song_mood
-// Cualquier campo del JSON que no exista en la base se ignora.
-// Las canciones sin género o sin mood se descartan.
+// Carga el catálogo de música (artistas, álbumes, canciones, géneros y moods) a
+// partir del JSON que genera jamendo_seed.html. Es idempotente: se puede volver
+// a correr sin duplicar nada.
+//
+// Formato esperado del JSON (todo anidado):
+//   [ { id, name, image_url, albums: [ { id, name, release_date, cover_url, type,
+//       songs: [ { id, title, release_date, cover_url, duration, url, moods,
+//                  musicinfo: { tags: { genres: [] } } } ] } ] } ]
+//
+// Los ids de Jamendo se guardan tal cual como id de artista, álbum y canción.
+// Es a propósito: seedRooms.js arma las playlists con ids de canciones de
+// Jamendo (43886, 306166, etc.). Como los ids se insertan a mano, al final se
+// reajustan las secuencias de autoincrement para que los próximos INSERT de la
+// app no choquen con ellos.
+//
+// Orden: primero este archivo, después seedRooms.js.
+//
+// Los campos shorturl/shareurl del JSON se ignoran (no están en el schema).
 
-const fs = require("node:fs");
-const path = require("node:path");
+const fs = require("fs");
+const path = require("path");
 
 const prisma = require("../src/prisma/prismaClient");
 
-const inputPath = "prisma/data/songs.json";
+const DEFAULT_FILE = path.join(__dirname, "data", "songs.json");
+const MOODS = ["neutral", "happy", "sad"];
+const ALBUM_TYPES = ["single", "ep", "album"];
 
-// ---------- helpers ----------
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-const clean = (v) => (typeof v === "string" ? v.trim() : v);
+const clip = (value, max) =>
+	String(value ?? "")
+		.trim()
+		.slice(0, max);
 
-// Lista de tags normalizada: trim + minúsculas + sin duplicados + sin vacíos
-const normalizeList = (list, maxLen) => [
-	...new Set(
-		(Array.isArray(list) ? list : [])
-			.map((x) => String(x).trim().toLowerCase().slice(0, maxLen))
-			.filter(Boolean),
-	),
-];
-
-const chunk = (arr, size = 1000) => {
-	const out = [];
-	for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-	return out;
+const toId = (value) => {
+	const n = Number(value);
+	return Number.isInteger(n) && n > 0 ? n : null;
 };
 
-function loadSongs(file) {
-	const raw = JSON.parse(fs.readFileSync(path.resolve(file), "utf8"));
-	if (Array.isArray(raw)) return raw;
-	if (Array.isArray(raw?.results)) return raw.results;
-	throw new Error(
-		"El JSON debe ser un array de canciones (o un objeto con 'results').",
-	);
+const toDate = (value) => {
+	if (!value) return null;
+	const d = new Date(value);
+	return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const toText = (value) =>
+	typeof value === "string" && value.trim() ? value.trim() : null;
+
+function loadData(file) {
+	if (!fs.existsSync(file)) {
+		throw new Error(
+			`No existe el archivo ${file}. Copiá ahí el JSON de jamendo_seed.html.`,
+		);
+	}
+	const data = JSON.parse(fs.readFileSync(file, "utf8"));
+	if (!Array.isArray(data)) {
+		throw new Error(
+			"El JSON tiene que ser un array de artistas (artista → álbumes → canciones).",
+		);
+	}
+	return data;
 }
 
-// Devuelve { song } si es válida, o { reason } si hay que ignorarla
-function parseSong(s) {
-	const id = Number(s.id);
-	const idArtist = Number(s.id_artist);
-	const title = clean(s.title);
-	const artistName = clean(s.artist_name);
-	const url = clean(s.url);
-
-	const genres = normalizeList(s.musicinfo?.tags?.genres, 80);
-	const moods = normalizeList(s.moods, 80);
-
-	if (!genres.length) return { reason: "sin género" };
-	if (!moods.length) return { reason: "sin mood" };
-
-	// Campos NOT NULL de la base
-	if (
-		!Number.isInteger(id) ||
-		!Number.isInteger(idArtist) ||
-		!title ||
-		!artistName ||
-		!url
-	) {
-		return { reason: "faltan datos obligatorios (id, título, artista o url)" };
-	}
-
-	let releaseDate = null;
-	if (s.release_date) {
-		const d = new Date(s.release_date);
-		if (!Number.isNaN(d.getTime())) releaseDate = d;
-	}
-
-	const duration =
-		s.duration == null ||
-		s.duration === "" ||
-		!Number.isFinite(Number(s.duration))
-			? null
-			: Math.round(Number(s.duration));
-
-	return {
-		song: {
-			id,
-			title: title.slice(0, 200),
-			idArtist,
-			artistName: artistName.slice(0, 150),
-			releaseDate,
-			coverUrl: clean(s.cover_url) || null,
-			duration,
-			url,
-			genres,
-			moods,
-		},
+// Cachés para no repetir upserts de géneros y moods (se buscan por nombre).
+function createLookup(model) {
+	const cache = new Map();
+	return async (tx, rawName) => {
+		const name = clip(rawName, 80);
+		if (!name) return null;
+		if (!cache.has(name)) {
+			const row = await tx[model].upsert({
+				where: { name },
+				update: {},
+				create: { name },
+				select: { id: true },
+			});
+			cache.set(name, row.id);
+		}
+		return cache.get(name);
 	};
 }
 
-// ---------- main ----------
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
 
 async function main() {
-	const rawSongs = loadSongs(inputPath);
-	console.log(`Leídas ${rawSongs.length} canciones de ${inputPath}`);
+	const file = path.resolve(DEFAULT_FILE);
+	const artists = loadData(file);
 
-	// 1) Validar y descartar
-	const skipped = {};
-	const valid = new Map(); // id -> canción (evita repetidos dentro del mismo JSON)
-	let duplicatesInFile = 0;
+	const getGenreId = createLookup("genre");
+	const getMoodId = createLookup("mood");
 
-	for (const raw of rawSongs) {
-		const { song, reason } = parseSong(raw);
-		if (!song) {
-			skipped[reason] = (skipped[reason] ?? 0) + 1;
-		} else if (valid.has(song.id)) {
-			duplicatesInFile++;
-		} else {
-			valid.set(song.id, song);
-		}
-	}
-	const songs = [...valid.values()];
+	const resumen = await prisma.$transaction(
+		async (tx) => {
+			const stats = { artists: 0, albums: 0, songs: 0, omitidos: 0 };
 
-	// 2) Insertar todo en una sola transacción (si algo falla, no queda nada a medias)
-	const { added, alreadyExisting, genreCount, moodCount } =
-		await prisma.$transaction(
-			async (tx) => {
-				// Artistas (se conserva el id de origen para mantener la relación)
-				const artists = new Map(songs.map((s) => [s.idArtist, s.artistName]));
-				for (const part of chunk(
-					[...artists].map(([id, name]) => ({ id, name })),
-				)) {
-					await tx.artist.createMany({ data: part, skipDuplicates: true });
-				}
-
-				// Géneros y moods únicos
-				const genreNames = [...new Set(songs.flatMap((s) => s.genres))];
-				const moodNames = [...new Set(songs.flatMap((s) => s.moods))];
-
-				await tx.genre.createMany({
-					data: genreNames.map((name) => ({ name })),
-					skipDuplicates: true,
-				});
-				await tx.mood.createMany({
-					data: moodNames.map((name) => ({ name })),
-					skipDuplicates: true,
-				});
-
-				const genreId = new Map(
-					(await tx.genre.findMany()).map((g) => [g.name, g.id]),
-				);
-				const moodId = new Map(
-					(await tx.mood.findMany()).map((m) => [m.name, m.id]),
-				);
-
-				// Canciones que todavía no están en la base
-				const existingIds = new Set(
-					(await tx.song.findMany({ select: { id: true } })).map((s) => s.id),
-				);
-				const toAdd = songs.filter((s) => !existingIds.has(s.id));
-
-				for (const part of chunk(toAdd)) {
-					await tx.song.createMany({
-						data: part.map((s) => ({
-							id: s.id,
-							title: s.title,
-							idArtist: s.idArtist,
-							releaseDate: s.releaseDate,
-							coverUrl: s.coverUrl,
-							duration: s.duration,
-							url: s.url,
-						})),
-						skipDuplicates: true,
-					});
-				}
-
-				// Relaciones
-				const songArtists = toAdd.map((s) => ({
-					idSong: s.id,
-					idArtist: s.idArtist,
-				}));
-				const songGenres = toAdd.flatMap((s) =>
-					s.genres.map((g) => ({ idSong: s.id, idGenre: genreId.get(g) })),
-				);
-				const songMoods = toAdd.flatMap((s) =>
-					s.moods.map((m) => ({ idSong: s.id, idMood: moodId.get(m) })),
-				);
-
-				for (const part of chunk(songArtists))
-					await tx.songArtist.createMany({ data: part, skipDuplicates: true });
-				for (const part of chunk(songGenres))
-					await tx.songGenre.createMany({ data: part, skipDuplicates: true });
-				for (const part of chunk(songMoods))
-					await tx.songMood.createMany({ data: part, skipDuplicates: true });
-
-				// Como insertamos ids explícitos en columnas autoincrementales, hay que
-				// adelantar las secuencias para que los próximos INSERT no choquen.
-				for (const table of ["artist", "song", "genre", "mood"]) {
-					await tx.$queryRawUnsafe(
-						`SELECT setval(pg_get_serial_sequence('${table}', 'id'),
-                         COALESCE(MAX(id), 1), MAX(id) IS NOT NULL)
-           FROM ${table}`,
+			for (const artist of artists) {
+				const idArtist = toId(artist.id);
+				const name = clip(artist.name, 150);
+				if (!idArtist || !name) {
+					console.warn(
+						`Artista omitido (sin id o nombre): ${JSON.stringify(artist.id)}`,
 					);
+					stats.omitidos++;
+					continue;
 				}
 
-				return {
-					added: toAdd.length,
-					alreadyExisting: songs.length - toAdd.length,
-					genreCount: genreNames.length,
-					moodCount: moodNames.length,
-				};
-			},
-			{ timeout: 10 * 60 * 1000, maxWait: 30 * 1000 },
-		);
+				const artistData = { name, pictureUrl: toText(artist.image_url) };
+				await tx.artist.upsert({
+					where: { id: idArtist },
+					update: artistData,
+					create: { id: idArtist, ...artistData },
+				});
+				stats.artists++;
 
-	// ---------- resumen ----------
-	const totalSkipped = Object.values(skipped).reduce((a, b) => a + b, 0);
+				for (const album of artist.albums ?? []) {
+					const idAlbum = toId(album.id);
+					const albumName = clip(album.name, 200);
+					if (!idAlbum || !albumName || !ALBUM_TYPES.includes(album.type)) {
+						console.warn(
+							`Álbum omitido (id, nombre o tipo inválido): ${JSON.stringify(album.id)}`,
+						);
+						stats.omitidos++;
+						continue;
+					}
+
+					const albumData = {
+						name: albumName,
+						idArtist,
+						releaseDate: toDate(album.release_date),
+						coverUrl: toText(album.cover_url),
+						type: album.type,
+					};
+					await tx.album.upsert({
+						where: { id: idAlbum },
+						update: albumData,
+						create: { id: idAlbum, ...albumData },
+					});
+					stats.albums++;
+
+					for (const song of album.songs ?? []) {
+						const idSong = toId(song.id);
+						const title = clip(song.title, 200);
+						const url = toText(song.url);
+						if (!idSong || !title || !url) {
+							console.warn(
+								`Canción omitida (sin id, título o url): ${JSON.stringify(song.id)}`,
+							);
+							stats.omitidos++;
+							continue;
+						}
+
+						const songData = {
+							title,
+							idArtist,
+							idAlbum,
+							releaseDate: toDate(song.release_date),
+							coverUrl: toText(song.cover_url),
+							duration: Number.isInteger(song.duration) ? song.duration : null,
+							url,
+						};
+						await tx.song.upsert({
+							where: { id: idSong },
+							update: songData,
+							create: { id: idSong, ...songData },
+						});
+						stats.songs++;
+
+						// Géneros y moods: se reemplazan los vínculos de la canción para
+						// que volver a correr el seed deje exactamente lo del JSON.
+						const genreNames = new Set(song.musicinfo?.tags?.genres ?? []);
+						const genreIds = [];
+						for (const g of genreNames) {
+							const id = await getGenreId(tx, g);
+							if (id) genreIds.push(id);
+						}
+						await tx.songGenre.deleteMany({ where: { idSong } });
+						await tx.songGenre.createMany({
+							data: [...new Set(genreIds)].map((idGenre) => ({
+								idSong,
+								idGenre,
+							})),
+							skipDuplicates: true,
+						});
+
+						const moodIds = [];
+						for (const m of new Set(song.moods ?? [])) {
+							if (!MOODS.includes(m)) {
+								console.warn(
+									`Mood ignorado "${m}" en la canción ${idSong} (solo ${MOODS.join(", ")}).`,
+								);
+								continue;
+							}
+							moodIds.push(await getMoodId(tx, m));
+						}
+						await tx.songMood.deleteMany({ where: { idSong } });
+						await tx.songMood.createMany({
+							data: moodIds.map((idMood) => ({ idSong, idMood })),
+							skipDuplicates: true,
+						});
+					}
+				}
+			}
+
+			return stats;
+		},
+		{ timeout: 5 * 60 * 1000 },
+	);
+
+	// Los ids se insertaron a mano: la secuencia de autoincrement no avanza sola.
+	for (const table of ["artist", "album", "song"]) {
+		await prisma.$queryRawUnsafe(
+			`SELECT setval(pg_get_serial_sequence('"${table}"', 'id'), GREATEST((SELECT COALESCE(MAX(id), 1) FROM "${table}"), 1))`,
+		);
+	}
+
+	const [genres, moods] = await Promise.all([
+		prisma.genre.count(),
+		prisma.mood.count(),
+	]);
 
 	console.log("\n===== RESUMEN =====");
-	console.log(`Canciones leídas:            ${rawSongs.length}`);
-	console.log(`Canciones añadidas:          ${added}`);
-	console.log(`Ya existían en la base:      ${alreadyExisting}`);
-	console.log(`Repetidas dentro del JSON:   ${duplicatesInFile}`);
-	console.log(`Ignoradas:                   ${totalSkipped}`);
-	for (const [why, n] of Object.entries(skipped)) {
-		console.log(`   - ${why}: ${n}`);
+	console.log(`Archivo:    ${file}`);
+	console.log(`Artistas:   ${resumen.artists}`);
+	console.log(`Álbumes:    ${resumen.albums}`);
+	console.log(`Canciones:  ${resumen.songs}`);
+	console.log(`Géneros en la base: ${genres}`);
+	console.log(`Moods en la base:   ${moods}`);
+	if (resumen.omitidos > 0) {
+		console.log(
+			`Omitidos por datos inválidos: ${resumen.omitidos} (ver avisos arriba)`,
+		);
 	}
-	console.log(`Géneros distintos usados:    ${genreCount}`);
-	console.log(`Moods distintos usados:      ${moodCount}`);
 }
 
 main()
 	.catch((err) => {
+		console.log(`ARCHIVO LEIDO: ${DEFAULT_FILE}`);
 		console.error("\nError: se revirtió todo, no se guardó nada.");
 		console.error(err);
 		process.exitCode = 1;

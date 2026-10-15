@@ -81,7 +81,7 @@ export async function getSongById(id, { signal } = {}) {
 }
 
 /**
- * Busca canciones por título, artista o género, paginadas por número de página.
+ * Busca canciones por título, artista, género o album, paginadas por número de página.
  *
  * @param {string} query Texto a buscar. Vacío devuelve el catálogo paginado.
  * @param {number} [page] Página 1-based.
@@ -95,6 +95,7 @@ export async function searchSongs(
 	pageSize = SEARCH_PAGE_SIZE,
 	{ signal } = {},
 ) {
+	//! El term puede ser songs (por defecto, busca por artista, titulo o genero) y albums (busca por nombre de albums)
 	const term = String(query ?? "").trim();
 
 	const data = await get(`${SONGS_PATH}/search`, {

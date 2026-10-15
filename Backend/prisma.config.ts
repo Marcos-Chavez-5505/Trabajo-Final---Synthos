@@ -10,8 +10,7 @@ export default defineConfig({
 		// playlists fuente. Los dos son idempotentes, así que `db seed` los puede
 		// correr las veces que haga falta. El orden importa: las salas referencian
 		// canciones del catálogo.
-		seed: "node prisma/seed.js && node prisma/seedRooms.js",
+		seed: "node prisma/seed.js && node prisma/seedRooms.js && node prisma/seedUsers.js",
 	},
 	datasource: { url: env("DATABASE_URL") },
 });
-

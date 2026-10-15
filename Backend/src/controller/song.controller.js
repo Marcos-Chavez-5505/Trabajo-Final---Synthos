@@ -27,11 +27,19 @@ async function getSongById(req, res, next) {
 
 async function searchSongs(req, res, next) {
 	try {
-		const { query, page, pageSize } = req.query;
+		const { query, page, pageSize, type = "songs" } = req.query;
 
-		const result = await songService.searchSongs(query, { page, pageSize });
+		if (type === "songs") {
+			return res.json(await songService.searchSongs(query, { page, pageSize }));
+		}
 
-		res.status(200).json(result);
+		if (type === "albums") {
+			return res.json(
+				await albumService.searchAlbums(query, { page, pageSize }),
+			);
+		}
+
+		res.json({ songs, albums });
 	} catch (error) {
 		next(error);
 	}

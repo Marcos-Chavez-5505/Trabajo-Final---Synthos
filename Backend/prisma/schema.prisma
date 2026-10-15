@@ -8,20 +8,20 @@ datasource db {
 }
 
 model User {
-  id                  Int                @id @default(autoincrement())
-  email               String             @unique @db.VarChar(255)
-  username            String             @unique @db.VarChar(50)
-  passwordHash        String             @map("password_hash") @db.VarChar(255)
-  pictureUrl          String?            @map("picture_url")
+  id                  Int                  @id @default(autoincrement())
+  email               String               @unique @db.VarChar(255)
+  username            String               @unique @db.VarChar(50)
+  passwordHash        String               @map("password_hash") @db.VarChar(255)
+  pictureUrl          String?              @map("picture_url")
   biography           String?
-  registrationDate    DateTime           @default(now()) @map("registration_date") @db.Timestamp(6)
+  registrationDate    DateTime             @default(now()) @map("registration_date") @db.Timestamp(6)
   contents            Content[]
   contentPlayements   ContentPlayement[]
   favorites           Favorite[]
-  followers           Follow[]           @relation("Followed")
-  following           Follow[]           @relation("Follower")
-  ratingsReceived     HostRating[]       @relation("Host")
-  ratingsGiven        HostRating[]       @relation("Rater")
+  followers           Follow[]             @relation("Followed")
+  following           Follow[]             @relation("Follower")
+  ratingsReceived     HostRating[]         @relation("Host")
+  ratingsGiven        HostRating[]         @relation("Rater")
   playlistsCreated    Playlist[]
   playlistMemberships PlaylistMember[]
   playlistSongsAdded  PlaylistSong[]
@@ -35,16 +35,33 @@ model User {
 model Artist {
   id          Int          @id @default(autoincrement())
   name        String       @db.VarChar(150)
+  pictureUrl  String?      @map("picture_url")
+  albums      Album[]
   songs       Song[]
   songArtists SongArtist[]
 
   @@map("artist")
 }
 
+model Album {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(200)
+  idArtist    Int       @map("id_artist")
+  releaseDate DateTime? @map("release_date") @db.Date
+  coverUrl    String?   @map("cover_url")
+  type        AlbumType
+  artist      Artist    @relation(fields: [idArtist], references: [id])
+  songs       Song[]
+
+  @@index([idArtist])
+  @@map("album")
+}
+
 model Song {
   id            Int            @id @default(autoincrement())
   title         String         @db.VarChar(200)
   idArtist      Int            @map("id_artist")
+  idAlbum       Int            @map("id_album")
   releaseDate   DateTime?      @map("release_date") @db.Date
   coverUrl      String?        @map("cover_url")
   duration      Int?
@@ -53,10 +70,12 @@ model Song {
   favorites     Favorite[]
   playlistSongs PlaylistSong[]
   artist        Artist         @relation(fields: [idArtist], references: [id])
+  album         Album          @relation(fields: [idAlbum], references: [id])
   songArtists   SongArtist[]
   songGenres    SongGenre[]
   songMoods     SongMood[]
 
+  @@index([idAlbum])
   @@map("song")
 }
 
@@ -107,18 +126,18 @@ model SongMood {
 }
 
 model Playlist {
-  id              Int                 @id @default(autoincrement())
-  name            String              @db.VarChar(150)
-  description     String?
-  idCreator       Int                 @map("id_creator")
-  type            PlaylistType
-  isPublic        Boolean             @default(false) @map("is_public")
-  creationDate    DateTime            @default(now()) @map("creation_date") @db.Timestamp(6)
-  creator         User                @relation(fields: [idCreator], references: [id], onDelete: Cascade)
-  members         PlaylistMember[]
-  songs           PlaylistSong[]
-  invitations     PlaylistInvitation[]
-  rooms           Room[]
+  id           Int                  @id @default(autoincrement())
+  name         String               @db.VarChar(150)
+  description  String?
+  idCreator    Int                  @map("id_creator")
+  type         PlaylistType
+  isPublic     Boolean              @default(false) @map("is_public")
+  creationDate DateTime             @default(now()) @map("creation_date") @db.Timestamp(6)
+  creator      User                 @relation(fields: [idCreator], references: [id], onDelete: Cascade)
+  members      PlaylistMember[]
+  songs        PlaylistSong[]
+  invitations  PlaylistInvitation[]
+  rooms        Room[]
 
   @@map("playlist")
 }
@@ -275,11 +294,12 @@ view HostAvgRating {
   // con este nombre en snake_case.
   @@map("host_avg_rating")
 }
+
 enum PlaylistType {
   personal
   colab
   favorites
-  
+
   @@map("playlist_type")
 }
 
@@ -296,6 +316,14 @@ enum InvitationStatus {
   rechazada
 
   @@map("invitation_status")
+}
+
+enum AlbumType {
+  single
+  ep
+  album
+
+  @@map("album_type")
 }
 
 enum RoomRole {
