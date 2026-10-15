@@ -176,18 +176,27 @@ export async function getFollowCounts(userId) {
 }
 
 /**
- * ¿La primera persona sigue a la segunda?
+ * Estado de la relación entre el viewer y otra persona, en los dos sentidos.
  *
- * Se resuelve contra los seguidores de la segunda: si el primero está en esa
- * lista, la relación existe. El backend no expone un endpoint directo para la
- * relación.
+ * Usa `GET /users/:id/follow-status`, que resuelve las dos direcciones y el
+ * `isMutual` con una sola consulta. Antes esto se armaba con dos llamadas que
+ * bajaban la lista completa de seguidores de cada lado para mirar un id.
  *
- * @returns {Promise<boolean>}
+ * @param {string} viewerId Quién mira (sale del token, no del body).
+ * @param {string} personId A quién se mira.
+ * @returns {Promise<{isFollowing: boolean, isFollowedBy: boolean, isMutual: boolean}>}
  */
-export async function isFollowing(followerId, followingId) {
-  const data = await get(`/users/${followingId}/followers`)
+export async function followStatus(viewerId, personId, { signal } = {}) {
+  const data = await get(`/users/${personId}/follow-status`, { signal })
 
-  return (data.followers ?? []).some((user) => String(user.id) === String(followerId))
+  const isFollowing = Boolean(data.viewerFollows)
+  const isFollowedBy = Boolean(data.targetFollows)
+
+  return {
+    isFollowing,
+    isFollowedBy,
+    isMutual: isFollowing && isFollowedBy,
+  }
 }
 
 /**
@@ -227,13 +236,13 @@ export async function listFollowers(userId) {
  *   de sus seguidores, no el nuestro.
  */
 async function relationState(followerId, followingId) {
-  const [counts, following] = await Promise.all([
+  const [counts, relation] = await Promise.all([
     getFollowCounts(followingId),
-    isFollowing(followerId, followingId),
+    followStatus(followerId, followingId),
   ])
 
   return {
-    isFollowing: following,
+    isFollowing: relation.isFollowing,
     followerCount: counts.followers,
     followingCount: counts.following,
   }
