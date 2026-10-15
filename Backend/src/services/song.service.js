@@ -1,5 +1,6 @@
 const prisma = require("../prisma/prismaClient");
 const { httpError } = require("../utils/errors");
+const { paginatedSearch } = require("../utils/pagination");
 
 const LIMIT = 10;
 
@@ -12,30 +13,7 @@ const SONG_INCLUDE = {
 const VALID_EXPRESSIONS = ["neutral", "happy", "sad"];
 const RECOMMENDATIONS_LIMIT = 20;
 
-const DEFAULT_PAGE = 1;
-const DEFAULT_PAGE_SIZE = 10;
-const MAX_PAGE_SIZE = 50;
-
-function parsePagination({ page, pageSize }) {
-	const parsedPage = Number.parseInt(page, 10);
-	const parsedPageSize = Number.parseInt(pageSize, 10);
-
-	return {
-		page: Number.isInteger(parsedPage) && parsedPage >= 1 ? parsedPage : DEFAULT_PAGE,
-		pageSize:
-			Number.isInteger(parsedPageSize) && parsedPageSize >= 1
-				? Math.min(parsedPageSize, MAX_PAGE_SIZE)
-				: DEFAULT_PAGE_SIZE,
-	};
-}
-
 async function searchSongs(query, pagination = {}) {
-	const { page: rawPage, pageSize: rawPageSize } = pagination;
-	const { page: requestedPage, pageSize } = parsePagination({
-		page: rawPage,
-		pageSize: rawPageSize,
-	});
-
 	const term = typeof query === "string" ? query.trim() : "";
 
 	const where = term
@@ -54,32 +32,12 @@ async function searchSongs(query, pagination = {}) {
 			}
 		: {};
 
-	const [total, items] = await prisma.$transaction([
-		prisma.song.count({ where }),
-		prisma.song.findMany({
-			where,
-			skip: (requestedPage - 1) * pageSize,
-			take: pageSize,
-			include: SONG_INCLUDE,
-			orderBy: { id: "asc" },
-		}),
-	]);
-
-	const totalPages = Math.max(1, Math.ceil(total / pageSize));
-	const page = Math.min(requestedPage, totalPages);
-
-	const finalItems =
-		page === requestedPage
-			? items
-			: await prisma.song.findMany({
-					where,
-					skip: (page - 1) * pageSize,
-					take: pageSize,
-					include: SONG_INCLUDE,
-					orderBy: { id: "asc" },
-				});
-
-	return { items: finalItems, total, page, pageSize, totalPages };
+	return paginatedSearch({
+		delegate: prisma.song,
+		where,
+		include: SONG_INCLUDE,
+		pagination,
+	});
 }
 
 async function getSongs(cursor = null) {
@@ -105,7 +63,6 @@ async function getSongById(songId) {
 
 	return song;
 }
-
 
 async function getRecommendationsByExpression(expression) {
 	if (!VALID_EXPRESSIONS.includes(expression)) {
@@ -137,5 +94,9 @@ async function getRecommendationsByExpression(expression) {
 	});
 }
 
-
-module.exports = { getSongs, getSongById, searchSongs, getRecommendationsByExpression };
+module.exports = {
+	getSongs,
+	getSongById,
+	searchSongs,
+	getRecommendationsByExpression,
+};
