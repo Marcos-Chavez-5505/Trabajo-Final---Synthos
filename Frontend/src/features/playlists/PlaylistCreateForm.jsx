@@ -12,6 +12,7 @@ import { mapApiError } from '../../utils/mapError.js'
 export default function PlaylistCreateForm({ onCreate, onCancel }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [type, setType] = useState('personal')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -24,7 +25,7 @@ export default function PlaylistCreateForm({ onCreate, onCancel }) {
     setSaving(true)
 
     try {
-      await onCreate({ name, description })
+      await onCreate({ name, description, type })
     } catch (cause) {
       setError(mapApiError(cause))
     } finally {
@@ -45,7 +46,7 @@ export default function PlaylistCreateForm({ onCreate, onCancel }) {
         onChange={(event) => setName(event.target.value)}
         placeholder="Nombre de la playlist"
         aria-label="Nombre de la playlist"
-        maxLength={60}
+        maxLength={50}
         className="w-full rounded px-3 py-2 Volume TextRegluar outline-none"
       />
 
@@ -58,6 +59,39 @@ export default function PlaylistCreateForm({ onCreate, onCancel }) {
         maxLength={200}
         className="w-full rounded px-3 py-2 Volume TextRegluar outline-none"
       />
+
+      <fieldset>
+        <legend className="Volume TextMedium mb-2">¿Quién la puede usar?</legend>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setType('personal')}
+            aria-pressed={type === 'personal'}
+            className={`rounded px-4 py-2 Button ${
+              type === 'personal' ? 'Fucsia' : 'Volume hover:brightness-110'
+            }`}
+          >
+            Solo vos
+          </button>
+          <button
+            type="button"
+            onClick={() => setType('colab')}
+            aria-pressed={type === 'colab'}
+            className={`rounded px-4 py-2 Button ${
+              type === 'colab' ? 'Fucsia' : 'Volume hover:brightness-110'
+            }`}
+          >
+            Colaborativa
+          </button>
+        </div>
+
+        <p className="text-muted-foreground TextTiny mt-2">
+          {type === 'colab'
+            ? 'Podés invitar personas: todos agregan y quitan canciones, y vos además editás el nombre, la borrás o echás a alguien.'
+            : 'Es privada: nadie más la ve ni puede agregar canciones.'}
+        </p>
+      </fieldset>
 
       {error && <p className="rounded px-3 py-2 Salmon TextMedium">{error}</p>}
 

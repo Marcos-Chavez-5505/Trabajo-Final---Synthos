@@ -10,7 +10,14 @@ import fullHeartIcon from '../../assets/full_heart.svg'
  * cambia el favorito: acá solo informa (el toggle vive en el reproductor), y por
  * eso no es un botón.
  */
-export default function PlaylistSongRow({ song, index, isFavorite, onPlay, onRemove }) {
+export default function PlaylistSongRow({
+  song,
+  index,
+  isFavorite,
+  onPlay,
+  onRemove,
+  canRemove = true,
+}) {
   const handleKeyDown = (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return
 
@@ -56,15 +63,17 @@ export default function PlaylistSongRow({ song, index, isFavorite, onPlay, onRem
         />
       )}
 
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={`Sacar ${song.title} de la playlist`}
-        title="Sacar de la playlist"
-        className="shrink-0 rounded px-2 py-1 TextMedium hover:opacity-70"
-      >
-        Quitar
-      </button>
+      {canRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Sacar ${song.title} de la playlist`}
+          title="Sacar de la playlist"
+          className="shrink-0 rounded px-2 py-1 TextMedium hover:opacity-70"
+        >
+          Quitar
+        </button>
+      )}
     </article>
   )
 }

@@ -7,6 +7,9 @@ import playlistIcon from '../../assets/playlist.svg'
  * Muestra la cantidad de canciones y si es la de favoritos. No reproduce: una
  * playlist sin resolver contra la API todavía no tiene la cola, y el detalle es
  * quien la arma (con `playSongs`).
+ *
+ * Las colaborativas llevan una línea más: si la creaste dice "Colaborativa" y si
+ * te la compartieron, de quién es.
  */
 export default function PlaylistTile({ playlist }) {
   const count = playlist.songIds.length
@@ -33,6 +36,14 @@ export default function PlaylistTile({ playlist }) {
             ? 'Generada automáticamente'
             : `${count} ${count === 1 ? 'canción' : 'canciones'}`}
         </p>
+
+        {playlist.isCollaborative && (
+          <p className="TextFucsia TextTiny mt-1 truncate">
+            {playlist.role === 'creator'
+              ? 'Colaborativa'
+              : `De ${playlist.creator.username}`}
+          </p>
+        )}
       </Link>
     </article>
   )

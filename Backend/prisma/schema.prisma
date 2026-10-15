@@ -25,6 +25,8 @@ model User {
   playlistsCreated    Playlist[]
   playlistMemberships PlaylistMember[]
   playlistSongsAdded  PlaylistSong[]
+  invitationsSent     PlaylistInvitation[] @relation("InvitationSender")
+  invitationsReceived PlaylistInvitation[] @relation("InvitationReceiver")
   roomMemberships     RoomMember[]
 
   @@map("user")
@@ -105,17 +107,17 @@ model SongMood {
 }
 
 model Playlist {
-  id              Int              @id @default(autoincrement())
-  name            String           @db.VarChar(150)
+  id              Int                 @id @default(autoincrement())
+  name            String              @db.VarChar(150)
   description     String?
-  idCreator       Int              @map("id_creator")
+  idCreator       Int                 @map("id_creator")
   type            PlaylistType
-  isPublic        Boolean          @default(false) @map("is_public")
-  tokenInvitation String?          @map("token_invitation") @db.VarChar(255)
-  creationDate    DateTime         @default(now()) @map("creation_date") @db.Timestamp(6)
-  creator         User             @relation(fields: [idCreator], references: [id], onDelete: Cascade)
+  isPublic        Boolean             @default(false) @map("is_public")
+  creationDate    DateTime            @default(now()) @map("creation_date") @db.Timestamp(6)
+  creator         User                @relation(fields: [idCreator], references: [id], onDelete: Cascade)
   members         PlaylistMember[]
   songs           PlaylistSong[]
+  invitations     PlaylistInvitation[]
   rooms           Room[]
 
   @@map("playlist")
@@ -131,6 +133,21 @@ model PlaylistMember {
 
   @@id([idPlaylist, idUser])
   @@map("playlist_member")
+}
+
+model PlaylistInvitation {
+  idPlaylist Int              @map("id_playlist")
+  idSender   Int              @map("id_sender")
+  idReceiver Int              @map("id_receiver")
+  status     InvitationStatus @default(pendiente)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamp(6)
+  playlist   Playlist         @relation(fields: [idPlaylist], references: [id], onDelete: Cascade)
+  sender     User             @relation("InvitationSender", fields: [idSender], references: [id], onDelete: Cascade)
+  receiver   User             @relation("InvitationReceiver", fields: [idReceiver], references: [id], onDelete: Cascade)
+
+  @@id([idPlaylist, idReceiver])
+  @@map("playlist_invitation")
 }
 
 model PlaylistSong {
@@ -271,6 +288,14 @@ enum PlaylistRole {
   colaborator
 
   @@map("playlist_role")
+}
+
+enum InvitationStatus {
+  pendiente
+  aceptada
+  rechazada
+
+  @@map("invitation_status")
 }
 
 enum RoomRole {
