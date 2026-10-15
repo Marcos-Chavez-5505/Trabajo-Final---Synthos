@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import useAuth from "../../hooks/useAuth.js";
 import {
 	followUser,
+	followStatus,
 	getFollowCounts,
-	isFollowing,
 	subscribeToFollow,
 	unfollowUser,
 } from "../../services/usersService.js";
@@ -88,6 +88,10 @@ export default function useFollow(personId) {
 	// Relación: depende del viewer. Sin sesión no se pide nada y se resuelve
 	// en false. Al desloguearse (viewerId -> null) este efecto corre y no
 	// dispara request, que es lo que evita el 401 en medio del logout.
+	//
+	// Un solo request: `follow-status` devuelve los dos sentidos y `isMutual`.
+	// Antes eran dos llamadas a `isFollowing`, y cada una bajaba la lista
+	// completa de seguidores de un lado para mirar un id.
 	useEffect(() => {
 		if (!requestKey) return undefined;
 		if (!canFollow) {
@@ -103,17 +107,14 @@ export default function useFollow(personId) {
 		const controller = new AbortController();
 		let active = true;
 
-		Promise.all([
-			isFollowing(viewerId, personId, { signal: controller.signal }),
-			isFollowing(personId, viewerId, { signal: controller.signal }),
-		])
-			.then(([following, followedBy]) => {
+		followStatus(viewerId, personId, { signal: controller.signal })
+			.then((relation) => {
 				if (!active) return;
 				setResponse((prev) => ({
 					...prev,
 					key: requestKey,
-					isFollowing: following,
-					isFollowedBy: followedBy,
+					isFollowing: relation.isFollowing,
+					isFollowedBy: relation.isFollowedBy,
 					error: null,
 				}));
 			})
