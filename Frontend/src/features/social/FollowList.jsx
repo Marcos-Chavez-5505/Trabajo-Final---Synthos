@@ -8,6 +8,7 @@ import {
   listFollowers,
   listFollowing,
 } from '../../services/usersService.js'
+import { mapApiError } from '../../utils/mapError.js'
 
 const TIPOS = ['seguidores', 'siguiendo']
 
@@ -55,7 +56,7 @@ export default function FollowList({ relation: requested }) {
         if (active) setResponse({ key: requestKey, people, error: null })
       })
       .catch((cause) => {
-        if (active) setResponse({ key: requestKey, people: [], error: cause.message })
+        if (active) setResponse({ key: requestKey, people: [], error: mapApiError(cause) })
       })
 
     return () => {

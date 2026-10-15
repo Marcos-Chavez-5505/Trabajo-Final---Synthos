@@ -13,6 +13,7 @@ import {
 import musicNoteIcon from '../../assets/music_note.svg'
 import PlaylistSongRow from './PlaylistSongRow.jsx'
 import PlaylistEditForm from './PlaylistEditForm.jsx'
+import { mapApiError } from '../../utils/mapError.js'
 
 /**
  * Detalle de una playlist (TS-09): reproducir, quitar canciones, renombrar y
@@ -50,7 +51,7 @@ export default function PlaylistDetail() {
 
     return getPlaylistById(userId, id).then(
       (playlist) => setPlaylistResponse({ key: `${userId}:${id}`, playlist }),
-      (cause) => setError(cause.message)
+      (cause) => setError(mapApiError(cause))
     )
   }, [userId, id])
 
@@ -76,7 +77,7 @@ export default function PlaylistDetail() {
         if (active) setSongsResponse({ key: songIdsKey, songs })
       })
       .catch((cause) => {
-        if (active) setError(cause.message)
+        if (active) setError(mapApiError(cause))
       })
 
     return () => {

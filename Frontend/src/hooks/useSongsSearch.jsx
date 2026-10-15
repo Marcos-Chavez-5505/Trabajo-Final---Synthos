@@ -1,6 +1,7 @@
 // hooks/useSongSearch.js
 import { useEffect, useState } from 'react'
 import { searchSongs, SEARCH_PAGE_SIZE } from '../services/songsService.js'
+import { mapApiError } from '../utils/mapError.js'
 
 /**
  * Búsqueda de canciones con debounce, paginada por número de página.
@@ -68,7 +69,7 @@ export default function useSongSearch(query, options = {}) {
             pageSize,
             totalPages: 1,
             loading: false,
-            error: cause.message,
+            error: mapApiError(cause),
           })
         })
     }, 250)

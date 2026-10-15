@@ -15,6 +15,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../../components/ui/pagination'
+import { mapApiError } from '../../utils/mapError.js'
 
 export const DEBOUNCE_MS = 300
 
@@ -52,7 +53,7 @@ export default function SearchSongs() {
       .catch((cause) => {
         if (!active) return
 
-        setResponse({ key: requestKey, data: null, error: cause.message })
+        setResponse({ key: requestKey, data: null, error: mapApiError(cause) })
       })
 
     return () => {

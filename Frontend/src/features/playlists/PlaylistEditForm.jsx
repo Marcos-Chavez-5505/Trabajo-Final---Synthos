@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { mapApiError } from '../../utils/mapError.js'
 
 /**
  * Edición de nombre y descripción. Se abre en el lugar del encabezado en
@@ -29,7 +30,7 @@ export default function PlaylistEditForm({
     try {
       await onSave({ name, description })
     } catch (cause) {
-      setError(cause.message)
+      setError(mapApiError(cause))
     } finally {
       setSaving(false)
     }

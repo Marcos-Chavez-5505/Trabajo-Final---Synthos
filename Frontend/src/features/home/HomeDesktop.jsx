@@ -3,6 +3,7 @@ import useAuth from '../../hooks/useAuth.js'
 import usePlayer from '../../hooks/usePlayer.js'
 import { listSongs } from '../../services/songsService.js'
 import MediaCard from '../../components/cards/MediaCard.jsx'
+import { mapApiError } from '../../utils/mapError.js'
 
 // Cuántas canciones muestra la fila de novedades. Es una muestra del catálogo,
 // no la grilla completa: esa vive en /buscar.
@@ -26,7 +27,7 @@ export default function HomeDesktop() {
         if (active) setSongs(catalog.slice(0, NOVEDADES_COUNT))
       })
       .catch((cause) => {
-        if (active) setError(cause.message)
+        if (active) setError(mapApiError(cause))
       })
 
     return () => {
