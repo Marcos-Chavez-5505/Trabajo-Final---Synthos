@@ -36,13 +36,15 @@ Todo endpoint responde los errores con el mismo cuerpo:
 | Endpoint | Respuesta | Uso en el frontend |
 | --- | --- | --- |
 | `GET /api/songs` | `{ songs, nextCursor, hasMore }` | `listSongs()` → `PlayerContext` (cola inicial) y `HomeDesktop` (fila novedades) |
-| `GET /api/songs/search` | `{ items, total, page, pageSize, totalPages }` | `searchSongs()` → `SearchSongs` (fila de páginas numeradas) |
+| `GET /api/songs/search` | `{ items, total, page, pageSize, totalPages }` | `searchSongs()` → `SearchSongs` (fila de páginas numeradas). `type=albums` → `listAlbums()` → `/albums` |
+| `GET /api/albums/:id` | `{ status, album }` con `artist` y `songs[]` | `getAlbumById()` → `/albums/:id` |
 | `GET /api/songs/:id` | objeto de la canción | `getSongById()` (sin consumidores por ahora) |
 | `GET /api/songs/recommendations` | `{ status, songs }` por estado de ánimo | `listSongsByMood(expression)` → `/animo` (TS-20). 400 `EXPRESSION_REQUIRED` / `INVALID_EXPRESSION` |
 
 El frontend mapea el payload crudo a su propia forma en `Frontend/src/services/songsService.js`
-(`url` → `audioUrl`, `artist.name` → `artist`, `songGenres[].genre.name` → `genre`), así que el backend
-no expone campos con nombres pensados para el frontend.
+(`url` → `audioUrl`, `artist.name` → `artist`, `songGenres[].genre.name` → `genre`, `album.name` → `album`), así que el backend
+no expone campos con nombres pensados para el frontend. Los álbumes tienen su propio mapper en
+`Frontend/src/services/albumsService.js`.
 
 `GET /api/songs` sigue con cursor a propósito: alimenta la cola inicial y la fila de novedades, que
 consumen los primeros elementos y no necesitan saltar de página.
@@ -68,12 +70,13 @@ página y pone el número en la URL (`?page=3`) para que el enlace sea compartib
 **Request**
 
 ```
-GET /api/songs/search?query=<texto>&page=<n>&pageSize=<n>
+GET /api/songs/search?query=<texto>&type=<songs|albums>&page=<n>&pageSize=<n>
 ```
 
 | Param | Tipo | Default | Notas |
 | --- | --- | --- | --- |
 | `query` | string | `''` | Ausente o vacío = catálogo completo, no error |
+| `type` | string | `songs` | `songs` o `albums`. Cualquier otro valor: `400 SEARCH_TYPE_INVALID` |
 | `page` | int ≥ 1 | `1` | 1-based |
 | `pageSize` | int ≥ 1 | `10` | El frontend manda `10`; tope duro de `50` |
 
@@ -97,6 +100,10 @@ GET /api/songs/search?query=<texto>&page=<n>&pageSize=<n>
 | `pageSize` | int | El `pageSize` efectivamente aplicado, ya acotado |
 | `totalPages` | int | `max(1, ceil(total / pageSize))` |
 
+**`type=albums`** devuelve la misma envolvente, pero cada item es un **álbum**: `{ id, name, type, coverUrl,
+releaseDate, artist: { id, name, pictureUrl }, _count: { songs } }`. El `query` busca por nombre de álbum o
+de su artista. Es lo que consume la pantalla `/albums`.
+
 ### 2.3 Reglas de comportamiento
 
 **Orden estable.** `orderBy: { id: "asc" }`. La paginación por offset exige un orden determinista: si
@@ -112,6 +119,34 @@ repite la consulta con el `skip` correcto. El frontend lee ese valor y reescribe
 para no mostrar un "sin resultados" engañoso. `totalPages` nunca es `0`: con cero resultados es `1`.
 
 **Query vacía es válida.** `?query=` y la ausencia de `query` devuelven el catálogo paginado.
+
+**Filtro por álbum.** Con `type=songs`, el `query` también matchea el nombre del álbum de la canción
+(`album: { name: { contains, insensitive } }`). Eso es lo que resuelve D4 y lo que habilita volver a decir
+"álbumo" en el copy de `/buscar`.
+
+**`type` validado.** `songs` (default) y `albums`; cualquier otro valor responde `400 SEARCH_TYPE_INVALID`
+con su `code`. Antes caía en un 500 por una variable sin definir.
+
+**Payload de canción.** Todas las respuestas de canciones (`/songs`, `/songs/:id`, `/songs/search`,
+`/songs/recommendations`) incluyen `album: { id, name }` vía `SONG_INCLUDE`.
+
+### 2.4 Detalle de álbum - `GET /api/albums/:id`
+
+Público, como el resto de canciones.
+
+| Situación | Respuesta |
+|---|---|
+| Existe | 200 `{ status, album }` |
+| Id no numérico | 400 `INVALID_ID` (viene de `getId`) |
+| No existe | 404 `ALBUM_NOT_FOUND` |
+
+El `album` trae `artist` y `songs[]`, con cada canción en la misma forma que devuelve el resto de la API
+(`songGenres`, `songMoods`, `artist`). Las canciones **no** repiten `album`: ya están dentro de uno, así
+que el include no lo agrega y el mapper del frontend las deja en `null`.
+
+**Orden de las pistas:** `orderBy: { id: "asc" }`, porque el esquema no tiene número de track. El seed
+guarda las canciones en el orden en que las trae la fuente, pero no está garantizado que sea el orden del
+disco. Si alguna vez importa, hace falta una columna de posición.
 
 **Validación tolerante.** `parsePagination` usa `Number.parseInt` y cae al default si el valor no es un
 entero ≥ 1; `pageSize` se limita a `MAX_PAGE_SIZE = 50` para que nadie pida la tabla entera. El

@@ -80,9 +80,10 @@ POST   /api/auth/login                 → 200 { token, user }
 POST   /api/auth/logout                → authenticate
 
 GET    /api/songs?cursor=              → { songs[10], nextCursor, hasMore }   (cursor, orden id asc)
-GET    /api/songs/search?query=&page=&pageSize=  → { items, total, page, pageSize, totalPages }
+GET    /api/songs/search?query=&type=songs|albums&page=&pageSize=  → { items, total, page, pageSize, totalPages } (400 SEARCH_TYPE_INVALID si `type` no es `songs` ni `albums`; con `type=albums` cada item es un álbum con `artist` y `_count.songs`)
 GET    /api/songs/recommendations?expression=     → { status, songs } por estado de ánimo (400 si la expresión no es un mood válido)
 GET    /api/songs/:id                  → song (findUniqueOrThrow)
+GET    /api/albums/:id                 → 200 { status, album } con `artist` y `songs[]` | 400 INVALID_ID | 404 ALBUM_NOT_FOUND
 
 GET    /api/users/search?query=&page=&pageSize=  → { items, total, page, pageSize, totalPages } (auth opcional; con sesión cada item suma isFollowing y followsMe)
 GET    /api/users/me                   → authenticate
@@ -119,7 +120,7 @@ POST   /api/playlists/invitations/:idPlaylist/reject → authenticate → 200 (4
 GET    /api/rooms?sort=alphabetical|rating  → array crudo de `room` + `avg_rating` (SQL raw: LEFT JOIN a `room_member` + vista `host_avg_rating`)
 ```
 
-**Endpoints que NO existen todavía** (los espera el frontend o el plan): crear/unirse/salir de sala, buscar salas (`GET /rooms` no acepta `query` ni trae el nombre del anfitrión), votar skip, calificar anfitrión (`host_rating` solo se carga por seed), chat, recomendaciones por estado de ánimo en el frontend (el endpoint ya existe), contenidos (`Content`/`ContentPlayement` sin rutas), albums/artistas como recursos, refresh de token, logout server-side real (logout solo responde OK). Las playlists colaborativas están completas de punta a punta (crear, invitar, aceptar/rechazar, sumar y quitar canciones, echar).
+**Endpoints que NO existen todavía** (los espera el frontend o el plan): crear/unirse/salir de sala, buscar salas (`GET /rooms` no acepta `query` ni trae el nombre del anfitrión), votar skip, calificar anfitrión (`host_rating` solo se carga por seed), chat, recomendaciones por estado de ánimo en el frontend (el endpoint ya existe), contenidos (`Content`/`ContentPlayement` sin rutas), **artistas** como recurso (`/albums` ya existe), refresh de token, logout server-side real (logout solo responde OK). Las playlists colaborativas están completas de punta a punta (crear, invitar, aceptar/rechazar, sumar y quitar canciones, echar).
 
 ### 3.2 Validaciones (`utils/validation.js`)
 
@@ -172,7 +173,8 @@ Tablas mapeadas a snake_case (`@@map`, `@map`), claves compuestas como `@@id([a,
 | Archivo                 | Expone                                                                                                                                                                                                 | Notas                                                                                                                                                                                                                                                                                                                                                   |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `authService.js`      | `registerUser`, `loginUser`, `logoutUser`, `getCurrentUser`, `clearSession`                                                                                                                  | Sesión en`localStorage['synthos_auth'] = {token, user}`; `toUser()` traduce`pictureUrl→avatarUrl`, `biography→bio`, `id→String`. `getCurrentUser` valida contra `/users/me`: sin red devuelve el usuario cacheado, 401/404 limpia sesión, 5xx no borra pero no deja entrar. API devuelve `{success, user}` (no tira).              |
-| `songsService.js`     | `listSongs`, `getSongById`, `searchSongs`, `listSongsByMood`, `SEARCH_PAGE_SIZE=10`                                                                                                                | `toSong()`: `url→audioUrl`, `artist.name→artist`, `songGenres[].genre.name→genre`, `album`/`source` = `null` (no existen en el esquema). `listSongsByMood(expression)` consume `GET /songs/recommendations` (TS-20, sin paginar, hasta 20 canciones).                                                                                                                               |
+| `songsService.js`     | `listSongs`, `getSongById`, `searchSongs`, `listSongsByMood`, `SEARCH_PAGE_SIZE=10`                                                                                                                | `toSong()`: `url→audioUrl`, `artist.name→artist`, `songGenres[].genre.name→genre`, `album.name→album` (dejó de hardcodear `null` con el modelo Album), `source` = `null` (no existe en el esquema). `listSongsByMood(expression)` consume `GET /songs/recommendations` (TS-20, sin paginar, hasta 20 canciones).                                                                                                                               |
+| `albumsService.js`    | `listAlbums`, `getAlbumById`, `toAlbum`, `ALBUMS_PAGE_SIZE=12`                                                                                                                                  | El listado **no** tiene recurso propio: es `GET /songs/search?type=albums`. `toAlbum()` traduce `_count.songs→songsCount` y `releaseDate→releaseYear`; el detalle reutiliza el `toSong()` de `songsService` para las pistas (que llegan sin `album`). |
 | `playlistsService.js` | CRUD playlists,`addSongToPlaylist`, `removeSongFromPlaylist`, `removePlaylistMember`, `sendInvitation`, `listSentInvitations`, `listReceivedInvitations`, `acceptPlaylistInvitation`, `rejectPlaylistInvitation`, `toggleFavorite`, `isFavorite`, `listFavoriteSongIds`, `subscribeToPlaylists`                                                | Favoritos = playlist`type==='favorites'` (la UI la llama **"Mis Favoritos"**); operaciones sobre ella se redirigen a `/favorites`. Idempotente: ignora 409/404. `ownerId` es obligatorio en la firma y es **el id de quien mira**, no del dueño: de ahí sale el `role` (`creator`/`colaborator`/null) que la UI usa para mostrar qué puede hacer cada uno. `toPlaylist` traduce `type`, `role`, `creator` y `members`. Las canciones van por `POST|DELETE /playlists/:id/songs`, que son las rutas con roles. |
 | `usersService.js`     | `getUserById`, `searchUsers`, `updateProfile`, `uploadProfilePicture`, `getFollowCounts`, `followStatus`, `listFollowers/listFollowing`, `followUser/unfollowUser`, `subscribeToFollow`, `SEARCH_PAGE_SIZE=4` | Traduce`bio→biography`, `avatarUrl→pictureUrl`. `updateProfile` solo manda `pictureUrl` si viene (si no, el backend no toca la foto; `null` la quita). `uploadProfilePicture` va multipart a `/users/me/picture` y devuelve el usuario mapeado. `searchUsers` suma la relación en los dos sentidos por resultado (los trae el backend con sesión, TS-10b): `isFollowing` + `followsMe`. **`followStatus(viewerId, personId)`** usa `GET /users/:id/follow-status` y devuelve `{isFollowing, isFollowedBy, isMutual}` en un request (reemplaza a la vieja `isFollowing`, que bajaba la lista completa de seguidores para mirar un id). No lee la sesión (evita ciclo con authService): recibe ids por parámetro.           |
 | `recommendationService.js` | `getUserRecommendations(userId)`                                                                                                                         | Traduce el payload de `/users/:id/recommendations` (recomendaciones de personas, TS-19). El alta la hace `hooks/useRecommendation.jsx` con `post`, no el service. |
@@ -193,7 +195,7 @@ Regla: **`mocks/` solo se importa desde su service** (hoy solo `roomsService` im
 2. **`version` para refetch por suscripción**: `useEffect(() => subscribeToX(() => setVersion(v => v+1)), [])` y `version` en deps del fetch. Lo usan `useFavorites`, `MisPlaylists`, `useFollow`.
 3. **`let active = true` + cleanup** en todo fetch (y `AbortController` donde ya está: `HomeDesktop`).
 4. **Optimismo**: `useFollow.toggle()` cambia el estado al instante y revierte si el service falla.
-5. **Estado en la URL**: `?q=` (TopBar/`/buscar`), `?tipo=canciones|personas`, `?page=`, `?sort=` (salas). Compartible + botón atrás funciona; los defaults no se escriben en la URL.
+5. **Estado en la URL**: `?q=` (TopBar/`/buscar`), `?tipo=canciones|albumes|personas`, `?page=`, `?sort=` (salas). Compartible + botón atrás funciona; los defaults no se escriben en la URL.
 6. **`useDebounce(value, 300)`** en inputs de búsqueda.
 7. **Trabajo pesado en el navegador, no en la red** (foto de perfil, TS-21): `features/profile/profileImage.js` recorta (1024 px) y recomprime (≤1 MB) el archivo del `<input type="file">` con `canvas`, devuelve un `File` listo para `FormData` y tira con mensajes en español (incluido el `DOMException` de `createImageBitmap`, que viene en inglés). Es un helper de la feature, no un service: no habla con la API.
 
@@ -210,8 +212,10 @@ Regla: **`mocks/` solo se importa desde su service** (hoy solo `roomsService` im
 /playlists/:id            Protected  PlaylistDetail
 /salas                    Protected  Rooms
 /animo                    Protected  MoodScan (recomendaciones por estado de ánimo, TS-20)
-/buscar                   Protected  Search (?q= & ?tipo= & ?page=)
-/populares, /albums, /artistas  Protected  ScreenPlaceholder ("Pantalla en construcción")
+/buscar                   Protected  Search (pestañas `?tipo=canciones|albumes|personas`, con `?q=` y `?page=`)
+/albums                Protected  Albums (catálogo paginado, solo `?page=`)
+/albums/:id            Protected  AlbumDetail (carátula + "Reproducir" + pistas)
+/populares, /artistas   Protected  ScreenPlaceholder ("Pantalla en construcción")
 /profile/:id              AppLayout sin RequireAuth (perfil público)
 /profile/:id/seguidores | /siguiendo   AppLayout sin RequireAuth
 *                         Navigate a /
@@ -251,7 +255,7 @@ Guards: `RequireAuth` (si `loading` → `LoadingScreen`; si no hay user → `/lo
 
 ## 5. Contrato de canciones
 
-Fuente canónica: **`docs/ESPECIFICACIONES-BACKEND.md` §1–§5** (no duplicar acá). En corto: `GET /api/songs` es cursor (cola del player y novedades); `GET /api/songs/search` es offset con `{items,total,page,pageSize,totalPages}`, query vacía = catálogo completo, clamping de página y `pageSize` 10–50; los payloads crudos los mapea `songsService.toSong()` y los géneros llegan anidados (`songGenres[].genre.name`, `SONG_INCLUDE`).
+Fuente canónica: **`docs/ESPECIFICACIONES-BACKEND.md` §1–§5** (no duplicar acá). En corto: `GET /api/songs` es cursor (cola del player y novedades); `GET /api/songs/search` es offset con `{items,total,page,pageSize,totalPages}`, query vacía = catálogo completo, clamping de página y `pageSize` 10–50, y acepta `type=songs|albums` (los álbumes salen por ahí, con `GET /api/albums/:id` para el detalle); el `query` matchea también el nombre del álbum; los payloads crudos los mapea `songsService.toSong()` y los géneros llegan anidados (`songGenres[].genre.name`, `SONG_INCLUDE`). Toda canción trae `album: { id, name }`.
 
 ## 6. Comandos de verificación
 
@@ -270,8 +274,8 @@ npm run dev                 # localhost:5173, proxy /api → :3000
 ## 7. Deudas y huecos conocidos (encontrados en el código)
 
 - `roomsService.USE_MOCK = true` → la pantalla `/salas` no habla con el backend todavía (el endpoint `GET /api/rooms` sí existe).
-- Pantallas placeholder: `/populares`, `/albums`, `/artistas`. Los archivos del layout mobile (`BottomNav`, `MiniPlayerBar`, `HomeMobile`, `hooks/useBreakpoint.js`) siguen en disco sin uso (`PENDIENTES.md` §8).
-- Campos inexistentes en el esquema que la UI tolera con `null`: `album`, `source`.
+- Pantallas placeholder: `/populares`, `/artistas`. Los archivos del layout mobile (`BottomNav`, `MiniPlayerBar`, `HomeMobile`, `hooks/useBreakpoint.js`) siguen en disco sin uso (`PENDIENTES.md` §8).
+- Campo inexistente en el esquema que la UI tolera con `null`: `source`. `album` ya existe (`Album`) y las canciones lo traen.
 - No existen `socketService` ni WebSockets (mencionados como plan, no implementados): la sincronización real de salas sigue pendiente (D8 del plan).
 - `GET /users/:id/follow-status` ya tiene consumidor: `useFollow` lo usa para resolver la relación y `isMutual` en un request (antes eran dos llamadas que bajaban la lista de seguidores de cada lado).
 - Backend: se borró la columna `playlist.token_invitation` (migración `drop_token_invitation`) y `FRONTEND_URL` ya no se lee en ningún lado.
