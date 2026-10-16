@@ -164,7 +164,7 @@ Una carpeta por dominio, con sus pantallas, componentes y hooks:
 | `profile/` | `ProfileView` (propio), `ProfilePublic` (ajeno), `ProfileEdit` + `profileImage.js` (recorte/compresión de la foto antes de subirla) |
 | `mood/` | `MoodScan` (pantalla `/animo`), `moodDetection.js` (face-api bajo demanda + mapeo de expresiones a los 3 estados), `MoodPicker`, `MoodResults` |
 | `playlists/` | Biblioteca y detalle, formularios, `MisPlaylists` (sidebar), `FavoriteButton`, `AddToPlaylistPanel`, `useSongPlaylists` |
-| `search/` | `Search` + pestañas `SearchSongs` / `SearchPeople` / `SearchTabs` |
+| `search/` | `Search` + pestañas `SearchSongs` / `SearchAlbums` / `SearchPeople` / `SearchTabs` |
 | `social/` | `useFollow`, `FollowButton`, `FollowList`, `FollowStats`, `ProfileSummary` |
 | `rooms/` | `Rooms.jsx`: listado con `RoomCard` (hoy contra mocks; crear/administrar salas, pendiente) |
 
@@ -315,8 +315,9 @@ El resto es público. Errores: siempre `{ status: "error", message, code? }` (ve
   consume, vía `roomsService`; `users.js`, `songs.js` y `playlists.js` quedaron sin uso tras migrar),
   `Backend/src/const/baseUrl.js`, `Backend/src/test.js` y la llamada a `ensureFavoritesPlaylist` que
   quedó comentada en `favorite.service.js`.
-- **Vistas de una sola página**: `/populares`, `/albums` y `/artistas` son `ScreenPlaceholder`;
-  el chat todavía no existe, y `features/rooms/` sólo tiene el listado (`Rooms.jsx`).
+- **Vistas de una sola página**: `/populares` y `/artistas` son `ScreenPlaceholder`; el chat todavía no
+  existe, y `features/rooms/` sólo tiene el listado (`Rooms.jsx`). `/albums` ya no es placeholder:
+  tiene grilla y detalle (`features/albums/`).
 
 ---
 

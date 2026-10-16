@@ -263,13 +263,43 @@ esquema y no hace falta agregarla.
 - [ ] Decisión del frontend: `playSongs(songs, startIndex, source)`.
 - [ ] Cerrar el ítem 5.4 de `PENDIENTES.md` con esa decisión.
 
-### [ ] REQ-SONG-4 — `album`: columna o fuera del contrato
+### [x] REQ-SONG-4 — `album`: columna o fuera del contrato
 
-El esquema no tiene columna `album` y el filtro de búsqueda no la cubre. Por eso se quitó la palabra del
-copy de `SearchSongs` (§5.3 de `PENDIENTES.md`).
+**Resuelto: entra al esquema y al contrato.** El modelo `Album` llegó con el feature de álbumes (migración
+`20261015215159_add_album`), con `Song.idAlbum` obligatorio y un índice por álbum.
 
-- [ ] Decidir: agregar columna + filtro + payload, o dejarlo definitivamente fuera. Si se agrega, hay que
-      reponer "álbumo" en el copy y en el contrato de búsqueda.
+- `SONG_INCLUDE` trae `album: { id, name }`, así que todas las respuestas de canción lo llevan.
+- El filtro de búsqueda matchea también el nombre del álbum.
+- `songsService.toSong()` dejó de hardcodear `album: null`: ahora `PlayerBar` usa el nombre real como
+  `alt` de la carátula.
+- El copy de `SearchSongs` volvió a decir "Buscá por título, artista, género o álbum", que era lo que pedía
+  el comentario del propio archivo.
+- `source` sigue fuera: no existe en el esquema y la línea "Reproduciéndose desde" se oculta si no viene.
+
+Verificado contra la base real: `GET /api/songs/search?query=Woods` devuelve las 3 canciones del álbum
+"Woods of Chaos", y cada canción trae `album: { id: 888, name: "Woods of Chaos" }`.
+
+### [x] REQ-ALBUM-1 — Endpoints de álbumes
+
+Cubre la pantalla `/albums` del Sidebar, que hasta ahora era un placeholder.
+
+- [x] Listado paginado con filtro por nombre de disco o de artista: `GET /api/songs/search?type=albums`,
+      reutilizando la paginación por offset de §2. Cada item trae `artist` y `_count.songs`.
+- [x] `type` validado: `songs` o `albums`, y cualquier otro valor es `400 SEARCH_TYPE_INVALID` (venía
+      devolviendo 500 por una variable sin definir).
+- [x] Detalle: `GET /api/albums/:id` → `{ status, album }` con `artist` y `songs[]`; `404 ALBUM_NOT_FOUND`,
+      `400 INVALID_ID`. Sin sesión, igual que `/api/songs`.
+- [x] Frontend: `albumsService.js` con su mapper, grilla `/albums` paginada (`?page=`, sin input: la
+      búsqueda de discos vive en `/buscar`), y detalle con "Reproducir" sobre la cola del `PlayerContext`.
+- [x] **Los álbumes se buscan desde `/buscar`**, no desde una pantalla propia: nueva pestaña `?tipo=albumes`
+      (`SearchAlbums`), que reutiliza `listAlbums` y comparte `?q=`/`?page=` con canciones y personas.
+- [x] Sin migración: el modelo ya estaba.
+
+**Lo que quedó fuera:** el orden de las pistas es por `id` porque el esquema no tiene número de track, y
+no se agregó `/artistas` (sigue siendo placeholder).
+
+> Nota: `SearchAlbums` pagina de a 10, igual que `SearchSongs`, porque las dos pestañas usan la misma grilla de
+> `MiniMediaCard`. La página `/albums` usa 12 (`ALBUMS_PAGE_SIZE`), ya que ahí no compite con otra pestaña.
 
 ---
 
@@ -365,7 +395,7 @@ Ninguna de estas se puede implementar sin resolverla antes.
 | D1 | ¿Favoritos como tabla `favorite` o como playlist materializada? | **resuelta**: tabla `favorite` única fuente, playlist virtual en el cliente (§4.1) | §4.1 | Toda la API de favoritos (ya migrada) |
 | D2 | ¿"Mis Favoritos" es compartible? Si sí, hace falta la playlist de verdad | abierta | §4.1 | TS-12 |
 | D3 | ¿`source` lo calcula el frontend? (recomendado: sí) | abierta, **fuera del backend** (REQ-SONG-3) | §5 | Cierra PENDIENTES 5.4 |
-| D4 | ¿`album` entra al esquema o queda fuera? | abierta | §5 | Copy y filtro de búsqueda |
+| D4 | ¿`album` entra al esquema o queda fuera? | **resuelta: entra** (modelo `Album` + filtro + payload; REQ-SONG-4 y REQ-ALBUM-1) | §5 | Copy y filtro de búsqueda |
 | D5 | ¿Dónde viven los votos de skip? | abierta | §7 | TS-18 entero |
 | D6 | ¿El host que sale de una sala la deja o la cierra? | abierta | §7 | `POST /rooms/:id/leave` |
 | D7 | ¿Se revocan los tokens al hacer logout? | abierta | §3 | `POST /auth/logout` real |

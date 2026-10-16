@@ -134,22 +134,23 @@ cursor, pero se perdía la fila de números y el salto directo.
 payload trae el nombre y `songsService.toSong()` lo mapea a `song.genre`. Las cards de `/home` y
 `/buscar` vuelven a mostrar la etiqueta.
 
-### 5.3 La búsqueda por álbum se eliminó del contrato
+### 5.3 La búsqueda por álbum — resuelta (2026-10-15)
 
-**Qué pasa:** el catálogo mock tenía `album` y `searchSongs()` mock filtraba por `title`, `artist`,
-`album` y `genre`. El backend no tiene columna `album` en el esquema (`song` es título/artista/
-release_date/cover_url/duration/url) y su filtro cubre título, artista y género.
+**Qué pasaba:** el catálogo mock tenía `album` y `searchSongs()` mock filtraba por `title`, `artist`,
+`album` y `genre`. El backend no tenía columna `album`, así que se quitó la palabra del copy de
+`SearchSongs.jsx` para no prometer lo que el endpoint no cumplía.
 
-Por eso se **quitó "álbumo" del copy** de `SearchSongs.jsx`: la pantalla ya no promete algo que el
-backend no cumple. Si más adelante se agrega la columna `album` y su filtro, hay que devolver el
-nombre en el payload y reponer la palabra en el copy.
+**Cómo quedó:** el feature de álbumes trajo el modelo `Album` (migración `20261015215159_add_album`) con
+`Song.idAlbum`. `SONG_INCLUDE` ahora trae `album: { id, name }`, el filtro de `searchSongs` matchea también
+el nombre del álbum y el copy volvió a decir "Buscá por título, artista, género o álbum". Verificado contra
+la base real: `?query=Woods` devuelve las 3 canciones del álbum "Woods of Chaos".
 
-### 5.4 `album` y `source` no existen en el esquema
+### 5.4 `source` sigue sin existir (el álbum ya no)
 
 `PlayerBar` usaba `song.album` como `alt` de la carátula y `song.source` para la línea
-"Reproduciéndose desde". Con el payload real ambos son `null`:
+"Reproduciéndose desde":
 
-- `album`: no rompe, el `alt` ya cae a `song.title`.
+- `album`: **resuelto**, ahora llega el nombre real y el `alt` lo usa de verdad.
 - `source`: la línea se oculta sola (el render está guardado con `song?.source ?`).
 
 **Qué hace falta para `source`:** decidir de dónde sale. "Reproduciéndose desde" debería ser el origen
@@ -374,3 +375,34 @@ usuarios.
   ya no lo usa para canciones, así que se puede dejar hasta que aparezca un caso en lote que lo necesite.
 - Sin E2E: el flujo se verificó con `curl` contra la base real, no en navegador (ver §1).
 
+
+## 11. Álbumes: endpoints y pantalla (nuevo, 2026-10-15)
+
+**Estado: implementado.** La pantalla `/albums` del Sidebar dejó de ser un placeholder, y los álbumes
+también se buscan desde la pestaña nueva de `/buscar`.
+
+- **Lo que estaba roto:** el PR de álbumes había dejado `GET /api/songs/search` devolviendo 500 en dos de
+  sus tres ramas. El service usaba un `ALBUM_INCLUDE` que no estaba definido y lo exportaba como función
+  suelta; el controller lo importaba con un nombre y lo usaba con otro; y el `type` sin reconocer caía en
+  un `res.json({ songs, albums })` con dos variables inexistentes. Todo eso está corregido.
+- **Listado:** `GET /api/songs/search?type=albums`, que reutiliza la paginación por offset de las
+  canciones. `type` inválido responde `400 SEARCH_TYPE_INVALID`. Cada item trae `artist` y `_count.songs`.
+- **Detalle:** `GET /api/albums/:id` → `{ status, album }` con `artist` y `songs[]`; `404 ALBUM_NOT_FOUND`.
+- **Frontend:** `albumsService.js` (con su `toAlbum`), grilla paginada del catálogo (`?page=`) y
+  `AlbumDetail` con "Reproducir" sobre la cola del `PlayerContext`.
+- **Búsqueda:** `SearchAlbums` es la tercera pestaña de `/buscar` (`?tipo=albumes`), entre Canciones y
+  Personas. Comparte `?q=` y `?page=` con las otras dos; la card lleva al detalle del disco. La página
+  `/albums` **no** tiene input: solo lista y enlaza a esa pestaña.
+- **Efecto colateral:** `songsService.toSong()` dejó de hardcodear `album: null`, así que el `alt` de la
+  carátula del `PlayerBar` ahora es el nombre real del álbum, y el copy de `/buscar` recuperó "álbumo".
+
+**Lo que sigue:**
+
+- **El orden de las pistas es por `id`**: el esquema no tiene número de track. Si alguna vez importa el
+  orden real del disco, hace falta una columna de posición.
+- **`/artistas` sigue siendo un placeholder.** Hay `Artist` en el esquema, pero no hay endpoints ni
+  pantalla para artistas.
+- El ícono de Albums en el Sidebar sigue siendo `Disc3` de lucide-react, aunque existe
+  `src/assets/album.svg`. Se deja así para no mezclar el set; migrar los cinco íconos juntos es lo que
+  cierra la deuda de `lucide-react` (§2).
+- Sin E2E: verificado con `curl` contra la base real (104 álbumes, 134 canciones), no en navegador.
