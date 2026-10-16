@@ -1,4 +1,5 @@
 const songService = require("../services/song.service");
+const albumService = require("../services/album.service");
 const { getId, validateCursor, validateQuery } = require("../utils/validation");
 const { httpError } = require("../utils/errors");
 
@@ -34,12 +35,14 @@ async function searchSongs(req, res, next) {
 		}
 
 		if (type === "albums") {
-			return res.json(
-				await albumService.searchAlbums(query, { page, pageSize }),
-			);
+			return res.json(await albumService.searchAlbums(query, { page, pageSize }));
 		}
 
-		res.json({ songs, albums });
+		throw httpError(
+			400,
+			"El tipo de búsqueda debe ser 'songs' o 'albums'.",
+			"SEARCH_TYPE_INVALID",
+		);
 	} catch (error) {
 		next(error);
 	}
