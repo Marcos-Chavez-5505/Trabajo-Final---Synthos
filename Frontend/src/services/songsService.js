@@ -28,9 +28,12 @@ export const SEARCH_PAGE_SIZE = 10;
  * - `genre` se arma con el primer nombre de `songGenres[].genre.name`. El backend
  *   anida la entidad en el include, así que hay nombre; si una canción no tuviera
  *   género queda en `null` y la card muestra la etiqueta vacía.
- * - `album` y `source` no existen en el esquema (ver docs/PENDIENTES.md). `album` solo
- *   se usa como `alt` de la carátula, que ya cae a `title`; `source` es la línea
- *   "Reproduciéndose desde", que se oculta si no viene.
+ * - `album` viene anidado (`{ id, name }`) y la app lo usa como string suelto, igual
+ *   que `artist`: `PlayerBar` lo lee como `alt` de la carátula y la búsqueda ya
+ *   filtra por nombre de álbum. El detalle de un álbum no lo incluye (allí la
+ *   canción no necesita repetirlo), así que cae en `null`.
+ * - `source` no existe en el esquema: es la línea "Reproduciéndose desde", que se
+ *   oculta si no viene.
  */
 export function toSong(raw) {
 	if (!raw) return null;
@@ -42,7 +45,7 @@ export function toSong(raw) {
 		id: raw.id,
 		title: raw.title,
 		artist: raw.artist?.name ?? null,
-		album: null,
+		album: raw.album?.name ?? null,
 		genre,
 		duration: raw.duration ?? 0,
 		audioUrl: raw.url,
@@ -81,7 +84,10 @@ export async function getSongById(id, { signal } = {}) {
 }
 
 /**
- * Busca canciones por título, artista, género o album, paginadas por número de página.
+ * Busca canciones por título, artista, género o álbum, paginadas por número de página.
+ *
+ * El mismo endpoint sirve para los álbumes con `type=albums`; esa variante la
+ * consume `albumsService`, que tiene su propio mapper.
  *
  * @param {string} query Texto a buscar. Vacío devuelve el catálogo paginado.
  * @param {number} [page] Página 1-based.
@@ -95,7 +101,6 @@ export async function searchSongs(
 	pageSize = SEARCH_PAGE_SIZE,
 	{ signal } = {},
 ) {
-	//! El term puede ser songs (por defecto, busca por artista, titulo o genero) y albums (busca por nombre de albums)
 	const term = String(query ?? "").trim();
 
 	const data = await get(`${SONGS_PATH}/search`, {
