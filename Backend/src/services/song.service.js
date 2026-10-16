@@ -8,6 +8,7 @@ const SONG_INCLUDE = {
 	songGenres: { include: { genre: true } },
 	songMoods: { include: { mood: true } },
 	artist: true,
+	album: { select: { id: true, name: true } },
 };
 
 const VALID_EXPRESSIONS = ["neutral", "happy", "sad"];
@@ -21,6 +22,7 @@ async function searchSongs(query, pagination = {}) {
 				OR: [
 					{ title: { contains: term, mode: "insensitive" } },
 					{ artist: { name: { contains: term, mode: "insensitive" } } },
+					{ album: { name: { contains: term, mode: "insensitive" } } },
 					{
 						songGenres: {
 							some: {
