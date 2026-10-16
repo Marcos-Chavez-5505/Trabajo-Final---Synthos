@@ -12,6 +12,8 @@ import FollowList from '../features/social/FollowList.jsx'
 import Search from '../features/search/Search.jsx'
 import Playlists from '../features/playlists/Playlists.jsx'
 import PlaylistDetail from '../features/playlists/PlaylistDetail.jsx'
+import Albums from '../features/albums/Albums.jsx'
+import AlbumDetail from '../features/albums/AlbumDetail.jsx'
 import PublicOnly from './PublicOnly.jsx'
 import RequireAuth from './RequireAuth.jsx'
 
@@ -76,9 +78,14 @@ export default function AppRoutes() {
         path="/playlists/:id"
         element={<Protected><PlaylistDetail /></Protected>}
       />
+      {/* Catálogo de discos: grilla paginada y detalle por id. */}
       <Route
         path="/albums"
-        element={<Protected><ScreenPlaceholder title="Albums" /></Protected>}
+        element={<Protected><Albums /></Protected>}
+      />
+      <Route
+        path="/albums/:id"
+        element={<Protected><AlbumDetail /></Protected>}
       />
       <Route
         path="/artistas"

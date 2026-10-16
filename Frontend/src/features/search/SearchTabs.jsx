@@ -8,12 +8,13 @@ import { Link, useSearchParams } from 'react-router-dom'
  * eso las tabs son `Link` y no un `useState`.
  *
  * `PageHeader` mantiene el mismo esqueleto (h1 + bajada) que las pantallas de
- * `SearchSongs`/`SearchPeople`, y these las pasan por prop para que el texto
- * siga siendo de cada búsqueda.
+ * `SearchSongs`/`SearchPeople`/`SearchAlbums`, y these las pasan por prop para que
+ * el texto siga siendo de cada búsqueda.
  */
 
 const TABS = [
   { tipo: 'canciones', label: 'Canciones' },
+  { tipo: 'albumes', label: 'Álbumes' },
   { tipo: 'personas', label: 'Personas' },
 ]
 
