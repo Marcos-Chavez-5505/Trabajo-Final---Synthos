@@ -1,6 +1,6 @@
 const songService = require("../services/song.service");
 const albumService = require("../services/album.service");
-const { getId, validateCursor, validateQuery } = require("../utils/validation");
+const { getId, validateCursor } = require("../utils/validation");
 const { httpError } = require("../utils/errors");
 
 async function getSongs(req, res, next) {
@@ -35,7 +35,9 @@ async function searchSongs(req, res, next) {
 		}
 
 		if (type === "albums") {
-			return res.json(await albumService.searchAlbums(query, { page, pageSize }));
+			return res.json(
+				await albumService.searchAlbums(query, { page, pageSize }),
+			);
 		}
 
 		throw httpError(

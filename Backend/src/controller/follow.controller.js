@@ -1,18 +1,6 @@
 const followService = require("../services/follow.service");
 const { httpError } = require("../utils/errors");
-
-function parseId(raw) {
-	const id = Number(raw);
-	return Number.isInteger(id) && id > 0 ? id : null;
-}
-
-function requireId(raw) {
-	const id = parseId(raw);
-	if (!id) {
-		throw httpError(400, "Id inválido.", "INVALID_ID");
-	}
-	return id;
-}
+const { requireId } = require("../utils/id");
 
 async function follow(req, res, next) {
 	try {
@@ -20,11 +8,7 @@ async function follow(req, res, next) {
 		const followedId = requireId(req.params.id);
 
 		if (followerId === followedId) {
-			throw httpError(
-				400,
-				"No podés seguirte a vos mismo.",
-				"FOLLOW_SELF",
-			);
+			throw httpError(400, "No podés seguirte a vos mismo.", "FOLLOW_SELF");
 		}
 
 		const exists = await followService.userExists(followedId);
@@ -63,11 +47,7 @@ async function unfollow(req, res, next) {
 		const result = await followService.unfollowUser(followerId, followedId);
 
 		if (result.notFollowing) {
-			throw httpError(
-				404,
-				"No seguías a este usuario.",
-				"NOT_FOLLOWING",
-			);
+			throw httpError(404, "No seguías a este usuario.", "NOT_FOLLOWING");
 		}
 
 		return res.status(200).json({

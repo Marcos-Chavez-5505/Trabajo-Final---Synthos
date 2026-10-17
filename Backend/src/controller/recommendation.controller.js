@@ -1,12 +1,8 @@
 const recommendationService = require("../services/recommendation.service");
 const { httpError } = require("../utils/errors");
+const { parseId } = require("../utils/id");
 
 const MAX_TEXT_LENGTH = 280;
-
-function parseId(raw) {
-	const id = Number(raw);
-	return Number.isInteger(id) && id > 0 ? id : null;
-}
 
 async function createRecommendation(req, res, next) {
 	try {
@@ -53,11 +49,7 @@ async function createRecommendation(req, res, next) {
 
 		const targetExists = await recommendationService.userExists(targetId);
 		if (!targetExists) {
-			throw httpError(
-				404,
-				"El usuario destino no existe.",
-				"USER_NOT_FOUND",
-			);
+			throw httpError(404, "El usuario destino no existe.", "USER_NOT_FOUND");
 		}
 
 		const songExists = await recommendationService.songExists(songId);

@@ -1,21 +1,9 @@
 const playlistService = require("../services/playlist.service");
 const { httpError } = require("../utils/errors");
+const { requireId, parseId } = require("../utils/id");
 
 function isFavoritesPlaylist(playlist) {
 	return playlist.type === "favorites";
-}
-
-function parseId(raw) {
-	const id = Number(raw);
-	return Number.isInteger(id) && id > 0 ? id : null;
-}
-
-function requireId(raw) {
-	const id = parseId(raw);
-	if (!id) {
-		throw httpError(400, "Id inválido.", "INVALID_ID");
-	}
-	return id;
 }
 
 async function createPlaylist(req, res, next) {
@@ -67,21 +55,13 @@ async function getPlaylistById(req, res, next) {
 
 		const playlist = await playlistService.getPlaylistById(id);
 		if (!playlist) {
-			throw httpError(
-				404,
-				"La playlist no existe.",
-				"PLAYLIST_NOT_FOUND",
-			);
+			throw httpError(404, "La playlist no existe.", "PLAYLIST_NOT_FOUND");
 		}
 
 		const isMember = playlist.members.some((m) => m.idUser === userId);
 
 		if (playlist.idCreator !== userId && !isMember && !playlist.isPublic) {
-			throw httpError(
-				404,
-				"La playlist no existe.",
-				"PLAYLIST_NOT_FOUND",
-			);
+			throw httpError(404, "La playlist no existe.", "PLAYLIST_NOT_FOUND");
 		}
 
 		return res.status(200).json({ status: "success", playlist });
@@ -108,11 +88,7 @@ async function updatePlaylist(req, res, next) {
 
 		const existing = await playlistService.getPlaylistById(id);
 		if (!existing) {
-			throw httpError(
-				404,
-				"La playlist no existe.",
-				"PLAYLIST_NOT_FOUND",
-			);
+			throw httpError(404, "La playlist no existe.", "PLAYLIST_NOT_FOUND");
 		}
 
 		if (existing.idCreator !== userId) {
@@ -131,7 +107,8 @@ async function updatePlaylist(req, res, next) {
 			);
 		}
 
-		const { name, description, addSongs, removeSongs, reorder } = req.body || {};
+		const { name, description, addSongs, removeSongs, reorder } =
+			req.body || {};
 
 		if (name !== undefined) {
 			if (typeof name !== "string" || name.trim().length === 0) {
@@ -171,11 +148,7 @@ async function deletePlaylist(req, res, next) {
 
 		const existing = await playlistService.getPlaylistById(id);
 		if (!existing) {
-			throw httpError(
-				404,
-				"La playlist no existe.",
-				"PLAYLIST_NOT_FOUND",
-			);
+			throw httpError(404, "La playlist no existe.", "PLAYLIST_NOT_FOUND");
 		}
 
 		if (existing.idCreator !== userId) {
@@ -212,20 +185,12 @@ async function addSong(req, res, next) {
 		const songId = Number(req.body?.songId);
 
 		if (!Number.isInteger(songId) || songId <= 0) {
-			throw httpError(
-				400,
-				"El songId es obligatorio.",
-				"SONG_ID_REQUIRED",
-			);
+			throw httpError(400, "El songId es obligatorio.", "SONG_ID_REQUIRED");
 		}
 
 		const playlist = await playlistService.getPlaylistById(id);
 		if (!playlist) {
-			throw httpError(
-				404,
-				"La playlist no existe.",
-				"PLAYLIST_NOT_FOUND",
-			);
+			throw httpError(404, "La playlist no existe.", "PLAYLIST_NOT_FOUND");
 		}
 
 		if (isFavoritesPlaylist(playlist)) {
@@ -291,11 +256,7 @@ async function removeSong(req, res, next) {
 
 		const playlist = await playlistService.getPlaylistById(id);
 		if (!playlist) {
-			throw httpError(
-				404,
-				"La playlist no existe.",
-				"PLAYLIST_NOT_FOUND",
-			);
+			throw httpError(404, "La playlist no existe.", "PLAYLIST_NOT_FOUND");
 		}
 
 		if (isFavoritesPlaylist(playlist)) {
@@ -351,16 +312,16 @@ async function createInvitation(req, res, next) {
 		const receiverId = parseId(req.body?.userId);
 
 		if (!receiverId) {
-			throw httpError(400, "Elegí a quién invitar.", "INVITATION_RECEIVER_REQUIRED");
+			throw httpError(
+				400,
+				"Elegí a quién invitar.",
+				"INVITATION_RECEIVER_REQUIRED",
+			);
 		}
 
 		const playlist = await playlistService.getPlaylistById(id);
 		if (!playlist) {
-			throw httpError(
-				404,
-				"La playlist no existe.",
-				"PLAYLIST_NOT_FOUND",
-			);
+			throw httpError(404, "La playlist no existe.", "PLAYLIST_NOT_FOUND");
 		}
 
 		if (playlist.idCreator !== userId) {
@@ -396,7 +357,11 @@ async function createInvitation(req, res, next) {
 			);
 		}
 
-		const invitation = await playlistService.createInvitation(id, userId, receiverId);
+		const invitation = await playlistService.createInvitation(
+			id,
+			userId,
+			receiverId,
+		);
 
 		if (invitation.alreadyMember) {
 			throw httpError(
@@ -425,11 +390,7 @@ async function listPlaylistInvitations(req, res, next) {
 
 		const playlist = await playlistService.getPlaylistById(id);
 		if (!playlist) {
-			throw httpError(
-				404,
-				"La playlist no existe.",
-				"PLAYLIST_NOT_FOUND",
-			);
+			throw httpError(404, "La playlist no existe.", "PLAYLIST_NOT_FOUND");
 		}
 
 		if (playlist.idCreator !== userId) {
@@ -512,11 +473,7 @@ async function removeMember(req, res, next) {
 
 		const playlist = await playlistService.getPlaylistById(id);
 		if (!playlist) {
-			throw httpError(
-				404,
-				"La playlist no existe.",
-				"PLAYLIST_NOT_FOUND",
-			);
+			throw httpError(404, "La playlist no existe.", "PLAYLIST_NOT_FOUND");
 		}
 
 		if (playlist.idCreator !== userId) {
