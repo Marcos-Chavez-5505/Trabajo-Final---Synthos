@@ -26,7 +26,7 @@ const SEG_BASE =
   'flex h-12 flex-1 items-center justify-center rounded-full transition-colors duration-[250ms] disabled:cursor-not-allowed disabled:opacity-40'
 
 export default function ActionControls({ songId }) {
-  const { shuffle, repeat, toggleShuffle, cycleRepeat, hasQueue } = usePlayer()
+  const { shuffle, repeat, roomMode, toggleShuffle, cycleRepeat, hasQueue } = usePlayer()
   const { isFavorite } = useFavorites()
 
   const repeatSrc = repeat === 'track' ? repeatOneIcon : repeatIcon
@@ -34,40 +34,44 @@ export default function ActionControls({ songId }) {
 
   return (
     <div className="flex w-[320px] max-w-full gap-1.5 rounded-full bg-surface/70 p-1.5">
+      {/* Aleatorio y repetición quedan a la vista pero inertes en modo sala: no
+          tienen sentido sobre una cola compartida, que el servidor recorre en
+          orden. Se apagan acá y también en el PlayerContext, para que quitar el
+          `disabled` no alcance. */}
       <button
         type="button"
-        className={`${SEG_BASE} ${shuffle ? 'Fucsia' : 'Volume hover:opacity-80'}`}
+        className={`${SEG_BASE} ${shuffle && !roomMode ? 'Fucsia' : 'Volume hover:opacity-80'}`}
         aria-pressed={shuffle}
         aria-label="Aleatorio"
         title="Aleatorio"
         onClick={toggleShuffle}
-        disabled={!hasQueue}
+        disabled={!hasQueue || roomMode}
       >
         <img
           src={shuffleIcon}
           alt=""
           aria-hidden="true"
           className={`h-5 w-5 transition-opacity duration-[250ms] ${
-            shuffle ? 'opacity-100' : 'opacity-55'
+            shuffle && !roomMode ? 'opacity-100' : 'opacity-55'
           }`}
         />
       </button>
 
       <button
         type="button"
-        className={`${SEG_BASE} ${repeat !== 'off' ? 'Fucsia' : 'Volume hover:opacity-80'}`}
+        className={`${SEG_BASE} ${repeat !== 'off' && !roomMode ? 'Fucsia' : 'Volume hover:opacity-80'}`}
         aria-pressed={repeat !== 'off'}
         aria-label={REPEAT_LABELS[repeat]}
         title={REPEAT_LABELS[repeat]}
         onClick={cycleRepeat}
-        disabled={!hasQueue}
+        disabled={!hasQueue || roomMode}
       >
         <img
           src={repeatSrc}
           alt=""
           aria-hidden="true"
           className={`h-5 w-5 transition-opacity duration-[250ms] ${
-            repeat !== 'off' ? 'opacity-100' : 'opacity-55'
+            repeat !== 'off' && !roomMode ? 'opacity-100' : 'opacity-55'
           }`}
         />
       </button>

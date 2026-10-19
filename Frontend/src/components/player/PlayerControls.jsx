@@ -94,6 +94,8 @@ export default function PlayerControls() {
     hasQueue,
     shuffle,
     repeat,
+    roomMode,
+    playBlocked,
     togglePlay,
     next,
     previous,
@@ -128,6 +130,58 @@ export default function PlayerControls() {
   const grow = (type) => (press === type ? 0.1 : 0)
 
   const repeatCurrent = repeat === 'track' ? repeatOneIcon : repeatIcon
+
+  // En una sala los cinco botones siguen a la vista para no cambiar la forma de
+  // la barra, pero los cuatro que deciden la lista quedan inertes: la cola la
+  // manda el servidor (el anfitrión, o la votación de skip), y mover el índice
+  // desde acá dejaría a esta persona sola y desfasada. Están `disabled` además de
+  // negados en el PlayerContext, para que sacarles el atributo no alcance.
+  //
+  // Play/pause sí funciona mientras la sala suena: es el audio de esta persona y
+  // bajarlo o volver a subirlo no le cambia el estado a nadie. Con la sala en
+  // pausa o detenida queda bloqueado, porque arrancarlo la dejaría sonando sola.
+  if (roomMode) {
+    return (
+      <div className="flex min-w-0 w-60 items-center justify-center gap-0.5 sm:w-64 sm:gap-1 [&>button]:min-w-0 [&>button]:shrink [&_img]:min-w-0">
+        <ControlButton label={"Aleatorio"} tooltip disabled>
+          <img
+            src={shuffleIcon}
+            alt=""
+            aria-hidden="true"
+            className="h-5 w-5 opacity-55"
+          />
+        </ControlButton>
+
+        <ControlButton label={"Anterior"} tooltip disabled>
+          <img src={previousIcon} alt="" aria-hidden="true" className="h-5 w-5" />
+        </ControlButton>
+
+        <ControlButton
+          label={isPlaying ? "Pausar" : "Reproducir"}
+          tooltip
+          grow={grow('play')}
+          onClick={togglePlay}
+          tone="solid"
+          disabled={!hasQueue || playBlocked}
+        >
+          <img
+            src={isPlaying ? pauseIcon : playIcon}
+            alt=""
+            aria-hidden="true"
+            className="h-5 w-5 invert"
+          />
+        </ControlButton>
+
+        <ControlButton label={"Siguiente"} tooltip disabled>
+          <img src={nextIcon} alt="" aria-hidden="true" className="h-5 w-5" />
+        </ControlButton>
+
+        <ControlButton label={REPEAT_LABELS[repeat]} tooltip disabled>
+          <img src={repeatCurrent} alt="" aria-hidden="true" className="h-5 w-5" />
+        </ControlButton>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-w-0 w-60 items-center justify-center gap-0.5 sm:w-64 sm:gap-1 [&>button]:min-w-0 [&>button]:shrink [&_img]:min-w-0">

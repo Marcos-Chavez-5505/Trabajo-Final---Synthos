@@ -74,10 +74,34 @@ const BY_CODE = {
 	INVITATION_SELF: "No podés invitarte a vos mismo.",
 	INVITATION_NOT_FOUND: "No tenés una invitación pendiente para esa playlist.",
 
+	// Salas
+	ROOM_NOT_FOUND: "No encontramos esa sala.",
+	ROOM_HOST_NOT_FOUND: "Esa sala no tiene anfitrión.",
+	ROOM_CLOSED: "Esa sala está cerrada.",
+	ROOM_FULL: "La sala está llena.",
+	ROOM_PASSWORD_REQUIRED: "Esa sala necesita una contraseña.",
+	ROOM_PASSWORD_INCORRECT: "La contraseña de la sala no es correcta.",
+	ROOM_CODE_REQUIRED: "Escribí el código de la sala.",
+	ROOM_CODE_NOT_FOUND: "No hay ninguna sala con ese código.",
+	ROOM_NOT_MEMBER: "No sos miembro de esta sala.",
+	ROOM_ALREADY_MEMBER: "Ya sos parte de esta sala.",
+	NOT_ROOM_HOST: "Solo el anfitrión puede hacer eso.",
+	INVALID_PLAYBACK_ACTION: "Esa acción de reproducción no existe.",
+	INVALID_ROOM_NAME: "Poné un nombre para la sala.",
+	INVALID_ROOM_PLAYLIST: "Elegí una playlist con canciones.",
+	INVALID_ROOM_PRIVATE: "Las salas privadas necesitan una contraseña.",
+	INVALID_RATING: "Esa calificación no es válida.",
+	SKIP_ALREADY_VOTED: "Ya votaste para saltar esta canción.",
+	SKIP_NO_SONG: "No hay ninguna canción sonando.",
+	CANNOT_RATE_HOST: "El anfitrión no puede calificar a nadie.",
+	RATER_NOT_IN_ROOM: "Solo podés calificar dentro de una sala de la que participás.",
+	HOST_ALREADY_RATED: "Ya calificaste al anfitrión de esta sala.",
+
 	// Genéricos de validación
 	INVALID_ID: "Ese identificador no es válido.",
 	INVALID_QUERY: "La búsqueda no puede ir vacía.",
 	INVALID_SORT: "Ese criterio de orden no existe.",
+	INVALID_ORDER: "Ese sentido de orden no existe.",
 	REGISTRATION_INVITE_ONLY: "Necesitás una invitación para entrar.",
 };
 

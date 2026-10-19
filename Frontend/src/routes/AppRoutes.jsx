@@ -7,6 +7,8 @@ import Register from '../features/auth/Register.jsx'
 import ProfileView from '../features/profile/ProfileView.jsx'
 import ProfilePublic from '../features/profile/ProfilePublic.jsx'
 import Rooms from '../features/rooms/Rooms.jsx'
+import CreateRoom from '../features/rooms/CreateRoom.jsx'
+import RoomView from '../features/rooms/RoomView.jsx'
 import MoodScan from '../features/mood/MoodScan.jsx'
 import FollowList from '../features/social/FollowList.jsx'
 import Search from '../features/search/Search.jsx'
@@ -91,8 +93,12 @@ export default function AppRoutes() {
         path="/artistas"
         element={<Protected><ScreenPlaceholder title="Artistas" /></Protected>}
       />
-      {/* TS-17: listado de salas ordenable por calificación del anfitrión. */}
+      {/* TS-17/TS-16: listado de salas con buscador y orden por calificación del
+          anfitrión. TS-14 agrega crear la sala y su pantalla: ambas detrás de
+          `Protected` porque el backend exige sesión hasta para leer el detalle. */}
       <Route path="/salas" element={<Protected><Rooms /></Protected>} />
+      <Route path="/salas/crear" element={<Protected><CreateRoom /></Protected>} />
+      <Route path="/salas/:id" element={<Protected><RoomView /></Protected>} />
       {/* TS-20: recomendaciones por estado de ánimo. El detector se descarga
           cuando se entra a la pantalla, no al cargar la app. */}
       <Route path="/animo" element={<Protected><MoodScan /></Protected>} />

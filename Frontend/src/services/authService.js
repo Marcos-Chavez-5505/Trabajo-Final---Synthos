@@ -18,12 +18,18 @@ const SESSION_KEY = 'synthos_auth'
 function toUser(raw) {
   if (!raw) return null
 
+  const rating = raw.hostRating ?? raw.host_rating ?? null
+
   return {
     id: String(raw.id),
     email: raw.email ?? null,
     username: raw.username,
     avatarUrl: raw.pictureUrl ?? raw.picture_url ?? raw.avatarUrl ?? null,
     bio: raw.biography ?? raw.bio ?? '',
+    // Calificación como anfitrión de salas (TS-11). `GET /users/me` ya la trae;
+    // el 0 del backend se traduce a `null` para poder decir "Sin calificaciones".
+    hostRating: rating === null || Number(rating) === 0 ? null : Number(rating),
+    hostRatingsCount: raw.hostRatingsCount ?? raw.host_ratings_count ?? 0,
   }
 }
 

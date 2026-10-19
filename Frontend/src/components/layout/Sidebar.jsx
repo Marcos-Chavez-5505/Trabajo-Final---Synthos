@@ -4,6 +4,7 @@ import { Disc3, Flame, Home, ListMusic, Mic2, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import MisPlaylists from '../../features/playlists/MisPlaylists.jsx'
 import CollabPlaylists from '../../features/playlists/CollabPlaylists.jsx'
+import MyRooms from '../../features/rooms/MyRooms.jsx'
 import ProfileSummary from '../../features/social/ProfileSummary.jsx'
 import roomIcon from '../../assets/join_music_room.svg'
 import moodIcon from '../../assets/microphone.svg'
@@ -167,6 +168,7 @@ export default function Sidebar() {
 
         <SidebarGroup>
           <SidebarGroupLabel>Mis Salas</SidebarGroupLabel>
+          <MyRooms />
         </SidebarGroup>
 
         <SidebarGroup>
