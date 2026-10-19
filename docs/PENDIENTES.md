@@ -62,8 +62,9 @@ pisar. Cuando no quede ningún import, sacar `lucide-react` de `package.json`.
 
 ## 3. Decisiones abiertas de `AGENTS.md` (sección 5)
 
-- **WebSockets:** definir `services/socketService.js` para el chat de Salas y la sincronización de
-  reproducción entre miembros.
+- **WebSockets:** resuelto para la sincronización de salas (2026-10-18). `services/socketService.js`
+  + Socket.IO, con handshake por JWT. **El chat de salas sigue sin existir**: no hay tabla
+  `room_message` ni eventos que lo transmitan.
 - **Estado global:** evaluar si `Context` alcanza o conviene un gestor (p. ej. Zustand) cuando
   aparezcan las features que aún faltan.
 
@@ -164,13 +165,53 @@ y `playSongs(songs, startIndex, source)`), falta decidir el label y pintarlo.
   `TypeError` → 500. Ahora el service normaliza a `""` y devuelve el catálogo paginado.
 - `Number(cursor)` daba `NaN` si faltaba el cursor. Sin efecto al pasar a offset, pero ya no se castea.
 
-### 5.6 `mocks/songs.js` — resuelto y eliminado (2026-10-14)
+### 5.6 `mocks/` — resuelto y eliminado (2026-10-18)
 
-Se borraron `mocks/songs.js`, `mocks/playlists.js` y `mocks/users.js`: los tres estaban sin imports
-(solo `roomsService` importaba `mocks/rooms.js`, que sigue existiendo porque las salas son mock) y
-` songsService` ya no arrastra la lógica de normalización de acentos ni el `SEARCH_PAGE_SIZE` que los
-justificaba. El endpoint real ya está conectado y verificado (§5.7), que era la condición que faltaba
-para borrarlos.
+Se borraron `mocks/songs.js`, `mocks/playlists.js` y `mocks/users.js` el 2026-10-14, y con las salas
+entregadas se borró la carpeta entera: `mocks/rooms.js` era el último que quedaba, importado solo
+por `roomsService`. **Ya no queda ningún mock en el repo**: toda la app habla con la API.
+
+### 5.6b Salas — entregados los cuatro bloques (2026-10-18)
+
+Plan: `docs/plan/sprint-2-salas-plan.md` (B11–B21 + F8, F11–F14). **No queda nada pendiente de
+salas salvo el chat.** Verificado contra la base real: 80 chequeos de API y 9 de socket.
+
+- **Fase 1** `GET /rooms?query=&sort=name|rating&order=asc|desc` con `members_count`/`songs_count`,
+  filtrando privadas y cerradas. **Fuga corregida:** antes la query proyectaba `room.*` y el
+  endpoint **público** devolvía `password_hash` de cada sala; ahora las columnas van una por una y
+  los endpoints que devuelven la sala entera (crear, unirse, detalle) la filtran con `safeRoom`.
+- **Fase 2** crear por playlist propia **o de una colaborativa** (D19), unirse por código, salir
+  (el anfitrión que sale cierra la sala, D16), detalle con miembros y canciones, y
+  `GET /rooms/mine` para el grupo "Mis Salas" del Sidebar.
+- **Fase 3** Socket.IO: handshake por JWT, canal `room:<id>` solo para miembros, eventos
+  `room:playback` / `room:members` / `room:skip-votes` / `room:rating` / `room:kicked` /
+  `room:closed`, control de reproducción del anfitrión, expulsión y cierre. En el frontend, "modo
+  sala" del `PlayerContext` (apaga aleatorio y repetición, y el `onEnded` del anfitrión pide el
+  `next` al servidor) más corrección de deriva cada 2 s.
+- **Fase 4** votar para saltar (mayoría sobre no-anfitriones, D17) y calificar al anfitrión (TS-11),
+  con el promedio visible en su perfil.
+
+**Bugs corregidos de paso:**
+
+- `pause` guardaba `positionMs` sin sumarle el tiempo transcurrido, así que **pausar reiniciaba la
+  canción para todo el mundo**. Ahora congela la posición real y `play` reanuda desde ahí.
+- `deleteRoomState` estaba definido pero **nunca se llamaba**: el estado de reproducción en memoria
+  sobrevivía al cierre de la sala. Ahora se limpia en `DELETE /rooms/:id` y cuando sale el anfitrión.
+- `socket.io` estaba en `package.json` y en el lockfile pero **no en `node_modules`**: el backend no
+  arrancaba hasta correr `npm install`.
+
+**Deuda que dejó el bloque:**
+
+- `POST /api/rooms/:id/playback` con dos ingresos simultáneos al mismo tiempo no garantiza el tope
+  de 10: la transacción de `joinRoom` relee el cupo, pero con el nivel de aislamiento por defecto de
+  Postgres (`ReadCommitted`) dos transacciones pueden pasar el chequeo a la vez. Para que sea
+  estricto hace falta aislamiento `Serializable` o un lock.
+- El rating del anfitrión es una escala 1–5 en el esquema, pero `POST /:id/rating` recibe el valor
+  en el body y la UI todavía **no lo manda**: el botón está implemented en `RoomView.jsx` y envía
+  `1`. Con la escala unificada, ordenar por calificación se reduce en la práctica a "calificada
+  antes que no calificada". Ver **D21** del plan de salas.
+- La barra de progreso de la sala es de solo lectura para los miembros: no hay endpoint para
+  buscar dentro de la canción, así que la posición es del servidor.
 
 ### 5.7 Verificación contra la base real — mayormente cubierta
 
