@@ -38,6 +38,21 @@ export function setAuthToken(token) {
 }
 
 /**
+ * Devuelve el token vigente, o `null` si no hay sesión.
+ *
+ * Vive acá porque el token es de `api.js`: `socketService` lo necesita para el
+ * handshake de Socket.IO, que no pasa por `fetch` ni por el header
+ * `Authorization`. Es la única forma de que otro módulo use el token sin que
+ * tenga que leer `localStorage` (que es el formato de la sesión, no del
+ * transporte).
+ *
+ * @returns {string|null}
+ */
+export function getAuthToken() {
+  return authToken
+}
+
+/**
  * Callback que se dispara una sola vez cuando un request autenticado recibe
  * 401. `AuthProvider` lo usa para limpiar la sesión; las rutas protegidas se
  * encargan de redirigir solas cuando el usuario pasa a `null`.

@@ -93,6 +93,15 @@ export default function PlayerProvider({ children }) {
   // vigente ya apunta a otra canción.
   const pendingSkipRef = useRef(null)
 
+  // Callback que reemplaza al `next()` local cuando una canción termina. Lo usa el
+  // modo sala: en una sala el avance lo decide el anfitrión y lo reparte el
+  // servidor, así que el salto local no puede simplemente avanzar el índice.
+  const onEndedRef = useRef(null)
+
+  // Posición inicial de la pista que se está por cargar, en segundos. La carga
+  // del track la consume: ver el efecto que setea `audio.src`.
+  const pendingSeekRef = useRef(0)
+
   const [queue, setQueue] = useState([])
   const [index, setIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -100,6 +109,10 @@ export default function PlayerProvider({ children }) {
   const [duration, setDuration] = useState(0)
   const [shuffle, setShuffle] = useState(false)
   const [repeat, setRepeat] = useState('off')
+  // Cuando está activo, el reproductor no manda: la sala lo controla el
+  // anfitrión y el estado llega por el socket. Apaga aleatorio y repetición y le
+  // avisa a los controles para que no ofrezcan lo que no va a pasar.
+  const [roomMode, setRoomMode] = useState(false)
   // Estado de UI del reproductor expandido. Vive acá (y no en el layout) para
   // sobrevivir a la navegación: AppLayout se remonta por ruta, PlayerProvider no.
   const [isExpanded, setIsExpanded] = useState(false)
@@ -110,6 +123,11 @@ export default function PlayerProvider({ children }) {
   // un control o de la barra espaciadora. Los controles lo observan para correr
   // su animación de pulsado también con teclado, no solo con mouse.
   const [playPulse, setPlayPulse] = useState(0)
+  // Bloqueo de arranque. Cuando está encendido, la reproducción no puede
+  // *empezar* desde el cliente: pausar sigue siendo del usuario (solo silencia
+  // a esta persona), pero reproducir no, porque alguien más decide cuándo suena.
+  // Lo enciende la sala, que es quien conoce el estado del servidor.
+  const [playBlocked, setPlayBlocked] = useState(false)
 
   const song = queue[index] ?? null
 
@@ -141,8 +159,21 @@ export default function PlayerProvider({ children }) {
 
     audio.src = song.audioUrl
     audio.load()
-    setCurrentTime(0)
     setDuration(song.duration ?? 0)
+
+    // Posición inicial dentro de la canción, en segundos. La usa el modo sala para
+    // arrancar en el punto que va el servidor y no al principio. Tiene que
+    // aplicarse acá y no después, porque este efecto deja `currentTime` en 0 y
+    // pisaría cualquier `seek()` que se hiciera antes de que corra.
+    const start = pendingSeekRef.current
+    pendingSeekRef.current = null
+
+    if (start > 0) {
+      audio.currentTime = start
+      setCurrentTime(start)
+    } else {
+      setCurrentTime(0)
+    }
   }, [song])
 
   useEffect(() => {
@@ -173,6 +204,11 @@ export default function PlayerProvider({ children }) {
   )
 
   const next = useCallback(() => {
+    // En modo sala la cola la manda el servidor: mover el índice acá solo deja a
+    // esta persona sonando sola y desfasada. Además de apagar el botón, esto
+    // cubre el caso de quien se salte la barrera y lo llame desde consola.
+    if (roomMode) return
+
     // El salto pendiente se evalúa antes del `if (!queue.length)`: con una sola
     // canción en la cola esa es justamente la que se retiró, y sin esto el
     // `next()` que dispara el evento 'ended' no haría nada.
@@ -224,9 +260,12 @@ export default function PlayerProvider({ children }) {
 
     historyRef.current.push(index)
     setIndex(nextIndex)
-  }, [index, queue, repeat, shuffle])
+  }, [index, queue, repeat, roomMode, shuffle])
 
   const previous = useCallback(() => {
+    // Igual que `next`: en modo sala el desplazamiento es del servidor.
+    if (roomMode) return
+
     const audio = audioRef.current
 
     // Si ya pasó un poco de la canción, el botón reinicia en vez de saltar.
@@ -253,14 +292,24 @@ export default function PlayerProvider({ children }) {
     }
 
     setIndex((prev) => (prev - 1 + queue.length) % queue.length)
-  }, [queue, seek])
+  }, [queue, roomMode, seek])
 
   const togglePlay = useCallback(() => {
     if (!song) return
 
+    // Pausar es siempre del usuario: solo le silencia a él. Arrancar, en cambio,
+    // puede dejarlo sonando solo mientras el resto de la sala está en silencio,
+    // por eso se niega si el estado externo (la sala) no lo permite. Cubre el
+    // botón y la barra espaciadora, las dos vías hacia acá.
+    if (!isPlaying && playBlocked) return
+
     setPlayPulse((n) => n + 1)
     setIsPlaying((prev) => !prev)
-  }, [song])
+  }, [isPlaying, playBlocked, song])
+
+  /** Apaga el audio sin tocar la cola ni el índice. Lo usa la sala cuando el
+   * servidor se queda sin canción que reproducir (`status: stopped`). */
+  const pause = useCallback(() => setIsPlaying(false), [])
 
   // Tecla "space": alterna reproducir/pausar desde cualquier lugar de la app,
   // incluso con un elemento enfocado (botón, card, ítem de menú). Se toma en
@@ -303,16 +352,57 @@ export default function PlayerProvider({ children }) {
    * después a las acciones de sincronización decidir si
    * tienen algo que sincronizar: una cola sin origen no se toca nunca, porque sus
    * canciones siguen siendo válidas aunque se quiten de una playlist.
+   *
+   * `options` es para el modo sala y no cambia el comportamiento por defecto:
+   * - `autoplay`: si arranca sonando o queda cargado (por defecto `true`).
+   * - `onEnded`: reemplaza al `next()` local cuando la canción termina. En una sala
+   *   el avance lo pide el anfitrión al servidor, así que no se puede avanzar el
+   *   índice desde el cliente.
+   * - `startPosition`: dónde arrancar dentro de la canción, en segundos. Lo aplica
+   *   el efecto que carga el track, no un `seek()` aparte (que quedaría pisado).
    */
-  const playSongs = useCallback((songs, startIndex = 0, source = null) => {
-    if (!songs?.length) return
+  const playSongs = useCallback(
+    (songs, startIndex = 0, source = null, options = {}) => {
+      if (!songs?.length) return
 
-    setQueue(songs)
-    historyRef.current = []
-    queueSourceRef.current = source
-    pendingSkipRef.current = null
-    setIndex(Math.min(Math.max(startIndex, 0), songs.length - 1))
-    setIsPlaying(true)
+      const { autoplay = true, onEnded = null, startPosition = 0 } = options
+
+      setQueue(songs)
+      historyRef.current = []
+      queueSourceRef.current = source
+      pendingSkipRef.current = null
+      onEndedRef.current = onEnded
+      pendingSeekRef.current = startPosition
+      setIndex(Math.min(Math.max(startIndex, 0), songs.length - 1))
+      setIsPlaying(autoplay)
+    },
+    []
+  )
+
+  /**
+   * Enciende el modo sala.
+   *
+   * En una sala el estado de reproducción no es del cliente: lo manda el
+   * anfitrión por REST y el servidor lo reparte por el socket. Por eso acá solo
+   * se apagan las cosas que cada uno manejaría por su cuenta y romperían la
+   * sincronización (aleatorio, repetición y el salto local).
+   *
+   * El "modo sala" no mete lógica de salas en este archivo: solo un flag que
+   * `PlayerControls` y `ActionControls` leen para apagar esos controles. La
+   * traducción del estado del servidor al player vive en
+   * `features/rooms/useRoomPlayback.js`.
+   */
+  const enterRoomMode = useCallback(() => {
+    setShuffle(false)
+    setRepeat('off')
+    setRoomMode(true)
+  }, [])
+
+  /** @see enterRoomMode */
+  const exitRoomMode = useCallback(() => {
+    onEndedRef.current = null
+    setRoomMode(false)
+    setPlayBlocked(false)
   }, [])
 
   /**
@@ -420,11 +510,20 @@ export default function PlayerProvider({ children }) {
     return true
   }, [])
 
-  const toggleShuffle = useCallback(() => setShuffle((prev) => !prev), [])
+  // Aleatorio y repetición quedan sin efecto en modo sala: apagan el sentido de
+  // una cola compartida (el servidor la recorre en orden, o la votación la
+  // salta). Se niegan en el origen y no solo en la UI.
+  const toggleShuffle = useCallback(() => {
+    if (roomMode) return
+
+    setShuffle((prev) => !prev)
+  }, [roomMode])
 
   const cycleRepeat = useCallback(() => {
+    if (roomMode) return
+
     setRepeat((prev) => REPEAT_MODES[(REPEAT_MODES.indexOf(prev) + 1) % REPEAT_MODES.length])
-  }, [])
+  }, [roomMode])
 
   const expand = useCallback((event) => {
     const trigger = event?.currentTarget
@@ -462,9 +561,24 @@ export default function PlayerProvider({ children }) {
 
     const handleLoadedMetadata = () => {
       if (Number.isFinite(audio.duration)) setDuration(audio.duration)
+
+      // Si se pidió arrancar en una posición y el navegador ignoró el
+      // `currentTime` porque todavía no conocía la duración, se reintenta acá.
+      if (pendingSeekRef.current > 0) {
+        audio.currentTime = pendingSeekRef.current
+        setCurrentTime(pendingSeekRef.current)
+        pendingSeekRef.current = 0
+      }
     }
 
     const handleEnded = () => {
+      // En modo sala manda el servidor: el `onEnded` del cliente del anfitrión
+      // avisa al backend y espera el `room:playback` que trae la canción nueva.
+      if (onEndedRef.current) {
+        onEndedRef.current()
+        return
+      }
+
       if (repeat === 'track') {
         audio.currentTime = 0
         audio.play().catch(() => setIsPlaying(false))
@@ -495,16 +609,21 @@ export default function PlayerProvider({ children }) {
       duration,
       shuffle,
       repeat,
+      roomMode,
+      playBlocked,
       isIdle,
       isExpanded,
       expandedOrigin,
       playPulse,
       hasQueue: queue.length > 0,
       playSongs,
+      enterRoomMode,
+      exitRoomMode,
       removeFromPlaylistQueue,
       removeFromFavoritesQueue,
       clearQueueIfSource,
       togglePlay,
+      pause,
       next,
       previous,
       seek,
@@ -512,6 +631,7 @@ export default function PlayerProvider({ children }) {
       cycleRepeat,
       expand,
       collapse,
+      setPlayBlocked,
     }),
     [
       song,
@@ -522,15 +642,20 @@ export default function PlayerProvider({ children }) {
       duration,
       shuffle,
       repeat,
+      roomMode,
+      playBlocked,
       isIdle,
       isExpanded,
       expandedOrigin,
       playPulse,
       playSongs,
+      enterRoomMode,
+      exitRoomMode,
       removeFromPlaylistQueue,
       removeFromFavoritesQueue,
       clearQueueIfSource,
       togglePlay,
+      pause,
       next,
       previous,
       seek,

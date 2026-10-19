@@ -23,7 +23,16 @@ const RELEASE_DELAY = 220
  * assets del proyecto (`<img>`, regla 10 de AGENTS.md).
  */
 export default function TransportControls() {
-  const { isPlaying, hasQueue, togglePlay, next, previous, playPulse } = usePlayer()
+  const { isPlaying, hasQueue, roomMode, playBlocked, togglePlay, next, previous, playPulse } =
+    usePlayer()
+
+  // En una sala, anterior/siguiente quedan a la vista pero inertes: la lista la
+  // manda el servidor. El play/pause solo se habilita mientras la sala suena
+  // (mientras tanto silencia o vuelve a sonar para esta persona; con la sala en
+  // pausa, arrancarlo la dejaría sonando sola). Los dos casos están negados
+  // también en el PlayerContext, no solo con `disabled`.
+  const skipDisabled = !hasQueue || roomMode
+  const playDisabled = !hasQueue || (roomMode && playBlocked)
 
   // Último botón pulsado: mientra es `null` todos tienen ancho igual; al pulsar
   // uno crece (1.1) y los otros se encogen (0.65), y se suelta a los 220ms.
@@ -64,7 +73,7 @@ export default function TransportControls() {
         animate={{ flexGrow: grow('prev') }}
         transition={SPRING}
         onClick={() => trigger('prev', previous)}
-        disabled={!hasQueue}
+        disabled={skipDisabled}
         aria-label={"Anterior"}
         title={"Anterior"}
         className="SurfaceLight flex h-full min-w-0 cursor-pointer select-none items-center justify-center rounded-full disabled:cursor-not-allowed disabled:opacity-40"
@@ -82,7 +91,7 @@ export default function TransportControls() {
         }}
         transition={SPRING}
         onClick={togglePlay}
-        disabled={!hasQueue}
+        disabled={playDisabled}
         aria-label={isPlaying ? "Pausar" : "Reproducir"}
         aria-pressed={isPlaying}
         title={isPlaying ? "Pausar" : "Reproducir"}
@@ -115,7 +124,7 @@ export default function TransportControls() {
         animate={{ flexGrow: grow('next') }}
         transition={SPRING}
         onClick={() => trigger('next', next)}
-        disabled={!hasQueue}
+        disabled={skipDisabled}
         aria-label={"Siguiente"}
         title={"Siguiente"}
         className="SurfaceLight flex h-full min-w-0 cursor-pointer select-none items-center justify-center rounded-full disabled:cursor-not-allowed disabled:opacity-40"

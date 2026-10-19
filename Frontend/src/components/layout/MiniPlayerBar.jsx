@@ -18,6 +18,8 @@ export default function MiniPlayerBar() {
     song,
     isPlaying,
     isIdle,
+    roomMode,
+    playBlocked,
     currentTime,
     duration,
     togglePlay,
@@ -40,6 +42,7 @@ export default function MiniPlayerBar() {
             label={isPlaying ? 'Pausar' : 'Reproducir'}
             onClick={togglePlay}
             tone="solid"
+            disabled={roomMode && playBlocked}
           >
             <img
               src={isPlaying ? pauseIcon : playIcon}
@@ -49,7 +52,9 @@ export default function MiniPlayerBar() {
             />
           </ControlButton>
 
-          <ControlButton label="Siguiente" onClick={next} tone="soft">
+          {/* En una sala la cola la manda el servidor: "siguiente" queda a la
+              vista pero inerte, igual que en la barra desktop. */}
+          <ControlButton label="Siguiente" onClick={next} tone="soft" disabled={roomMode}>
             <img src={nextIcon} alt="" aria-hidden="true" className="h-5 w-5 invert" />
           </ControlButton>
 

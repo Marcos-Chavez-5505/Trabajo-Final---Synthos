@@ -3,6 +3,7 @@ import Avatar from "../../components/ui/Avatar.jsx";
 import RecommendationSection from "../../components/RecommendationSection/RecommendationSection.jsx";
 import useAuth from "../../hooks/useAuth.js";
 import FollowStats from "../social/FollowStats.jsx";
+import HostRatingBadge from "../social/HostRatingBadge.jsx";
 import useFollow from "../social/useFollow.js";
 import ProfileEdit from "./ProfileEdit.jsx";
 import { RecommendationProvider } from "../../context/recommendationContext.jsx";
@@ -53,6 +54,13 @@ export default function ProfileView() {
 							basePath="/perfil"
 							followerCount={follow.followerCount}
 							followingCount={follow.followingCount}
+						/>
+
+						{/* TS-11: la calificación como anfitrión de salas. Solo se
+						    muestra si tiene; si no, el perfil queda igual que antes. */}
+						<HostRatingBadge
+							hostRating={user.hostRating}
+							hostRatingsCount={user.hostRatingsCount}
 						/>
 
 						<button

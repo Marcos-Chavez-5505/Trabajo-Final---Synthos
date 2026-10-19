@@ -21,6 +21,14 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true
+      },
+      // El socket de las salas (B11) se conecta al mismo origen del frontend, así
+      // que en dev también tiene que pasar por el proxy. Sin `ws: true` el
+      // handshake de Socket.IO falla y la sala nunca se sincroniza.
+      '/socket.io': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        ws: true
       }
     }
   }

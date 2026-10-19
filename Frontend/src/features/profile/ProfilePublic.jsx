@@ -7,6 +7,7 @@ import useAuth from "../../hooks/useAuth.js";
 import { getUserById } from "../../services/usersService.js";
 import FollowButton from "../social/FollowButton.jsx";
 import FollowStats from "../social/FollowStats.jsx";
+import HostRatingBadge from "../social/HostRatingBadge.jsx";
 import useFollow from "../social/useFollow.js";
 import { RecommendationProvider } from "../../context/recommendationContext.jsx";
 
@@ -157,6 +158,12 @@ export default function ProfilePublic() {
 							basePath={`/profile/${person.id}`}
 							followerCount={follow.followerCount}
 							followingCount={follow.followingCount}
+						/>
+
+						{/* TS-11: la calificación como anfitrión de salas. */}
+						<HostRatingBadge
+							hostRating={person.hostRating}
+							hostRatingsCount={person.hostRatingsCount}
 						/>
 
 						<FollowButton

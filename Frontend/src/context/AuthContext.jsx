@@ -12,6 +12,7 @@ import {
   updateProfile as updateProfileService,
   uploadProfilePicture as uploadProfilePictureService,
 } from '../services/usersService.js'
+import { disconnectSocket } from '../services/socketService.js'
 
 export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -62,6 +63,9 @@ export default function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     await logoutService()
+    // El socket de las salas viaja con el JWT: dejarlo vivo con un token viejo
+    // seguiría recibiendo eventos de salas a las que ya no se pertenece.
+    disconnectSocket()
     setUser(null)
   }, [])
 
