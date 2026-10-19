@@ -43,7 +43,7 @@ src/
 │   ├── auth/                  # registro, login, logout
 │   ├── profile/               # editar perfil, ver perfil público
 │   ├── playlists/             # CRUD playlists, favoritos, playlists colaborativas
-│   ├── rooms/                 # listado de salas (crear/administrar/votar skip, pendientes)
+│   ├── rooms/                 # salas: listado con buscador, crear, detalle, sincronizado y votar skip
 │   ├── search/                # buscar canciones y personas
 │   └── social/                # seguir/dejar de seguir
 ├── hooks/
@@ -58,16 +58,13 @@ src/
 │   └── AuthContext.jsx
 ├── services/                   # una función = una llamada API, ver convención abajo
 │   ├── api.js                  # fetch nativo: helpers get/post/patch/put/del, token y handler de 401
+│   ├── socketService.js        # socket de salas (Socket.IO): un solo socket, handshake con el JWT
 │   ├── authService.js
 │   ├── songsService.js
 │   ├── playlistsService.js
-│   ├── roomsService.js         # único que consume mocks hoy (USE_MOCK)
+│   ├── roomsService.js         # salas contra la API (ya no hay mocks)
 │   └── usersService.js
-├── mocks/                      # datos fake; solo los importa su service. Hoy solo rooms.js (→ roomsService)
-│   ├── playlists.js            # sin uso (playlists migró a la API)
-│   ├── rooms.js                # en uso
-│   ├── songs.js                # sin uso (pendiente de borrar)
-│   └── users.js                # sin uso (auth/usuarios migraron a la API)
+├── mocks/                      # YA NO EXISTE: no queda ningún mock en el repo
 ├── routes/
 │   └── AppRoutes.jsx
 ├── styles/                     # design system (única fuente de verdad de los valores)
@@ -114,7 +111,7 @@ Precedencia en caso de conflicto: `AGENTS.md` (convenciones) → `ESPECIFICACION
 | `vote`                  | votar (ej. skip)                             |
 | `follow` / `unfollow` | seguir/dejar de seguir                       |
 
-Ejemplos: `roomsService.js` → `listRooms()`, `getRoomById(id)`, `createRoom(data)`, `joinRoom(id, password?)`, `voteSkip(roomId)`.
+Ejemplos: `roomsService.js` → `searchRooms({query,sort,order})`, `getRoomById(id)`, `createRoom(data)`, `joinRoom(code, password?)`, `voteSkip(roomId)`.
 
 **Rutas API (REST, backend):** base `/api`, recursos en plural, minúsculas, sin verbos:
 
@@ -140,7 +137,7 @@ Ejemplos: `roomsService.js` → `listRooms()`, `getRoomById(id)`, `createRoom(da
 3. Un solo `PlayerContext` global. `PlayerBar` (desktop) y `MiniPlayerBar` (mobile) son solo presentación, consumen el mismo estado.
 4. Breakpoints Tailwind (`md:`, `lg:`) para alternar layouts desktop/mobile — no duplicar componentes por CSS cuando alcanza con clases responsive. Sí duplicar cuando la interacción es distinta (Sidebar vs BottomNav).
 5. Toda llamada a red pasa por `services/`, nunca `fetch` directo dentro de un componente.
-6. `mocks/` solo es consumido por su `xService.js` correspondiente (ej. `mocks/rooms.js` → `roomsService.js`), nunca directo desde componentes o features. Al migrar a backend real, solo se edita el contenido de `services/`; nada fuera de esa carpeta cambia.
+6. **`mocks/` ya no existe**: la app no tiene datos falsos, todo habla con la API. Si aparece una carpeta así otra vez, Remember que solo su `xService.js` puede importarla, y apagarla al migrar.
 7. Nuevo archivo de servicio → agregar su convención de nombres a este documento.
 8. Antes de generar una feature nueva, revisar si ya existe folder en `features/` correspondiente.
 9. `docs/plan/` (en la raíz del repo) contiene los planes de sprint en formato agente (autocontenidos). Nuevo sprint → nuevo archivo ahí, no sobrescribir los anteriores.
@@ -166,5 +163,7 @@ Una vez que el usuario autoriza, cada cambio viaja en su propia rama saliendo de
 
 ## 5. Pendiente / decisiones abiertas
 
-- Definir manejo de WebSockets para chat en salas y sincronización de reproducción (sugerido: `services/socketService.js`).
+- **Chat en salas**: la sincronización de reproducción ya usa WebSocket (`services/socketService.js` + Socket.IO), pero el **chat todavía no existe**: no hay ni tabla `room_message` ni eventos que lo transmitan.
 - Definir gestor de estado global si Context queda insuficiente (ej. Zustand).
+
+> **WebSockets y despliegue:** la sincronización de salas exige un **backend Node persistente**, porque el estado de reproducción y los votos viven en memoria del proceso (se pierden al reiniciar) y el handshake de Socket.IO no se sostiene en una función serverless. Hoy el backend es local, así que va. Si alguna vez se despliega en Vercel u otro serverless, hay que migrar la sincronización a polling (`GET /api/rooms/:id/playback` cada 3–5 s) o a un servicio externo tipo Ably/Pusher.

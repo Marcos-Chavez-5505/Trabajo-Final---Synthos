@@ -117,16 +117,29 @@ GET    /api/playlists/invitations      → authenticate → { invitations } (las
 POST   /api/playlists/invitations/:idPlaylist/accept → authenticate → 201 (404 si no hay pendiente)
 POST   /api/playlists/invitations/:idPlaylist/reject → authenticate → 200 (404 si no hay pendiente)
 
-GET    /api/rooms?sort=alphabetical|rating  → array crudo de `room` + `avg_rating` (SQL raw: LEFT JOIN a `room_member` + vista `host_avg_rating`)
+GET    /api/rooms?query=&sort=name|rating&order=asc|desc  → array crudo con columnas explícitas de `room` + `host_id`, `host_username`, `avg_rating` (string), `members_count`, `songs_count`. Solo públicas y activas
+GET    /api/rooms/mine       → authenticate; mismo shape, de las salas activas del usuario (incluye privadas)
+POST   /api/rooms            → authenticate, { name, description?, playlistId, isPrivate, password? } → 201 { status, room } con `members[]` y `playlistSource.songs`. Acepta playlist propia **o** de una colab de la que sea miembro (D19); exige ≥1 canción. `maxCapacity` siempre 10, el `code` lo genera el server. Nunca devuelve `passwordHash`
+POST   /api/rooms/join       → authenticate, { code, password? } → 201 (200 si ya era miembro); 404 código inexistente, 403 contraseña, 400 cerrada, 409 llena
+GET    /api/rooms/:id        → authenticate (403 no miembro, 404 no existe) → { status, room } con `members[]`, `hostAvgRating`, `viewerHasRated` y las canciones de la fuente
+POST   /api/rooms/:id/leave  → authenticate → 204 (si sale el anfitrión, **cierra la sala**)
+DELETE /api/rooms/:id        → authenticate, solo host → 204 (cierra y emite `room:closed`)
+DELETE /api/rooms/:id/members/:userId → authenticate, solo host → 204 (400 si se saca a sí mismo, 403 si no es host)
+POST   /api/rooms/:id/playback   → authenticate, solo host, { action: play|pause|next|stop } → 200 { status, playback }
+GET    /api/rooms/:id/playback   → authenticate (403 no miembro) → { status, playback, skipVotes }
+POST   /api/rooms/:id/skip-votes → authenticate → 201 { status, skipVotes, approved }; 403 si es el host, 409 si ya votó, 400 sin canción
+POST   /api/rooms/:id/rating     → authenticate, { rating } 1–5 → 201 { status, rating }; 403 si es el host o no es miembro, 409 si ya calificó
 ```
 
-**Endpoints que NO existen todavía** (los espera el frontend o el plan): crear/unirse/salir de sala, buscar salas (`GET /rooms` no acepta `query` ni trae el nombre del anfitrión), votar skip, calificar anfitrión (`host_rating` solo se carga por seed), chat, recomendaciones por estado de ánimo en el frontend (el endpoint ya existe), contenidos (`Content`/`ContentPlayement` sin rutas), **artistas** como recurso (`/albums` ya existe), refresh de token, logout server-side real (logout solo responde OK). Las playlists colaborativas están completas de punta a punta (crear, invitar, aceptar/rechazar, sumar y quitar canciones, echar).
+**Endpoints que NO existen todavía** (los espera el frontend o el plan): **chat de salas** (no hay tabla `room_message` ni eventos que lo transmitan), contenidos (`Content`/`ContentPlayement` sin rutas), **artistas** como recurso (`/albums` ya existe), refresh de token, logout server-side real (logout solo responde OK). Las salas y las playlists colaborativas están completas de punta a punta.
+
+**Salas — sincronización (Socket.IO, `src/realtime/` + `src/index.js`):** el handshake se autentica con el JWT en `socket.handshake.auth.token` (rechaza si falta o venció) y cada socket entra solo a `user:<id>`; entrar a una sala es `join-room`, que el servidor valida contra `room_member` antes de sumar el socket a `room:<id>`. Eventos: `joined-room`, `room:playback`, `room:members`, `room:skip-votes`, `room:rating`, `room:kicked`, `room:closed`. **Los clientes solo escuchan**: el estado cambia por REST y el servidor emite. El estado de reproducción y los votos viven en **memoria del proceso** (`src/realtime/roomState.js`), una sola instancia, y se pierden al reiniciar; `positionMs` va congelado en `updatedAt` (hora del servidor) y la posición real mientras suena es `positionMs + (Date.now() - updatedAt)`. **Exige backend Node persistente**: una función serverless no sostiene el handshake.
 
 ### 3.2 Validaciones (`utils/validation.js`)
 
 - `getId(req)` → lanza error con `code = 400` si el id no es número ≥ 0.
 - `validateQuery` (string no vacío), `validateCursor` (number | null).
-- `validateSortType` → solo `"alphabetical" | "rating"` (el frontend debe respetar estas keys exactas).
+- `validateSortType` → `"alphabetical" | "name" | "rating"` (el backend normaliza `alphabetical` a `name`); `validateOrderType` → `"asc" | "desc"`.
 - `validateRegisterInput` → email regex, username 3–50, password ≥8 con al menos una letra y un número.
 
 ### 3.3 Modelo de datos (`prisma/schema.prisma`)
@@ -140,7 +153,7 @@ Tablas mapeadas a snake_case (`@@map`, `@map`), claves compuestas como `@@id([a,
 - **Follow**: PK `[followerId, followedId]` (hay CHECK de no auto-seguirse mencionado en el frontend).
 - **Content / ContentPlayement**: tienen rutas de lectura/escritura de recomendaciones (TS-19); `ContentPlayement` es donde vive el destinatario de una recomendación. `SongMood` + `Mood` alimentan `GET /songs/recommendations`.
 - **Room**: `code` unique (≤20), `name`, `idPlaylistSource` NOT NULL FK playlist, `isPrivate`, `passwordHash?`, `maxCapacity`, `status: RoomStatus { activa | cerrada }`, `expiresAt?`. `RoomMember` con `RoomRole { host | member }`. `HostRating` PK `[idRoom, idRater, idHost]`, `rating SmallInt`.
-- **Vistas** (preview `views`): `user_genre_counts`, `user_top_genre` (usada por `searchUsers`), `RoomAvgRating` → mapeada a `room_avg_rating` (usada por raw SQL de rooms).
+- **Vistas** (preview `views`): `user_genre_counts`, `user_top_genre` (usada por `searchUsers`), `HostAvgRating` → mapeada a `host_avg_rating` (`AVG(host_rating.rating)` por `id_host`, creada a mano por la migración `20261013164336`; la usa el raw SQL de salas y el promedio del anfitrión).
 
 **Semillas:** `prisma.config.ts` → `db seed` corre `seed.js && seedRooms.js` (ambos idempotentes). `seed.js` puebla artista/canciones/géneros/moods desde `prisma/data/songs.json` (descarta canciones sin género o mood). `seedRooms.js` crea 5 anfitriones + 3 raters (contraseña **`Demo1234`**), playlists fuente, salas y `host_rating` (escala 1–5) para que el orden por rating sea comprobable.
 
@@ -178,14 +191,16 @@ Tablas mapeadas a snake_case (`@@map`, `@map`), claves compuestas como `@@id([a,
 | `playlistsService.js` | CRUD playlists,`addSongToPlaylist`, `removeSongFromPlaylist`, `removePlaylistMember`, `sendInvitation`, `listSentInvitations`, `listReceivedInvitations`, `acceptPlaylistInvitation`, `rejectPlaylistInvitation`, `toggleFavorite`, `isFavorite`, `listFavoriteSongIds`, `subscribeToPlaylists`                                                | Favoritos = playlist`type==='favorites'` (la UI la llama **"Mis Favoritos"**); operaciones sobre ella se redirigen a `/favorites`. Idempotente: ignora 409/404. `ownerId` es obligatorio en la firma y es **el id de quien mira**, no del dueño: de ahí sale el `role` (`creator`/`colaborator`/null) que la UI usa para mostrar qué puede hacer cada uno. `toPlaylist` traduce `type`, `role`, `creator` y `members`. Las canciones van por `POST|DELETE /playlists/:id/songs`, que son las rutas con roles. |
 | `usersService.js`     | `getUserById`, `searchUsers`, `updateProfile`, `uploadProfilePicture`, `getFollowCounts`, `followStatus`, `listFollowers/listFollowing`, `followUser/unfollowUser`, `subscribeToFollow`, `SEARCH_PAGE_SIZE=4` | Traduce`bio→biography`, `avatarUrl→pictureUrl`. `updateProfile` solo manda `pictureUrl` si viene (si no, el backend no toca la foto; `null` la quita). `uploadProfilePicture` va multipart a `/users/me/picture` y devuelve el usuario mapeado. `searchUsers` suma la relación en los dos sentidos por resultado (los trae el backend con sesión, TS-10b): `isFollowing` + `followsMe`. **`followStatus(viewerId, personId)`** usa `GET /users/:id/follow-status` y devuelve `{isFollowing, isFollowedBy, isMutual}` en un request (reemplaza a la vieja `isFollowing`, que bajaba la lista completa de seguidores para mirar un id). No lee la sesión (evita ciclo con authService): recibe ids por parámetro.           |
 | `recommendationService.js` | `getUserRecommendations(userId)`                                                                                                                         | Traduce el payload de `/users/:id/recommendations` (recomendaciones de personas, TS-19). El alta la hace `hooks/useRecommendation.jsx` con `post`, no el service. |
-| `roomsService.js`     | `listRooms({sort})`, `ROOM_SORTS`, `DEFAULT_ROOM_SORT`                                                                                                                                           | **`USE_MOCK = true`**: hoy consume `mocks/rooms.js`, no el endpoint. `toRoom()` ya acepta ambos shapes (snake_case del SQL crudo y el del mock), `avg_rating` llega como string Decimal → `Number()`, `hostRating: null` = "Sin calificar" (distinto de 0). Ordena en el clientecon `localeCompare('es')`, sin rating va al final. Falta apagar el flag (TS-17/F8). |
+| `roomsService.js`     | `searchRooms({query,sort,order})`, `listMyRooms`, `createRoom`, `joinRoom`, `leaveRoom`, `getRoomById`, `closeRoom`, `kickMember`, `getPlayback`, `controlPlayback`, `voteSkip`, `rateHost`, `subscribeToRooms`, `ROOM_SORTS`, `ROOM_ORDERS` | **Ya no hay mock.** `toRoom()` traduce las columnas snake_case del listado y coalescea `avg_rating: 0` a `null` (= "Sin calificaciones", no "calificada con cero"). `toRoomDetail()` agrega `members[]`, `songs[]` (reutiliza el `toSong()` de `songsService`), `playlistName` y `viewerHasRated`. El **orden lo resuelve el servidor**: el service normaliza `sort`/`order` para no mandar requests que el backend rechaza con 400, pero no reordena. `getPlayback` traduce `playback` (`updatedAt` es hora del servidor, la posición se interpola con ella) y `skipVotes`. `subscribeToRooms` existe porque el grupo "Mis Salas" del Sidebar no se remonta al unirse o salir desde otra pantalla (mismo patrón que `subscribeToPlaylists`). |
+| `socketService.js`    | `connectSocket`, `disconnectSocket`, `subscribeToRoomEvent`, `joinRoomChannel`, `leaveRoomChannel`, `getSocket`                                                                                    | Un solo socket para toda la app, con el JWT en `auth.token` (por eso `api.js` exporta `getAuthToken()`). Los suscriptores se registran en un mapa y se enganchan al socket cuando existe, así varias pantallas comparten la conexión. Recuerda los canales unidos y **re-emite `join-room` en cada reconexión**. Los clientes solo escuchan; el estado cambia por REST. Lo cierra `AuthContext` en el logout. |
 
-Regla: **`mocks/` solo se importa desde su service** (hoy solo `roomsService` importa mocks).
+Regla: **`mocks/` ya no existe**: no queda ningún mock en el repo. Toda la red pasa por `services/`.
 
 ### 4.3 Estado global
 
 - **`AuthContext`** (`context/AuthContext.jsx` + `authContext.js` que solo crea el contexto): `{ user, loading, register, login, logout, updateProfile, uploadProfilePicture }`. Al montar llama `getCurrentUser()`; registra el handler de 401 (limpia sesión y `user=null`; no navega porque está fuera del Router). Las dos últimas(setUser con la respuesta del backend) son las que mantienen avatar y perfil al día sin recargar.
-- **`PlayerContext`** (`context/PlayerContext.jsx`, 452 líneas): un solo `<audio>` HTML5. Estado: `queue, index, isPlaying, currentTime, duration, shuffle, repeat ('off'|'track'|'list'), song, hasQueue`. Acciones: `playSongs(songs, startIndex, source)`, `next/previous/seek/togglePlay/toggleShuffle/cycleRepeat`, y sincronización con la fuente de la cola: `removeFromPlaylistQueue(songId, playlistId)`, `removeFromFavoritesQueue(songId)`, `clearQueueIfSource(playlistId)`. Detalles clave: `queueSourceRef` = `{playlistId, isFavorites} | null` (cola sin origen nunca se toca); `pendingSkipRef` = si se quita la canción que suena, sigue sonando y se descarta en el próximo `next()`; `historyRef` para `previous()` y shuffle con memoria de 10; `repeat 'track'` se maneja en el evento `ended`; `sameSong()` compara ids como string (number del backend vs string del storage). Cola inicial = primera tanda de `listSongs()` (TODO: reemplazar por la selección real del usuario).
+- **`PlayerContext`** (`context/PlayerContext.jsx`): un solo `<audio>` HTML5. Estado: `queue, index, isPlaying, currentTime, duration, shuffle, repeat ('off'|'track'|'list'), roomMode, song, hasQueue`. Acciones: `playSongs(songs, startIndex, source, { autoplay, onEnded, startPosition })`, `enterRoomMode/exitRoomMode`, `next/previous/seek/togglePlay/toggleShuffle/cycleRepeat`, y sincronización con la fuente de la cola: `removeFromPlaylistQueue(songId, playlistId)`, `removeFromFavoritesQueue(songId)`, `clearQueueIfSource(playlistId)`. Detalles clave: `queueSourceRef` = `{playlistId, isFavorites} | null` (cola sin origen nunca se toca); `pendingSkipRef` = si se quita la canción que suena, sigue sonando y se descarta en el próximo `next()`; `historyRef` para `previous()` y shuffle con memoria de 10; `repeat 'track'` se maneja en el evento `ended`; `sameSong()` compara ids como string (number del backend vs string del storage). Cola inicial = primera tanda de `listSongs()` (TODO: reemplazar por la selección real del usuario).
+- **"Modo sala" del player (opt-in, TS-15):** `playSongs` acepta tres opciones que por defecto no cambian nada. `onEnded` reemplaza al `next()` local cuando termina una canción (en una sala el avance lo pide el anfitrión al servidor). `startPosition` arranca en un segundo concreto y **la aplica el efecto que carga el track**, no un `seek()` aparte: ese efecto pone `currentTime` en 0 y pisaría el seek. `roomMode` apaga aleatorio y repetición y hace que `PlayerControls` y `ActionControls` dejen de ofrecerlos. La lógica de salas vive en `features/rooms/useRoomPlayback.js`, no en el contexto.
 - No hay Context de playlists/follow: se resuelven con hooks + suscripciones.
 - **`recommendationContext.jsx`** (`context/` + `hooks/useRecommendation.jsx`): provider **por perfil** (TS-19), montado en `ProfileView` y `ProfilePublic` con `userId` distinto, para que la lista de uno no pise la del otro. Aporta `{ items, loading, error, retry, send, submitting, sendError, reset }`. No es un Context global: sigue el patrón de las features.
 
@@ -211,6 +226,8 @@ Regla: **`mocks/` solo se importa desde su service** (hoy solo `roomsService` im
 /playlists                Protected  Playlists (sub-pestañas por `?tab=mis|colaborativas|invitaciones`)
 /playlists/:id            Protected  PlaylistDetail
 /salas                    Protected  Rooms
+/salas/crear              Protected  CreateRoom
+/salas/:id                Protected  RoomView
 /animo                    Protected  MoodScan (recomendaciones por estado de ánimo, TS-20)
 /buscar                   Protected  Search (pestañas `?tipo=canciones|albumes|personas`, con `?q=` y `?page=`)
 /albums                Protected  Albums (catálogo paginado, solo `?page=`)
@@ -232,7 +249,7 @@ Guards: `RequireAuth` (si `loading` → `LoadingScreen`; si no hay user → `/lo
 
 `AppLayout` usaba `useBreakpoint()` (768px = `md` de Tailwind) para alternar:
 
-- **Desktop**: `SidebarProvider` (shadcn) + `Sidebar` (colapsable a íconos; header logo, nav Home/Populares/Salas/**Ánimo**/Perfil, "Mi Colección" Playlists/Albums/Artistas, "Mis Salas"vacío, "Mis Playlists" ← `MisPlaylists` de la feature y "Playlists Colaborativas" ← `CollabPlaylists`, footer `ProfileSummary`) + `TopBar` + contenido + `PlayerBar`. `AppLayout` monta `SidebarAutoCollapse`, que colapsa/expande el sidebar al cruzar los 1280px sin pisar el trigger manual; el `SidebarTrigger` del `TopBar` (shadcn) es el botón que lo abre/cierra a mano.
+- **Desktop**: `SidebarProvider` (shadcn) + `Sidebar` (colapsable a íconos; header logo, nav Home/Populares/Salas/**Ánimo**/Perfil, "Mi Colección" Playlists/Albums/Artistas, "Mis Salas" ← `features/rooms/MyRooms.jsx` (las salas del usuario, con las que administra marcadas), "Mis Playlists" ← `MisPlaylists` de la feature y "Playlists Colaborativas" ← `CollabPlaylists`, footer `ProfileSummary`) + `TopBar` + contenido + `PlayerBar`. `AppLayout` monta `SidebarAutoCollapse`, que colapsa/expande el sidebar al cruzar los 1280px sin pisar el trigger manual; el `SidebarTrigger` del `TopBar` (shadcn) es el botón que lo abre/cierra a mano.
 - **Mobile**: **ya no hay.** Era contenido + `MiniPlayerBar` + `BottomNav`; se desarmó, ver `PENDIENTES.md` §8.
 
 `TopBar`: input controlado por la URL que navega a `/buscar?q=…`; las flechas back/forward están `hidden` (sin handler). `Home` renderiza `HomeDesktop`.
@@ -273,15 +290,15 @@ npm run dev                 # localhost:5173, proxy /api → :3000
 
 ## 7. Deudas y huecos conocidos (encontrados en el código)
 
-- `roomsService.USE_MOCK = true` → la pantalla `/salas` no habla con el backend todavía (el endpoint `GET /api/rooms` sí existe).
+- `roomsService.USE_MOCK` ya no existe: `/salas` habla con la API real desde que el bloque de salas se entregó (2026-10-18). Ver `PENDIENTES.md` §5.6b para las deudas que dejó.
 - Pantallas placeholder: `/populares`, `/artistas`. Los archivos del layout mobile (`BottomNav`, `MiniPlayerBar`, `HomeMobile`, `hooks/useBreakpoint.js`) siguen en disco sin uso (`PENDIENTES.md` §8).
 - Campo inexistente en el esquema que la UI tolera con `null`: `source`. `album` ya existe (`Album`) y las canciones lo traen.
-- No existen `socketService` ni WebSockets (mencionados como plan, no implementados): la sincronización real de salas sigue pendiente (D8 del plan).
+- **Chat de salas**: la sincronización de reproducción ya usa WebSocket (`services/socketService.js` + Socket.IO), pero el chat no existe: no hay tabla `room_message` ni eventos que lo transmitan.
+- Salas: la barra de progreso es de solo lectura para los miembros (no hay endpoint para buscar dentro de la canción, la posición es del servidor), y `joinRoom` no garantiza el tope de 10 ante dos ingresos simultáneos (la transacción relee el cupo pero con el aislamiento por defecto de Postgres).
 - `GET /users/:id/follow-status` ya tiene consumidor: `useFollow` lo usa para resolver la relación y `isMutual` en un request (antes eran dos llamadas que bajaban la lista de seguidores de cada lado).
 - Backend: se borró la columna `playlist.token_invitation` (migración `drop_token_invitation`) y `FRONTEND_URL` ya no se lee en ningún lado.
 - Backend: en una `colab` cualquier miembro agrega y quita canciones (`POST|DELETE /playlists/:id/songs`); editar, borrar, invitar y echar son del creador (`idCreator`). `PUT /playlists/:id` conserva `addSongs`/`removeSongs` por compatibilidad y sigue siendo del creador: el frontend ya no lo usa para canciones. **Invitar convierte la playlist en `colab`**, así que no hay miembros en playlists personales salvo la de favoritos, que no se puede invitar.
-- La rama `feat/ts14-crear-sala` (`77fe367`, sin mergear) tiene TS-14 completo en la capa mock (`CreateRoom`, `RoomView`, `createRoom`/`joinRoom`/`getRoomById`, rutas `/salas/crear` y `/salas/:id`); es anterior a PR #65 y rebasa con conflicto en `Rooms.jsx`/`roomsService.js`.
-- `roomsService.USE_MOCK = true` sigue sirviendo `mocks/rooms.js` aunque el backend ya ordena por rating real (`host_avg_rating`): es el único ítem de TS-17 que queda (F8).
+- La rama `feat/ts14-crear-sala` (`77fe367`, sin mergear) quedó obsoleta: el bloque de salas se rehízo sobre `dev` contra el contrato real, así que esa rama ya no sirve de base (su `joinRoom` entraba por id y no por código).
 - Backend: `mongoose` sin usar; `const/baseUrl.js` (`/api/v1`) sin usar y contradictorio con las rutas reales; `src/test.js` es un snippet huérfano; `db/schema.sql` es solo referencia.
 - Sin tests en ninguna de las dos apps (el mapeo de estado de ánimo de TS-20 se puede probar en node, porque es una función pura).
 - TS-20 (/animo): el detector es **face-api.js 0.22.2 desde CDN, cargado bajo demanda** (script + pesos en el primer ingreso a la pantalla). Sin red o sin CDN la pantalla cae al selector manual. La detección real de un rostro no se pudo verificar automáticamente: la cámara falsa de Chrome no muestra ninguno (sí se verificó el mapeo de expresiones a los 3 estados y todo el camino manual). face-api no tiene mantenimiento desde 2020.
@@ -298,7 +315,7 @@ npm run dev                 # localhost:5173, proxy /api → :3000
 3. Un solo `PlayerContext`; `PlayerBar`/`MiniPlayerBar` son presentación.
 4. Breakpoints Tailwind para layouts; duplicar componentes solo cuando la interacción cambia (Sidebar vs BottomNav).
 5. Toda red pasa por `services/`; los componentes nunca hacen fetch.
-6. `mocks/` solo se consume desde su `xService.js`.
+6. `mocks/` ya no existe: la app no tiene datos falsos, todo habla con la API.
 7. Íconos solo de `src/assets/*.svg` importados como URL (§4.8).
 8. Literales de estilo solo en `tokens.css`.
 9. **Git**: sin push/ramas/tags/PRs sin autorización. Commits locales permitidos. Ramas salen de `dev`, prefijo `feat/fix/docs/`, un cambio por rama, mensajes en español al imperativo, stageo con rutas explícitas (ojo: no subir el `package-lock.json` de la raíz, es un artefacto vacío), verificar `lint` + `build` antes de pushear, el PR lo abre el usuario.

@@ -409,13 +409,69 @@ con `pendiente | aceptada | rechazada`).
 
 | Endpoint | Auth | Request | Response |
 |---|---|---|---|
-| `GET /` | — | query: `sort` = `alphabetical` (default) \| `rating` | **Array plano** (sin envelope) de filas con `room.*` + `avg_rating`, desde la vista `host_avg_rating` |
+| `GET /` | opcional | query: `query` (texto libre), `sort` = `name` (default, alias `alphabetical`) \| `rating`, `order` = `asc` (default) \| `desc` | **Array plano** (sin envelope) de salas |
+| `GET /mine` | **sí** | query: `query` opcional | Las salas activas de las que el usuario es miembro, mismas columnas. **Incluye las privadas** (a esas se entra con el código) |
+| `POST /` | **sí** | body `{ name, description?, playlistId, isPrivate, password? }` | `201` con la sala: `id`, `code`, `name`, `description`, `isPrivate`, `maxCapacity` (**siempre 10**, lo fija el server), `status`, `hostAvgRating`, `viewerHasRated`, `members[]` (id, username, `pictureUrl`, rol), `playlistSource` con sus `songs` en orden por `position`. **Nunca devuelve `passwordHash`** |
+| `POST /join` | **sí** | body `{ code, password? }` | `201` si se unió, `200` si ya era miembro. La misma sala que `POST /` |
+| `GET /:id` | **sí** | — | `200` con la sala (igual que `POST /`, más `viewerHasRated` y `viewerRating`). `403` si no sos miembro, `404` si no existe |
+| `POST /:id/leave` | **sí** | — | `204`. Si quien sale es el **anfitrión, la sala se cierra** |
+| `DELETE /:id` | **sí** | — | `204`. Solo el anfitrión. Cierra la sala y emite `room:closed` |
+| `DELETE /:id/members/:userId` | **sí** | — | `204`. Solo el anfitrión. `400` si se intenta sacar al anfitrión |
+| `POST /:id/playback` | **sí** | body `{ action: "play" \| "pause" \| "next" \| "stop" }` | `200 { status, playback }`. **Solo el anfitrión** |
+| `GET /:id/playback` | **sí** | — | `200 { status, playback, skipVotes }` |
+| `POST /:id/skip-votes` | **sí** | — | `201 { status, skipVotes, approved }`. **403 para el anfitrión** |
+| `POST /:id/rating` | **sí** | body `{ rating }` (entero 1–5) | `201 { status, rating }`. Califica al anfitrión (TS-11) |
 
-Solo hay lectura. No existen crear/unirse/salir, buscar por texto (`query`), votar skip ni calificar al anfitrión:
-el frontend trabaja con `mocks/rooms.js` (`roomsService.USE_MOCK = true`) y las calificaciones vienen del seed
-(tabla `host_rating`).
+**Forma de las salas del listado** (columnas explícitas, nunca `room.*`, para no filtrar
+`password_hash`): `id`, `code`, `name`, `description`, `id_playlist_source`, `is_private`,
+`max_capacity`, `status`, `creation_date`, `host_id`, `host_username`, `avg_rating`,
+`members_count`, `songs_count`. El listado público devuelve **solo las públicas y activas**;
+las privadas no aparecen (se entra con `code`, D14) y las cerradas tampoco. `avg_rating` es
+`numeric` de Postgres y llega como **string**; cuando el anfitrión no tiene calificaciones el
+backend lo coalescea a `0`.
 
-**Orden por calificación del anfitrión (`sort=rating`):** ambas consultas hacen `LEFT JOIN` con `room_member` para
-encontrar al anfitrión y luego con la vista **`host_avg_rating`** (`AVG(host_rating.rating)` agrupado por
-`id_host`, creada por la migración `20261013164336`, que reemplazó a la anterior `room_avg_rating`). Ordena por
-`avg_rating DESC, room.name ASC`, y trae `0` (no `NULL`) para los anfitriones sin calificar.
+**Orden:** `sort=name` ordena por nombre en el sentido de `order`; `sort=rating` ordena por
+`avg_rating DESC` con desempate alfabético. `sort` u `order` inválidos devuelven `400` con
+`INVALID_SORT` / `INVALID_ORDER` (`{ allowed: [...] }`).
+
+**Origen de la playlist (D19):** `POST /rooms` acepta **cualquier playlist** a la que el
+usuario tenga acceso, sea personal propia o colaborativa de la que participe: no se valida
+`type`. Exige que exista (404), que sea suya o sea miembro (403) y que tenga al menos una
+canción (400).
+
+### 10.1 Sincronización (WebSocket)
+
+Socket.IO sobre el mismo servidor HTTP. El handshake se autentica con el JWT en
+`socket.handshake.auth.token`; sin token o con token inválido la conexión se rechaza. Cada
+socket entra solo a su canal `user:<id>`; entrar a una sala es un `join-room` explícito que el
+servidor valida contra `room_member` (un no miembro no entra al canal `room:<id>`).
+
+| Evento | Cuándo | Payload |
+|---|---|---|
+| `joined-room` | Al entrar al canal (también en cada reconexión) | `{ roomId }` |
+| `room:playback` | Cada acción de reproducción, y cuando se aprueba un voto de skip | `{ songId, status, positionMs, updatedAt }` |
+| `room:members` | Entra o sale alguien, o se expulsa a alguien | `roomMember[]` (filas crudas con `user` anidado) |
+| `room:skip-votes` | Cada voto, y al limpiarse la votación | `{ voters: number[], required }` (`required: 0` = ya no hay votación) |
+| `room:rating` | Al calificar al anfitrión | `{ roomId, hostId, avgRating }` |
+| `room:kicked` | Al expulsado, solo a su socket | `{ roomId }` |
+| `room:closed` | Al cerrar la sala, y cuando sale el anfitrión | `{ roomId }` |
+
+Los clientes **solo escuchan**: el estado cambia por REST y el servidor lo emite.
+
+**Posición de reproducción:** el estado vive **en memoria del proceso**, una sola instancia, y
+se pierde si el servidor se reinicia (tras un reinicio, `GET /:id/playback` responde
+`stopped`). `positionMs` es la posición congelada en `updatedAt`, que es la **hora del
+servidor**: mientras `status === "playing"`, la posición real es
+`positionMs + (Date.now() - updatedAt)`. `pause` guarda la posición acumulada antes de
+congelarla, así que reanudar no reinicia la canción.
+
+**Votación de skip (D17):** se aprueba con más de la mitad de los miembros que **no** son
+anfitrión (`floor(noHost/2) + 1`). Los votos son por canción, se limpian al cambiarla
+(incluso si la playlist vuelve a la primera, D18) y `required` se recalcula si alguien sale o
+es expulsado. `next` del anfitrión anula la votación en curso.
+
+**Calificación del anfitrión (TS-11):** una por persona y sala, garantizada por la PK
+`[idRoom, idRater, idHost]` (el `P2002` se traduce a `409 HOST_ALREADY_RATED`). Solo quien
+participa califica y el anfitrión no califica a nadie (`403`). `GET /users/:id` y
+`GET /users/me` devuelven además `hostRating` y `hostRatingsCount`, para que el perfil
+muestre el promedio.
