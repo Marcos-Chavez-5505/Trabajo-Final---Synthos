@@ -1,11 +1,28 @@
 const roomService = require("../services/room.service");
-const { validateSortType } = require("../utils/validation");
+const { validateSortType, validateOrderType, getId } = require("../utils/validation");
 const roomState = require("../realtime/roomState");
 
 async function getSortedRoom(req, res, next) {
 	try {
-		const sort = validateSortType(req.query.sort || "alphabetical");
-		const result = await roomService.getSortedRoom(sort);
+		const sort = validateSortType(req.query.sort || "name");
+		const order = validateOrderType(req.query.order || "asc");
+		const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
+
+		const result = await roomService.listRooms({ query, sort, order });
+
+		res.status(200).json(result);
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function getMyRooms(req, res, next) {
+	try {
+		const userId = req.user.sub;
+		const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
+
+		const result = await roomService.listMyRooms(userId, { query });
+
 		res.status(200).json(result);
 	} catch (error) {
 		next(error);
@@ -102,6 +119,7 @@ async function leaveRoom(req, res, next) {
 		const io = req.app.get("io");
 		if (io) {
 			if (result.closed) {
+				roomState.deleteRoomState(roomId);
 				io.to(`room:${roomId}`).emit("room:closed", { roomId });
 			} else {
 				const room = await roomService.getRoomWithMembers(roomId);
@@ -189,6 +207,7 @@ async function closeRoom(req, res, next) {
 
 		const io = req.app.get("io");
 		if (io) {
+			roomState.deleteRoomState(roomId);
 			io.to(`room:${roomId}`).emit("room:closed", { roomId });
 		}
 
@@ -247,10 +266,14 @@ async function postPlayback(req, res, next) {
 			next = {
 				songId: current.songId ?? songs[0],
 				status: "playing",
-				positionMs: current.songId ? current.positionMs : 0,
+				positionMs: current.positionMs,
 			};
 		} else if (action === "pause") {
-			next = { ...current, status: "paused" };
+			// `positionMs` es la posición congelada en el último `updatedAt`: mientras
+			// suena, la posición real es esa más lo que pasó desde entonces. Sin
+			// sumarlo, pausar reiniciaría la canción para todo el mundo.
+			const elapsed = current.status === "playing" ? Date.now() - current.updatedAt : 0;
+			next = { ...current, positionMs: current.positionMs + elapsed, status: "paused" };
 		} else if (action === "stop") {
 			next = { songId: null, status: "stopped", positionMs: 0 };
 		} else if (action === "next") {
@@ -265,9 +288,15 @@ async function postPlayback(req, res, next) {
 			roomState.clearSkipVotes(roomId);
 		}
 
+		// `serverTime` es la hora del servidor en este instante. El cliente lo usa
+		// para medir su propio desvío de reloj: sin eso, interpolar la posición con
+		// `Date.now()` del cliente contra `updatedAt` del servidor mezcla dos
+		// relojes y la posición sale corrida.
+		const playback = { ...updated, serverTime: Date.now() };
+
 		const io = req.app.get("io");
 		if (io) {
-			io.to(`room:${roomId}`).emit("room:playback", updated);
+			io.to(`room:${roomId}`).emit("room:playback", playback);
 			if (action === "next" || action === "stop") {
 				io.to(`room:${roomId}`).emit("room:skip-votes", {
 					voters: [],
@@ -276,7 +305,7 @@ async function postPlayback(req, res, next) {
 			}
 		}
 
-		return res.status(200).json({ status: "success", playback: updated });
+		return res.status(200).json({ status: "success", playback });
 	} catch (error) {
 		if (error.status) {
 			return res.status(error.status).json({ status: "error", message: error.message });
@@ -309,7 +338,7 @@ async function getPlayback(req, res, next) {
 
 		return res.status(200).json({
 			status: "success",
-			playback: state.playback,
+			playback: { ...state.playback, serverTime: Date.now() },
 			skipVotes: {
 				voters: [...votes.voters],
 				required: votes.required,
@@ -388,10 +417,12 @@ async function postSkipVote(req, res, next) {
 
 			roomState.clearSkipVotes(roomId);
 
-			if (io) {
-				io.to(`room:${roomId}`).emit("room:playback", next);
-				io.to(`room:${roomId}`).emit("room:skip-votes", { voters: [], required: 0 });
-			}
+if (io) {
+			const playback = { ...next, serverTime: Date.now() };
+
+			io.to(`room:${roomId}`).emit("room:playback", playback);
+			io.to(`room:${roomId}`).emit("room:skip-votes", { voters: [], required: 0 });
+		}
 		} else if (io) {
 			io.to(`room:${roomId}`).emit("room:skip-votes", {
 				voters: [...votes.voters],
@@ -416,8 +447,38 @@ async function postSkipVote(req, res, next) {
 	}
 }
 
+async function rateHost(req, res, next) {
+	try {
+		const roomId = getId(req);
+		const raterId = req.user.sub;
+		const { rating } = req.body || {};
+
+		const created = await roomService.rateHost({ roomId, raterId, rating });
+
+		// El promedio vive en la vista `host_avg_rating`, así que se relee para
+		// mandarlo ya calculado: los clientes actualizan el cartel sin recargar.
+		const io = req.app.get("io");
+		if (io) {
+			const avgRating = await roomService.getHostAvgRating(created.idHost);
+			io.to(`room:${roomId}`).emit("room:rating", {
+				roomId,
+				hostId: created.idHost,
+				avgRating,
+			});
+		}
+
+		return res.status(201).json({ status: "success", rating: created });
+	} catch (error) {
+		// Los errores de `rateHost` salen con `httpError`, así que no tienen
+		// `status`: van por el handler global, que respeta `httpStatus` y manda
+		// el `code` que el frontend traduce con `mapApiError`.
+		next(error);
+	}
+}
+
 module.exports = {
 	getSortedRoom,
+	getMyRooms,
 	createRoom,
 	joinRoom,
 	leaveRoom,
@@ -427,4 +488,5 @@ module.exports = {
 	postPlayback,
 	getPlayback,
 	postSkipVote,
+	rateHost,
 };

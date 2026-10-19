@@ -98,6 +98,25 @@ async function searchUsers(query, page, pageSize, viewerId) {
 	return { items, total, page: currentPage, pageSize: size, totalPages };
 }
 
+/**
+ * Calificación promedio como anfitrión de salas (TS-11).
+ *
+ * El promedio sale de la vista `host_avg_rating` y el conteo de `host_rating`.
+ * Un anfitrión sin calificaciones devuelve 0, que es lo que la UI traduce a
+ * "Sin calificaciones".
+ */
+async function getHostRatingSummary(userId) {
+	const [avgRows, ratingsCount] = await Promise.all([
+		prisma.$queryRaw`SELECT avg_rating FROM host_avg_rating WHERE id_host = ${userId}`,
+		prisma.hostRating.count({ where: { idHost: userId } }),
+	]);
+
+	return {
+		hostRating: avgRows.length ? Number(avgRows[0].avg_rating) : 0,
+		hostRatingsCount: ratingsCount,
+	};
+}
+
 async function getUserById(id) {
 	const user = await prisma.user.findUnique({
 		where: { id },
@@ -123,14 +142,19 @@ async function getUserById(id) {
 		following,
 		followerCount: followers.length,
 		followingCount: following.length,
+		...(await getHostRatingSummary(id)),
 	};
 }
 
 async function getMe(id) {
-	return prisma.user.findUnique({
+	const user = await prisma.user.findUnique({
 		where: { id },
 		select: ME_USER_SELECT,
 	});
+
+	if (!user) return null;
+
+	return { ...user, ...(await getHostRatingSummary(id)) };
 }
 
 async function updateUser(id, { username, biography, pictureUrl }) {

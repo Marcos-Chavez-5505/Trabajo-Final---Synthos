@@ -244,6 +244,9 @@ model Room {
   playlistSource   Playlist     @relation(fields: [idPlaylistSource], references: [id])
   members          RoomMember[]
 
+  @@index([status])
+  @@index([isPrivate])
+  @@index([name])
   @@map("room")
 }
 

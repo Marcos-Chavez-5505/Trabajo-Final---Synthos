@@ -25,12 +25,18 @@
 // La PK de `host_rating` es [id_room, id_rater, id_host]: una calificación por
 // persona y sala. Los ratings repetidos del mismo `rater` a un mismo anfitrión se
 // acumulan en filas distintas de salas distintas, que es el caso real.
+//
+// Canciones: `playlist_song.id_song` tiene FK a `song`, así que el seed NO fija
+// IDs de canciones. Al arrancar toma las primeras canciones que existan en la
+// base (el "pool") y cada sala referencia posiciones de ese pool (`songs: [0, 1]`).
+// Así funciona en la base de cualquier integrante del equipo.
 
 const bcrypt = require("bcryptjs");
 
 const prisma = require("../src/prisma/prismaClient");
 
 const SALT_ROUNDS = 10;
+const SONG_POOL_SIZE = 6;
 
 // ---------------------------------------------------------------------------
 // Datos de prueba
@@ -50,13 +56,14 @@ const RATERS = [
 	{ email: "rater.tres@example.com", username: "tres_que_escucha" },
 ];
 
+// `songs` son posiciones dentro del pool de canciones existentes (0 = la primera).
 const ROOMS = [
 	{
 		code: "ELECTRO404",
 		name: "Electro 404",
 		description: "Basses y hits de club, sin hablar mucho.",
 		playlistName: "Electro 404 (fuente)",
-		songs: [43886, 306166],
+		songs: [0, 1],
 		host: "electro_pura",
 		maxCapacity: 20,
 		ratings: [5, 5, 5],
@@ -66,7 +73,7 @@ const ROOMS = [
 		name: "Jazz de la calle",
 		description: "Standards y algo de free, volumen bajo.",
 		playlistName: "Jazz de la calle (fuente)",
-		songs: [25706],
+		songs: [2],
 		host: "jazz_callejero",
 		maxCapacity: 12,
 		ratings: [5, 4, 4],
@@ -76,7 +83,7 @@ const ROOMS = [
 		name: "Rock total",
 		description: "Guitarras y mucho volumen.",
 		playlistName: "Rock total (fuente)",
-		songs: [26747, 81740, 43886],
+		songs: [0, 3, 4],
 		host: "rock_total",
 		maxCapacity: 30,
 		ratings: [4, 4, 3],
@@ -86,7 +93,7 @@ const ROOMS = [
 		name: "Ambiente total",
 		description: "Para escuchar sin mirar la pantalla.",
 		playlistName: "Ambiente total (fuente)",
-		songs: [306166],
+		songs: [1],
 		host: "ambiente_total",
 		maxCapacity: 8,
 		ratings: [3, 2, 2],
@@ -96,7 +103,7 @@ const ROOMS = [
 		name: "Pop radiante",
 		description: "La sala que siempre pone la que todos quieren.",
 		playlistName: "Pop radiante (fuente)",
-		songs: [25706, 26747],
+		songs: [2, 3],
 		host: "pop_radiante",
 		maxCapacity: 15,
 		ratings: [],
@@ -106,6 +113,29 @@ const ROOMS = [
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+async function loadSongPool() {
+	const songs = await prisma.song.findMany({
+		select: { id: true },
+		orderBy: { id: "asc" },
+		take: SONG_POOL_SIZE,
+	});
+
+	if (songs.length === 0) {
+		throw new Error(
+			"No hay canciones en la tabla song. Cargá canciones antes de correr el seed.",
+		);
+	}
+
+	return songs.map((s) => s.id);
+}
+
+// Convierte posiciones del pool en IDs reales y descarta repetidos
+// (si el pool es chico, el módulo puede repetir una canción).
+function resolveSongIds(positions, songPool) {
+	const ids = positions.map((i) => songPool[i % songPool.length]);
+	return [...new Set(ids)];
+}
 
 async function upsertUser(tx, { email, username }, passwordHash) {
 	const user = await tx.user.upsert({
@@ -198,7 +228,11 @@ async function seedRatings(tx, { roomId, hostId, ratings, raterIds }) {
 
 		await tx.hostRating.upsert({
 			where: {
-				idRoom_idRater_idHost: { idRoom: roomId, idRater: raterId, idHost: hostId },
+				idRoom_idRater_idHost: {
+					idRoom: roomId,
+					idRater: raterId,
+					idHost: hostId,
+				},
 			},
 			update: { rating },
 			create: { idRoom: roomId, idRater: raterId, idHost: hostId, rating },
@@ -212,6 +246,10 @@ async function seedRatings(tx, { roomId, hostId, ratings, raterIds }) {
 
 async function main() {
 	const passwordHash = await bcrypt.hash("Demo1234", SALT_ROUNDS);
+
+	// Fuera de la transacción: solo lectura de canciones que ya existen.
+	const songPool = await loadSongPool();
+	console.log(`Pool de canciones (${songPool.length}): ${songPool.join(", ")}`);
 
 	const resumen = await prisma.$transaction(
 		async (tx) => {
@@ -231,16 +269,21 @@ async function main() {
 			for (const room of ROOMS) {
 				const hostId = hosts.get(room.host);
 				if (!hostId) {
-					throw new Error(`La sala ${room.code} no tiene anfitrión "${room.host}".`);
+					throw new Error(
+						`La sala ${room.code} no tiene anfitrión "${room.host}".`,
+					);
 				}
 
 				const playlist = await upsertPlaylist(tx, {
 					name: room.playlistName,
 					creatorId: hostId,
-					songIds: room.songs,
+					songIds: resolveSongIds(room.songs, songPool),
 				});
 
-				const record = await upsertRoom(tx, room, { hostId, playlistId: playlist.id });
+				const record = await upsertRoom(tx, room, {
+					hostId,
+					playlistId: playlist.id,
+				});
 
 				await seedRatings(tx, {
 					roomId: record.id,
