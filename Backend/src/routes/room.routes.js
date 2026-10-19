@@ -8,6 +8,7 @@ router.use(authenticate);
 
 router.post("/", roomController.createRoom);
 router.post("/join", roomController.joinRoom);
+router.get("/mine", roomController.getMyRooms);
 
 router.get("/:id", roomController.getRoomById);
 router.delete("/:id", roomController.closeRoom);
@@ -17,5 +18,6 @@ router.delete("/:id/members/:userId", roomController.kickMember);
 router.post("/:id/playback", roomController.postPlayback);
 router.get("/:id/playback", roomController.getPlayback);
 router.post("/:id/skip-votes", roomController.postSkipVote);
+router.post("/:id/rating", roomController.rateHost);
 
 module.exports = router;

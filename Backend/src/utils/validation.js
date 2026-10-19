@@ -43,7 +43,27 @@ function validateSortType(sortType) {
 			{ allowed: validTypes },
 		);
 	} else {
-		return sortType.trim();
+		// "alphabetical" es el nombre viejo del criterio por nombre; el service
+		// solo conoce "name".
+		const value = sortType.trim();
+		return value === "alphabetical" ? "name" : value;
+	}
+}
+
+function validateOrderType(orderType) {
+	const validOrders = ["asc", "desc"];
+	if (
+		typeof orderType !== "string" ||
+		!validOrders.includes(orderType.trim().toLowerCase())
+	) {
+		throw httpError(
+			400,
+			`El sentido del orden tiene que ser uno de: ${validOrders.join(", ")}.`,
+			"INVALID_ORDER",
+			{ allowed: validOrders },
+		);
+	} else {
+		return orderType.trim().toLowerCase();
 	}
 }
 
@@ -85,4 +105,5 @@ module.exports = {
 	validateCursor,
 	validateQuery,
 	validateSortType,
+	validateOrderType,
 };
