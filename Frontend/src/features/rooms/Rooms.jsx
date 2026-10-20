@@ -195,7 +195,12 @@ export default function Rooms() {
 }
 
 /**
- * Acción de la tarjeta: mirar la sala, o unirse si tiene lugar.
+ * Acción de la tarjeta: unirse si hay lugar.
+ *
+ * No hay "ver la sala" en el listado: `GET /api/rooms/:id` es solo para
+ * miembros (`room.controller.js` → 403), así que una vista previa no tiene
+ * endpoint que la sostenga. "Unirme" además es idempotente (`200` si ya era
+ * miembro), así que sirve también para volver a una sala propia.
  *
  * La sala privada no aparece en el listado, así que acá siempre es pública: no
  * hace falta el código ni la contraseña, y el backend responde 201 directo.
@@ -211,17 +216,7 @@ function RoomCardAction({ room }) {
     )
   }
 
-  return (
-    <>
-      <Link
-        to={`/salas/${room.id}`}
-        className="flex-1 rounded px-3 py-2 text-center Volume Button hover:brightness-110"
-      >
-        Ver sala
-      </Link>
-      <JoinRoomButton room={room} />
-    </>
-  )
+  return <JoinRoomButton room={room} />
 }
 
 function JoinRoomButton({ room }) {

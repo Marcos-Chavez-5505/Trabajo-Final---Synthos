@@ -28,8 +28,21 @@ export function subscribeToRooms(listener) {
   return () => listeners.delete(listener)
 }
 
-function notifyRoomsChanged() {
-  listeners.forEach((listener) => listener())
+/**
+ * Avisa a quien esté subscripto (el "Mis Salas" del Sidebar) que cambió algo en
+ * las salas del usuario, para que vuelva a pedir la lista sin recargar la
+ * página.
+ *
+ * Además de las mutaciones propias (crear, unirse, salir, cerrar), lo llama
+ * `useMyRooms` cuando llegan los eventos `room:kicked` y `room:closed`: a quien
+ * expulsan y a los miembros de una sala que cerró otro, no les toca ninguna
+ * llamada REST que avise, y la fila que les quedó en el Sidebar se quedaría
+ * vieja para siempre.
+ *
+ * @returns {void}
+ */
+export function notifyRoomsChanged() {
+	listeners.forEach((listener) => listener())
 }
 
 /**
