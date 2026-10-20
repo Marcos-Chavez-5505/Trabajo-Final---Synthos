@@ -37,9 +37,10 @@ romperlo.
 
 ### 1.2 Lo que el frontend tiene contra la API real
 
-`songsService`, `authService`, `usersService` y `playlistsService` ya hablan contra la API real (la
-sesión, el perfil, el seguimiento y las playlists/favoritos están migrados). Sigue en mocks
-`roomsService` (`USE_MOCK = true`, consume `mocks/rooms.js`): es el único importador de `mocks/`.
+`songsService`, `authService`, `usersService`, `playlistsService` y `roomsService` ya hablan contra la
+API real (sesión, perfil, seguimiento, playlists/favoritos y salas migrados). **No queda ningún mock en
+el repo**: `mocks/` se borró entero al cerrar el bloque de salas (2026-10-18), así que este párrafo ya
+no tiene nada que migrar.
 
 ### 1.3 Los huecos, de un vistazo
 
@@ -49,8 +50,8 @@ con `register` que devuelve token, endpoints de usuarios) **ya se cerraron**. Lo
 | # | Hueco | Impacto |
 | --- | --- | --- |
 | 1 | No hay lote de canciones por id (`?ids=`) | Hidratar una playlist son N requests (REQ-SONG-1) |
-| 2 | No hay endpoints de salas CRUD, ni chat, ni recomendaciones | Sprint 2 entero |
-| 3 | El esquema no tiene dónde guardar votos de skip ni mensajes de chat | Dos features sin soporte de datos |
+| 2 | ~~No hay endpoints de salas CRUD~~; siguen faltando chat y recomendaciones | Chat (§8) y recomendaciones (§9) |
+| 3 | El esquema no tiene mensajes de chat. Los votos de skip **no** necesitan esquema: quedaron en memoria (D5) | Solo el chat (§8) |
 | 4 | ~~La foto de perfil se guarda como base64 en la columna `pictureUrl`~~ | **cerrado** (TS-21): `POST /api/users/me/picture` + ImageKit. Ver `PENDIENTES.md` §7 |
 
 ---
@@ -63,7 +64,7 @@ Aplican a **todos** los endpoints nuevos. Si se cumple esto, el frontend migra s
 | Tema | Regla |
 | --- | --- |
 | Prefijo | `/api`, sin versión. `API_BASE_URL` ya es `/api` en el frontend y el proxy de Vite apunta a `:3000`. El mount duplicado `/api/v1/auth` ya se eliminó de `app.js`. |
-| Rutas | Plurales, minúsculas, sin verbos (`/api/playlists/:id/songs`, no `/api/playlists/addSong`). Las acciones que no son CRUD van como sub-recurso: `/api/rooms/:id/vote-skip`, `/api/users/:id/follow`. |
+| Rutas | Plurales, minúsculas, sin verbos (`/api/playlists/:id/songs`, no `/api/playlists/addSong`). Las acciones que no son CRUD van como sub-recurso: `/api/rooms/:id/skip-votes`, `/api/users/:id/follow`. |
 | Identidad | Sale de `req.user.sub` (el `jwt.sign` actual pone `{ sub: user.id, email, username }`), **nunca** del body ni de un query param. Ojo: en JWT `sub` es string, hay que castearlo a número para Prisma. |
 | Auth | Todo lo privado exige `authenticate`. Lo público sigue abierto. |
 | Ids | `Int` de Postgres (SERIAL). El backend debe tolerar que el cliente mande `"43886"` además de `43886`; conviene verificar que Prisma no rompa con un string en un campo `Int` en vez de asumirlo. |
@@ -191,7 +192,7 @@ que ya aplica el mock. Verificado por humo: crear, name vacío/>50 → 400, ajen
 | `POST` | `/api/playlists` | Body `{ name, description?, isPublic?, type }`, con `type` obligatorio (`personal` o `colab`, si no `400`). `idCreator` del token. `201` con la playlist creada; si es `colab`, también la fila de miembro con rol `creator`. |
 | `GET` | `/api/playlists/:id` | `404` si no es suya, no es miembro y no es pública (no `403`, para no filtrar existencia). |
 | `PUT` | `/api/playlists/:id` | Body `{ name?, description?, addSongs?, removeSongs?, reorder? }`. Dueño y no-favoritos; si no, `403`. |
-| `DELETE` | `/api/playlists/:id` | Dueño y no-favoritos. Borrar la fuente de una sala tiene `onDelete: Restrict` en `Room`: `409` con mensaje claro, no un 500 de Prisma (pendiente de probar cuando existan salas). |
+| `DELETE` | `/api/playlists/:id` | Dueño y no-favoritos. Borrar la fuente de una sala tiene `onDelete: Restrict` en `Room`: `409` con mensaje claro, no un 500 de Prisma (sale del `errorHandler` al violar el `Restrict`; decisión **D20**: si la playlist se vacía o cambia, la sala sigue viva). |
 | `POST` | `/api/playlists/:id/songs` | Body `{ songId }`. En una `personal` solo el dueño; en una `colab` cualquier miembro. `409` si ya estaba. |
 | `DELETE` | `/api/playlists/:id/songs/:songId` | Misma regla de membresía. `404` si la canción no estaba. |
 | `POST` | `/api/playlists/:id/invitation` | Body `{ userId }`. Solo del creador y solo sobre `colab`; `404` si esa persona no existe. |
@@ -326,45 +327,64 @@ en la migración aplicada.
 
 ---
 
-## 7. Salas (P1 → P2)
+## 7. Salas (P1 → P2) — entregado 2026-10-18
 
-Es lo más caro del proyecto, y el esquema tiene una restricción que condiciona todo: **`Room` exige
-`idPlaylistSource`** (`onDelete: Restrict`). No hay sala sin playlist de origen, y borrar esa playlist con
-una sala viva tiene que dar `409`.
+> **Contrato vigente:** `ESPECIFICACIONES-BACKEND.md` §10 es la fuente canónica (request/response,
+> errores y `curl`). Esto es el resumen de lo que quedó implementado y de las decisiones que hubo que
+> tomar para llegar ahí. Verificado contra la base real: 80 chequeos de API y 9 de socket
+> (`PENDIENTES.md` §5.6b, plan en `docs/plan/sprint-2-salas-plan.md`).
+
+El esquema impone **`Room.idPlaylistSource`** (`onDelete: Restrict`): no hay sala sin playlist de
+origen, y borrar esa playlist con una sala viva da `409` (decisión **D20**: si la playlist se vacía o
+cambia, la sala no se invalida).
 
 | Método | Ruta | Notas |
 | --- | --- | --- |
-| `GET` | `/api/rooms` | **Existe** (verificado 2026-10-08): array crudo con `avg_rating` de la vista, `sort=alphabetical\|rating` y `400` ante sort inválido. Para TS-17 hace falta además `query`/`status`. |
-| `POST` | `/api/rooms` | Body `{ name, description?, idPlaylistSource, isPrivate, password?, maxCapacity, expiresAt? }`. El `code` lo genera el server (único, `VarChar(20)`). `status: activa`. El creador entra como `host`. |
-| `GET` | `/api/rooms/:id` | Con `members`, `playlistSource` y el puntaje promedio del anfitrión. |
-| `PATCH` | `/api/rooms/:id` | Solo `host`. |
-| `POST` | `/api/rooms/:id/close` | **Acción, no edición**: `status` no es un campo editable desde el cliente. `DELETE` sería ambiguo (¿borrar o cerrar?). |
-| `POST` | `/api/rooms/:id/join` | Body `{ password? }` si es privada. Capacidad llena: `409`. |
-| `POST` | `/api/rooms/:id/leave` | Si sale el host, decidir si cierra la sala o si el rol se transfiere. |
-| `GET` | `/api/rooms/:id/members` | Con roles. |
-| `POST` | `/api/rooms/:id/ratings` | Body `{ rating }` 1–5 (lo valida el `CHECK`; mejor validarlo antes y devolver `400`). PK `[idRoom, idRater, idHost]`: una calificación por persona y sala. |
+| `GET` | `/api/rooms` | Auth opcional. Query `query` (texto libre), `sort = name` (default, alias `alphabetical`) \| `rating`, `order = asc` (default) \| `desc`. Devuelve **array plano**, columnas explícitas (nunca `room.*`: filtraría `password_hash`), **solo públicas y activas**. `sort`/`order` inválidos → `400 INVALID_SORT` / `INVALID_ORDER`. |
+| `GET` | `/api/rooms/mine` | Auth. Las salas **activas** de las que el usuario es miembro, mismo shape, **incluye las privadas** (a esas se entra con el código). Alimenta el grupo "Mis Salas" del Sidebar. |
+| `POST` | `/api/rooms` | Body `{ name, description?, playlistId, isPrivate, password? }`. `maxCapacity` lo fija el server en **10** (no es editable) y el `code` lo genera el server (`VarChar(20)` único); `status` arranca `activa` y el creador entra como `host`. Acepta playlist propia **o** colaborativa de la que sea miembro (**D19**, no valida `type`): 404 si no existe, 403 si no tiene acceso, 400 si no tiene canciones. **Nunca devuelve `passwordHash`.** |
+| `POST` | `/api/rooms/join` | Body `{ code, password? }`. `201` si se unió, `200` si ya era miembro; `404` código inexistente, `403` contraseña, `400` sala cerrada, `409` llena. |
+| `GET` | `/api/rooms/:id` | Auth. Misma sala que `POST /`, más `viewerHasRated` y `viewerRating`. `403` si no sos miembro (no `404`, para no filtrar existencia), `404` si no existe. |
+| `POST` | `/api/rooms/:id/leave` | `204`. **Si sale el anfitrión, la sala se cierra** (decisión **D6**, plan: D16). |
+| `DELETE` | `/api/rooms/:id` | Solo el anfitrión. `204`: pone `status = cerrada`, limpia el estado de reproducción en memoria y emite `room:closed`. **`status` no es editable desde el cliente**, por eso cerrar es `DELETE` y no `PATCH` (decisión **D15** del plan de salas). |
+| `DELETE` | `/api/rooms/:id/members/:userId` | Solo el anfitrión. `204`; `400` si se saca a sí mismo, `403` si no es host. Borra la fila de `room_member` y emite `room:kicked` solo al canal `user:<id>` del expulsado. |
+| `POST` | `/api/rooms/:id/playback` | Solo el anfitrión. Body `{ action: play \| pause \| next \| stop }` → `200 { status, playback }`. |
+| `GET` | `/api/rooms/:id/playback` | Auth (403 si no es miembro) → `{ status, playback, skipVotes }`. |
+| `POST` | `/api/rooms/:id/skip-votes` | `201 { status, skipVotes, approved }`; `403` si vota el anfitrión, `409` si ya votó, `400` sin canción en curso. |
+| `POST` | `/api/rooms/:id/rating` | Body `{ rating }` 1–5. `201 { status, rating }`; `403` si es el anfitrión o no es miembro, `409` si ya calificó (`HOST_ALREADY_RATED`). |
 
-- [ ] **Decisión: dónde viven los votos de skip.** No hay tabla ni columna para ellos, y son estado
-      efímero de la reproducción (se reinician al cambiar de canción), así que guardarlos en Postgres es
-      modelar basura. Alternativas: en memoria en el proceso del servidor (se pierde al reiniciar y no
-      escala a más de una instancia) o Redis (hay que incorporarlo). Mientras no se decida, TS-18 no
-      puede ir al backend.
-- [ ] El puntaje promedio para ordenar salas sale de un `AVG` sobre `host_rating`; decidir si cuenta el
-      promedio simple o uno ponderado por cantidad de votos.
+**Endpoints que no existen** (y no hacen falta): `PATCH /api/rooms/:id`, `POST /api/rooms/:id/close`
+(el cierre es `DELETE`) y `GET /api/rooms/:id/members` (`members[]` viaja dentro del payload de la
+sala, igual que en playlists).
+
+- [x] **Dónde viven los votos de skip — D5 de esta hoja resuelta** (D8′ y D17 del plan de salas): **en
+      memoria del proceso** (`Backend/src/realtime/roomState.js`), no en Postgres. Son estado efímero de
+      la reproducción (se reinician al cambiar de canción) y guardarlos en la base sería modelar basura.
+      Sale junto con el transporte de §8 y arrastra sus límites: una sola instancia, se pierden al
+      reiniciar y exige un backend Node persistente (no corre en serverless).
+- [x] **Puntaje promedio para ordenar salas — resuelto:** `AVG(host_rating.rating)` por anfitrión,
+      promedio **simple**, no ponderado por cantidad de votos (vista `HostAvgRating`). Llega como
+      `avg_rating`, que es `numeric` de Postgres y por lo tanto un **string**; el backend lo coalescea
+      a `0` cuando nadie calificó, y el frontend lo traduce a `null` (= "Sin calificaciones").
 
 ---
 
 ## 8. Chat y sincronización de reproducción (P2)
 
-Hay que decidir el transporte antes que el endpoint: la convención REST no cubre un chat.
+**Transporte decidido y ya implementado para la sincronización:** Socket.IO sobre el mismo servidor
+HTTP, con handshake por JWT (contrato en `ESPECIFICACIONES-BACKEND.md` §10.1). Lo que sigue abierto es
+el chat en sí.
 
-- [ ] Definir si es WebSocket (`socket.io` o `ws`) y con qué auth (handshake con JWT).
+- [x] **Sincronización de reproducción: resuelta.** La sala sabe qué canción está sonando y en qué
+      segundo (`GET|POST /api/rooms/:id/playback`), con la posición en memoria del servidor y
+      corrección de deriva en el cliente. Hoy la posición de la cola en el player sigue siendo estado
+      del cliente (`PlayerContext`), pero en sala la que manda es la del servidor.
 - [ ] **El esquema no tiene mensajes de chat.** `Content` y `ContentPlayement` son para contenido con
       canción opcional, no para mensajes de sala. Hace falta una tabla `room_message`, o decidir que el
-      chat es efímero y vive solo en el servidor.
-- [ ] Sincronización de reproducción: la sala necesita saber qué canción está sonando y en qué segundo.
-      Hoy la posición de la cola es estado del cliente (`PlayerContext`), no del servidor.
-- [ ] Esto resuelve la decisión abierta 2 de `AGENTS.md` (`services/socketService.js`).
+      chat es efímero y vive solo en el servidor. Es lo único que sigue bloqueando acá (**D8**): el
+      transporte ya está decidido, falta la persistencia de los mensajes.
+- [x] El WebSocket dejó de ser una decisión abierta de `AGENTS.md` §5; de ese apartado solo quedó el
+      chat.
 
 ---
 
@@ -390,19 +410,29 @@ Hay que decidir el transporte antes que el endpoint: la convención REST no cubr
 
 Ninguna de estas se puede implementar sin resolverla antes.
 
+> **Ojo con la numeración:** los `D1`–`D11` de **esta hoja** son una serie propia (migración del
+> frontend a la API) y **no son los mismos** que los `D1`–`D25` de `docs/plan/sprint-2-plan.md` y
+> `docs/plan/sprint-2-salas-plan.md`, que tienen otro significado para el mismo número (por ejemplo,
+> el `D5` de esta hoja son los votos de skip; el `D5` del plan de sprint es "crear calificaciones de
+> anfitrión"). Las decisiones del bloque de salas están tomadas y viven en el plan de salas §2.
+
 | # | Decisión | Estado | Afecta a | Bloquea |
 | --- | --- | --- | --- | --- |
 | D1 | ¿Favoritos como tabla `favorite` o como playlist materializada? | **resuelta**: tabla `favorite` única fuente, playlist virtual en el cliente (§4.1) | §4.1 | Toda la API de favoritos (ya migrada) |
 | D2 | ¿"Mis Favoritos" es compartible? Si sí, hace falta la playlist de verdad | abierta | §4.1 | TS-12 |
 | D3 | ¿`source` lo calcula el frontend? (recomendado: sí) | abierta, **fuera del backend** (REQ-SONG-3) | §5 | Cierra PENDIENTES 5.4 |
 | D4 | ¿`album` entra al esquema o queda fuera? | **resuelta: entra** (modelo `Album` + filtro + payload; REQ-SONG-4 y REQ-ALBUM-1) | §5 | Copy y filtro de búsqueda |
-| D5 | ¿Dónde viven los votos de skip? | abierta | §7 | TS-18 entero |
-| D6 | ¿El host que sale de una sala la deja o la cierra? | abierta | §7 | `POST /rooms/:id/leave` |
+| D5 | ¿Dónde viven los votos de skip? | **resuelta: en memoria del proceso** (no en Postgres), junto con la reproducción (§7) | §7 | — (TS-18 entregado) |
+| D6 | ¿El host que sale de una sala la deja o la cierra? | **resuelta: la cierra** (D16 del plan de salas) | §7 | — (`POST /rooms/:id/leave` ya existe) |
 | D7 | ¿Se revocan los tokens al hacer logout? | abierta | §3 | `POST /auth/logout` real |
-| D8 | ¿Chat por WebSocket, con mensajes persistentes o efímeros? | abierta | §8 | Tareas de salas y chat |
+| D8 | ¿Chat por WebSocket, con mensajes persistentes o efímeros? | **transporte decidido (Socket.IO)**; sigue abierta la persistencia de los mensajes | §8 | Chat de salas |
 | D9 | ¿Librería de validación para los endpoints nuevos? Hoy `utils/validation.js` es a mano | abierta | §2, todos | Consistencia de los `400` |
 | D10 | ¿CORS con lista explícita de orígenes para el APK? | abierta | §2 | Build de producción |
 | D11 | ¿`/api/users/search` pasa a offset o el frontend se adapta al cursor? | **resuelta**: offset, igual que `/songs/search` | §2, REQ-USER-1 | `SearchPeople` (ya funciona) |
+
+Las decisiones **D12 en adelante** (privacidad, capacidad, playlist de origen, votos, rating, etc.) no
+se listan acá: están tomadas y documentadas en `docs/plan/sprint-2-salas-plan.md` §2, que es el plan
+del bloque de salas.
 
 ---
 
@@ -416,8 +446,10 @@ sin imports, como pasó con `mocks/songs.js`) y se actualizan las casillas.
 2. **[x] REQ-PLAYLIST-1/2/3 + D1** → TS-09 pasa de `localStorage` a la base.
 3. **[ ] REQ-SONG-1/2** → hidratar playlists sin N requests.
 4. **[x] Follow + perfil** → TS-10.
-5. **[ ] Salas** → cuando D5 y D6 estén resueltas. Es el bloque más grande.
-6. **[ ] WebSocket + chat** → cuando D8 esté decidido.
+5. **[x] Salas** → entregado 2026-10-18, con la **D5** y la **D6** de esta hoja ya resueltas. Fue el
+   bloque más grande: cuatro fases (listado, ciclo de vida, realtime, skip + rating) y ocho ramas.
+6. **[ ] WebSocket + chat** → el WebSocket ya está (sincronización de salas, §8); falta el chat, cuando
+   cierre D8.
 7. **[ ] Recomendaciones** → al final, es lo más abierto a producto.
 
 **Definition of done de cada bloque:**
@@ -438,12 +470,12 @@ sin imports, como pasó con `mocks/songs.js`) y se actualizan las casillas.
 | Tarea | Requiere | Bloqueada por |
 | --- | --- | --- |
 | TS-10 Seguir personas | **hecho** (REQ-HTTP-1, REQ-USER-1, endpoints de follow verificados) | — |
-| TS-11 Calificar anfitrión | §7, ratings | salas |
+| TS-11 Calificar anfitrión | **hecho** (`POST /rooms/:id/rating`, verificado 2026-10-18) | — |
 | TS-12 Playlist colaborativa | `PlaylistMember` | **hecho** (B5, B8 y F4/F7 verificados contra la base real) |
 | TS-13 Invitar a colaborativa | `PlaylistInvitation` + endpoints de invitación | **hecho** (invitación dirigida con Aceptar/Rechazar, verificada contra la base real) |
-| TS-14/15/16 Salas | §7 completo | D5, D6 |
-| TS-17 Ordenar salas por calificación | `AVG(host_rating)` | TS-11 |
-| TS-18 Votar skip | votos de skip | **D5** |
+| TS-14/15/16 Salas | **hecho** (§7 completo, con la **D5** y la **D6** de esta hoja ya resueltas) | — |
+| TS-17 Ordenar salas por calificación | **hecho** (`AVG(host_rating)` en la vista `HostAvgRating`) | — |
+| TS-18 Votar skip | **hecho** (votos en memoria, `POST /rooms/:id/skip-votes`) | — |
 | TS-19/20 Recomendaciones | §9 completo | modelo de recomendación |
 
 ---
