@@ -7,6 +7,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils";
 
 import { useIsMobile } from "@/hooks/use-mobile"
+import { SIDEBAR_SPRING } from "@/lib/sidebarMotion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -40,12 +41,11 @@ const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 // Valores del spring del ancho en rem, derivados de las constantes de arriba
 // para no tener dos fuentes de verdad (si cambia `SIDEBAR_WIDTH`, el spring lo
-// sigue). El `stiffness` alto con `damping` bajo le da el rebote al llegar al
-// ancho objetivo.
+// sigue). El spring en sí (`SIDEBAR_SPRING`) vive en `lib/sidebarMotion.js`,
+// porque lo comparte `SidebarAnimatedGroup`.
 const SIDEBAR_EXPANDED_REM = parseFloat(SIDEBAR_WIDTH)
 const SIDEBAR_ICON_REM = parseFloat(SIDEBAR_WIDTH_ICON)
 const SIDEBAR_MOBILE_REM = parseFloat(SIDEBAR_WIDTH_MOBILE)
-const SIDEBAR_SPRING = { stiffness: 300, damping: 20, mass: 0.6 }
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
