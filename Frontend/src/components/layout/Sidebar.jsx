@@ -103,9 +103,13 @@ function SidebarWordmark() {
   )
 }
 
-// "Mis Salas" sigue vacío hasta el sprint de Salas. "Mis Playlists" (TS-09) y el
-// resumen del usuario (TS-10) se delegan en la feature para no meter lógica de
-// fetching dentro de un componente de layout.
+// Los grupos con datos (Mis Salas, Mis Playlists, Playlists Colaborativas) se
+// delegan enteros en la feature, no solo la lista: cada uno arma su propio
+// `SidebarGroup` con su label y, si no tiene nada que mostrar, lo cierra con
+// `SidebarAnimatedGroup` en vez de dejar un label colgado sobre un grupo vacío.
+// Con el `SidebarGroup` acá abajo y el label suelto, los grupos vacíos dejaban
+// ese label y una caja de padding sin contenido, y desaparecían de golpe.
+// Navegación y "Mi Colección" son estáticos, así se quedan acá.
 export default function Sidebar() {
   const location = useLocation()
 
@@ -166,20 +170,11 @@ export default function Sidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Mis Salas</SidebarGroupLabel>
-          <MyRooms />
-        </SidebarGroup>
+        <MyRooms />
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Mis Playlists</SidebarGroupLabel>
-          <MisPlaylists />
-        </SidebarGroup>
+        <MisPlaylists />
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Playlists Colaborativas</SidebarGroupLabel>
-          <CollabPlaylists />
-        </SidebarGroup>
+        <CollabPlaylists />
       </SidebarContent>
 
       <SidebarFooter>
