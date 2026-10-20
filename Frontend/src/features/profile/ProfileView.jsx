@@ -56,11 +56,13 @@ export default function ProfileView() {
 							followingCount={follow.followingCount}
 						/>
 
-						{/* TS-11: la calificación como anfitrión de salas. Solo se
-						    muestra si tiene; si no, el perfil queda igual que antes. */}
+						{/* TS-11: la calificación como anfitrión de salas. El perfil
+						    muestra siempre el estado propio: el número cuando tiene
+						    votos, "Sin calificaciones" cuando todavía no. */}
 						<HostRatingBadge
 							hostRating={user.hostRating}
 							hostRatingsCount={user.hostRatingsCount}
+							alwaysShow
 						/>
 
 						<button

@@ -160,10 +160,12 @@ export default function ProfilePublic() {
 							followingCount={follow.followingCount}
 						/>
 
-						{/* TS-11: la calificación como anfitrión de salas. */}
+						{/* TS-11: la calificación como anfitrión de salas, con su
+						    estado vacío para perfiles todavía sin votos. */}
 						<HostRatingBadge
 							hostRating={person.hostRating}
 							hostRatingsCount={person.hostRatingsCount}
+							alwaysShow
 						/>
 
 						<FollowButton
