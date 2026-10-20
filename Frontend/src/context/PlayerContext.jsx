@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PlayerContext } from './playerContext.js'
+import useAuth from '../hooks/useAuth.js'
 
 const REPEAT_MODES = ['off', 'track', 'list']
 const RESTART_THRESHOLD_SECONDS = 3
@@ -75,6 +76,7 @@ function removeIndex(queue, position, current, setQueue, setIndex, historyRef) {
  * (desktop) y MiniPlayerBar (mobile) son presentación de este mismo estado.
  */
 export default function PlayerProvider({ children }) {
+  const { user } = useAuth()
   const audioRef = useRef(null)
   // Índices ya reproducidos, del más nuevo al más viejo. Es ref y no state porque
   // no se renderiza: solo lo leen/escriben next(), previous() y playSongs().
@@ -510,6 +512,60 @@ export default function PlayerProvider({ children }) {
     return true
   }, [])
 
+  /**
+   * Deja el reproductor en idle: vacía la cola, apaga el audio y colapsa el
+   * expandido.
+   *
+   * Es la salida limpia de una sesión compartida. El `PlayerProvider` vive
+   * arriba de las rutas y sobrevive a la navegación, así que sin esto, salir de
+   * una sala (expulsado, cierre o salida propia) deja la canción cargada y
+   * sonando en el playerbar. Encima quien salió ya no recibe `room:playback`:
+   * escucha solo y desfasado, sin ningún camino de vuelta que lo corrija.
+   *
+   * No es `clearQueueIfSource()`: esa solo vacía si la cola salió de una
+   * playlist concreta, y la cola de una sala tiene por origen `{ roomId }`, no
+   * un `playlistId`. Acá hay que vaciar lo que sea que esté sonando.
+   *
+   * @returns {void}
+   */
+  const goIdle = useCallback(() => {
+    setQueue([])
+    setIndex(0)
+    setIsPlaying(false)
+    setCurrentTime(0)
+    setDuration(0)
+    setIsExpanded(false)
+    setRoomMode(false)
+    setPlayBlocked(false)
+    historyRef.current = []
+    queueSourceRef.current = null
+    pendingSkipRef.current = null
+    pendingSeekRef.current = null
+    onEndedRef.current = null
+  }, [])
+
+  // La sesión manda sobre la cola. `PlayerProvider` vive arriba de las rutas y
+  // sobrevive a logout/login, así que sin este reset la canción de un usuario
+  // seguía cargada (y sonando) en la barra de la cuenta siguiente, y también en
+  // /login, que no desmonta el provider: cerrar sesión no alcanzaba con sacar al
+  // usuario, había que apagar el reproductor. `goIdle()` es la salida limpia que
+  // ya se usa al salir de una sala: vacía la cola, apaga el audio, colapsa el
+  // expandido y tira los refs internos (historial, fuente, seek pendiente).
+  //
+  // Se compara por id y no por el objeto `user`: `updateProfile()` y cada refetch
+  // de `/users/me` recrean el objeto y reiniciarían la cola en pleno uso. Con id,
+  // el único cambio que apaga todo es entrar/salir de sesión (incluido el
+  // `setUser(null)` de un 401).
+  const userId = user?.id == null ? null : String(user.id)
+  const lastUserIdRef = useRef(userId)
+
+  useEffect(() => {
+    if (lastUserIdRef.current === userId) return
+
+    lastUserIdRef.current = userId
+    goIdle()
+  }, [userId, goIdle])
+
   // Aleatorio y repetición quedan sin efecto en modo sala: apagan el sentido de
   // una cola compartida (el servidor la recorre en orden, o la votación la
   // salta). Se niegan en el origen y no solo en la UI.
@@ -619,6 +675,7 @@ export default function PlayerProvider({ children }) {
       playSongs,
       enterRoomMode,
       exitRoomMode,
+      goIdle,
       removeFromPlaylistQueue,
       removeFromFavoritesQueue,
       clearQueueIfSource,
@@ -651,6 +708,7 @@ export default function PlayerProvider({ children }) {
       playSongs,
       enterRoomMode,
       exitRoomMode,
+      goIdle,
       removeFromPlaylistQueue,
       removeFromFavoritesQueue,
       clearQueueIfSource,

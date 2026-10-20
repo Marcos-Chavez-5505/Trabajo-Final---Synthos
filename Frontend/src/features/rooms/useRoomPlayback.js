@@ -79,6 +79,7 @@ export default function useRoomPlayback({ roomId, songs, isHost, onEnded }) {
     isPlaying: localIsPlaying,
     enterRoomMode,
     exitRoomMode,
+    goIdle,
     setPlayBlocked,
   } = usePlayer()
 
@@ -104,8 +105,15 @@ export default function useRoomPlayback({ roomId, songs, isHost, onEnded }) {
       // quién desmonta.
       setPlayBlocked(false)
       exitRoomMode()
+      // Y el reproductor vuelve a idle. Esta pantalla se desmonta en los tres
+      // motivos de salida (expulsado, sala cerrada y salida propia, más el
+      // botón atrás): quien dejó de ser miembro ya no recibe `room:playback`,
+      // así que seguir sonando es escuchar solo y desfasado. Antes de esto la
+      // cola quedaba viva en el provider, que sobrevive a la navegación, y el
+      // playerbar seguía mostrando una canción a la que no había acceso.
+      goIdle()
     }
-  }, [enterRoomMode, exitRoomMode, setPlayBlocked])
+  }, [enterRoomMode, exitRoomMode, goIdle, setPlayBlocked])
 
   // Mientras la sala no esté sonando, arrancar el audio local está prohibido: si
   // el anfitrión pausó (o detuvo) la sala y alguien reproduce desde su barra, se
