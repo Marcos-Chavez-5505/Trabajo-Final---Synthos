@@ -29,6 +29,43 @@ const PASSWORD = "Demo1234";
 const CREATE_FAVORITES_PLAYLIST = true;
 const FAVORITES_PER_USER = 5;
 
+// Canciones que tienen que entrar a /populares: al menos 3 personas distintas
+// las marcan como favoritas dentro de la misma semana. Se siembran aparte de
+// los favoritos de cada gusto para que el ranking sea comprobable aunque los
+// usuarios de prueba no coincidan naturalmente en una canción.
+const POPULAR_SONGS = [
+	{
+		mood: "happy",
+		skip: 0,
+		users: ["ana_sintoniza", "diego_bajos", "gise_melodia", "bruno_ritmo"],
+	},
+	{
+		mood: "happy",
+		skip: 1,
+		users: ["ana_sintoniza", "diego_bajos", "gise_melodia"],
+	},
+	{
+		mood: "neutral",
+		skip: 0,
+		users: ["cami_acordes", "fede_playlist", "hugo_ecos"],
+	},
+	{
+		mood: "neutral",
+		skip: 1,
+		users: ["cami_acordes", "fede_playlist", "hugo_ecos", "ana_sintoniza"],
+	},
+	{
+		mood: "sad",
+		skip: 0,
+		users: ["bruno_ritmo", "eli_vinilo", "ana_sintoniza"],
+	},
+	{
+		mood: "sad",
+		skip: 1,
+		users: ["bruno_ritmo", "eli_vinilo", "hugo_ecos"],
+	},
+];
+
 // ---------------------------------------------------------------------------
 // Datos de prueba
 // ---------------------------------------------------------------------------
@@ -455,6 +492,38 @@ async function main() {
 						songAdders: [idUser],
 					});
 					stats.playlists++;
+				}
+			}
+
+			// Populares de la semana: cada entrada la marcan 3 o más personas
+			// distintas. El `markedDate` se refresca en cada corrida para que el
+			// seed siga sirviendo sin importar en qué semana se ejecute; así el
+			// ranking de /populares tiene datos aunque los gustos no se crucen.
+			const markedDate = new Date();
+
+			for (const entry of POPULAR_SONGS) {
+				const [idSong] = await pickSongs(tx, {
+					mood: entry.mood,
+					skip: entry.skip,
+					take: 1,
+				});
+
+				if (!idSong) {
+					stats.warnings.push(
+						`No hay canción para populares (mood ${entry.mood}, skip ${entry.skip}).`,
+					);
+					continue;
+				}
+
+				for (const username of entry.users) {
+					const idUser = idOf(users, username);
+
+					await tx.favorite.upsert({
+						where: { idUser_idSong: { idUser, idSong } },
+						update: { markedDate },
+						create: { idUser, idSong, markedDate },
+					});
+					stats.favorites++;
 				}
 			}
 

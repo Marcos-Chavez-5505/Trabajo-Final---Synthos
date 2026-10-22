@@ -167,6 +167,7 @@ Una carpeta por dominio, con sus pantallas, componentes y hooks:
 | `search/` | `Search` + pestañas `SearchSongs` / `SearchAlbums` / `SearchPeople` / `SearchTabs` |
 | `social/` | `useFollow`, `FollowButton`, `FollowList`, `FollowStats`, `ProfileSummary` |
 | `rooms/` | `Rooms.jsx`: listado con `RoomCard` (hoy contra mocks; crear/administrar salas, pendiente) |
+| `popular/` | `Populares.jsx`: ranking semanal por favoritos (`GET /songs/popular`), reutiliza `MediaCard` |
 
 ### 3.6 `components/`
 
@@ -272,7 +273,7 @@ Todo bajo `/api` (`Backend/src/app.js`). El contrato completo —requests, respo
 | Salud | `GET /health` | — | ESPECIFICACIONES §6 |
 | Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout` | `logout` | §6 |
 | Usuarios y follow | `GET /users/search`, `GET\|PATCH /users/me`, `GET /users/:id`, `GET /users/:id/followers\|following`, `POST\|DELETE /users/:id/follow` | `me`, follow | §7 |
-| Canciones | `GET /songs`, `GET /songs/search`, `GET /songs/:id` | — | §1–§5 |
+| Canciones | `GET /songs`, `GET /songs/search`, `GET /songs/recommendations`, `GET /songs/popular`, `GET /songs/:id` | — | §1–§5 |
 | Favoritos | `GET /favorites`, `GET /favorites/songs/ids`, `POST /favorites/songs`, `DELETE /favorites/songs/:songId` | todas | §8 |
 | Playlists | `GET /playlists`, `GET\|PUT\|DELETE /playlists/:id`, `POST /playlists` | todas | §9 |
 | Salas | `GET /rooms?sort=` | — | §10 |
@@ -315,9 +316,9 @@ El resto es público. Errores: siempre `{ status: "error", message, code? }` (ve
   consume, vía `roomsService`; `users.js`, `songs.js` y `playlists.js` quedaron sin uso tras migrar),
   `Backend/src/const/baseUrl.js`, `Backend/src/test.js` y la llamada a `ensureFavoritesPlaylist` que
   quedó comentada en `favorite.service.js`.
-- **Vistas de una sola página**: `/populares` y `/artistas` son `ScreenPlaceholder`; el chat todavía no
-  existe, y `features/rooms/` sólo tiene el listado (`Rooms.jsx`). `/albums` ya no es placeholder:
-  tiene grilla y detalle (`features/albums/`).
+- **Vistas de una sola página**: `/artistas` es `ScreenPlaceholder`; el chat todavía no
+  existe, y `features/rooms/` sólo tiene el listado (`Rooms.jsx`). `/populares` ya no es placeholder:
+  tiene ranking semanal (`features/popular/`), y `/albums` tiene grilla y detalle (`features/albums/`).
 
 ---
 

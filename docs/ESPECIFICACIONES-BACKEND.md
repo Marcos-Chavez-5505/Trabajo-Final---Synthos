@@ -40,6 +40,7 @@ Todo endpoint responde los errores con el mismo cuerpo:
 | `GET /api/albums/:id` | `{ status, album }` con `artist` y `songs[]` | `getAlbumById()` → `/albums/:id` |
 | `GET /api/songs/:id` | objeto de la canción | `getSongById()` (sin consumidores por ahora) |
 | `GET /api/songs/recommendations` | `{ status, songs }` por estado de ánimo | `listSongsByMood(expression)` → `/animo` (TS-20). 400 `EXPRESSION_REQUIRED` / `INVALID_EXPRESSION` |
+| `GET /api/songs/popular` | `{ status, week, minimumFavorites, songs[] }` con `favoriteCount` | `listPopularSongs()` → `/populares`. Ranking de la semana en curso por favoritos distintos |
 
 El frontend mapea el payload crudo a su propia forma en `Frontend/src/services/songsService.js`
 (`url` → `audioUrl`, `artist.name` → `artist`, `songGenres[].genre.name` → `genre`, `album.name` → `album`), así que el backend
@@ -52,6 +53,23 @@ consumen los primeros elementos y no necesitan saltar de página.
 `GET /api/songs/recommendations?expression=<ánimo>` (TS-20/B9) devuelve canciones aleatorias del catálogo de ese
 estado de ánimo, con `200 { status, songs }` o `[]` si no hay, y **400 "Expresión inválida."** si el `expression` no
 es un mood del catálogo (`neutral`, `happy`, `sad`, `angry`). El plan lo pedía como `/api/songs/mood`: la ruta real es la canónica.
+
+`GET /api/songs/popular` (público) devuelve el ranking de la **semana en curso** (lunes 00:00 a lunes 00:00 UTC,
+para que el corte no dependa de la zona horaria del server). Cuenta `COUNT(DISTINCT id_user)` sobre
+`favorite.marked_date` dentro de esa ventana: si la misma persona marcó la misma canción varias veces, cuenta una
+sola vez, y solo entran las canciones con **al menos 3 personas distintas**. Se ordena por `favoriteCount` desc y
+luego por id asc. `week.to` es exclusivo. La consulta se hace en cada request (ventana semanal, sin foto cacheada),
+así que los favoritos de la semana se ven al recargar `/populares`.
+
+```bash
+curl "http://localhost:3000/api/songs/popular"
+# 200 { status, week: { from, to }, minimumFavorites: 3, songs: [{ ...song, favoriteCount }] }
+# songs: [] si ninguna llegó al mínimo; no es un error.
+```
+
+**Seed de prueba:** `seedUsers.js` incluye `POPULAR_SONGS`, un puñado de canciones que marcan 3 o 4 usuarios
+distintos y cuyo `markedDate` se refresca a la fecha de la corrida, para que el ranking tenga datos en cualquier
+semana. No hace falta migración: `favorite.marked_date` ya existía.
 
 ---
 
@@ -128,7 +146,7 @@ para no mostrar un "sin resultados" engañoso. `totalPages` nunca es `0`: con ce
 con su `code`. Antes caía en un 500 por una variable sin definir.
 
 **Payload de canción.** Todas las respuestas de canciones (`/songs`, `/songs/:id`, `/songs/search`,
-`/songs/recommendations`) incluyen `album: { id, name }` vía `SONG_INCLUDE`.
+`/songs/recommendations`, `/songs/popular`) incluyen `album: { id, name }` vía `SONG_INCLUDE`.
 
 ### 2.4 Detalle de álbum - `GET /api/albums/:id`
 
@@ -218,6 +236,8 @@ curl "http://localhost:3000/api/songs/search?query=rock&page=999&pageSize=10"
 #    esperado: page corregido a la última con contenido, no una lista vacía
 curl "http://localhost:3000/api/songs/search?page=1&pageSize=10"
 #    esperado: catálogo completo, sin 500
+curl "http://localhost:3000/api/songs/popular"
+#    esperado: 6 canciones del seed con favoriteCount 3 o 4, ordenadas de mayor a menor
 
 # 3. Frontend
 cd Frontend && npm run dev
