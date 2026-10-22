@@ -51,7 +51,7 @@ consumen los primeros elementos y no necesitan saltar de página.
 
 `GET /api/songs/recommendations?expression=<ánimo>` (TS-20/B9) devuelve canciones aleatorias del catálogo de ese
 estado de ánimo, con `200 { status, songs }` o `[]` si no hay, y **400 "Expresión inválida."** si el `expression` no
-es un mood del catálogo. El plan lo pedía como `/api/songs/mood`: la ruta real es la canónica.
+es un mood del catálogo (`neutral`, `happy`, `sad`, `angry`). El plan lo pedía como `/api/songs/mood`: la ruta real es la canónica.
 
 ---
 

@@ -1,14 +1,16 @@
 import musicNoteIcon from '../../assets/music_note.svg'
 import fullHeartIcon from '../../assets/full_heart.svg'
+import AddToQueueButton from '../../components/player/AddToQueueButton.jsx'
 
 /**
  * Fila de canción dentro del detalle de una playlist.
  *
- * Igual que `MiniMediaCard`, es presentacional: no pide datos ni toca el player.
- * `onPlay` reproduce la cola de la playlist desde esta posición; `onRemove` saca
- * la canción de la playlist. El corazón se dibuja según `isFavorite` pero no
- * cambia el favorito: acá solo informa (el toggle vive en el reproductor), y por
- * eso no es un botón.
+ * Es presentacional: no pide datos ni decide la reproducción. `onPlay` reproduce
+ * la cola de la playlist desde esta posición; `onRemove` saca la canción de la
+ * playlist. El corazón se dibuja según `isFavorite` pero no cambia el favorito:
+ * acá solo informa (el toggle vive en el reproductor), y por eso no es un botón.
+ * La acción de encolar sí consume el `PlayerContext` a través de
+ * `AddToQueueButton`, igual que el resto de los botones de acción del reproductor.
  */
 export default function PlaylistSongRow({
   song,
@@ -62,6 +64,8 @@ export default function PlaylistSongRow({
           className="h-4 w-4 shrink-0"
         />
       )}
+
+      <AddToQueueButton song={song} iconClassName="h-4 w-4" />
 
       {canRemove && (
         <button

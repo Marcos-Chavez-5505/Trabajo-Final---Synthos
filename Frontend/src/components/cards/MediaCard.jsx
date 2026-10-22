@@ -1,5 +1,6 @@
 import playIcon from '../../assets/play.svg'
 import musicNoteIcon from '../../assets/music_note.svg'
+import QueueActionButton from '../player/QueueActionButton.jsx'
 
 /**
  * Tarjeta de canción con overlay inferior (label/título/artista) y botón play
@@ -9,9 +10,11 @@ import musicNoteIcon from '../../assets/music_note.svg'
  * ancho 180px, radio 6px, thumb 3:4, overlay padding 10px/12px, play 36px.
  * Los valores salen de `utilities.css` → `tokens.css`.
  *
- * Presentacional: no pide datos ni toca el player. Quien la usa pasa `onPlay`.
+ * Presentacional: no pide datos ni toca el player. Quien la usa pasa `onPlay` y,
+ * si quiere ofrecer la acción, `onAddToQueue`. En mobile los botones quedan
+ * siempre visibles (no hay hover); desde `md` aparecen al pasar el mouse.
  */
-export default function MediaCard({ title, artist, label, coverUrl = null, onPlay }) {
+export default function MediaCard({ title, artist, label, coverUrl = null, onPlay, onAddToQueue }) {
   return (
     <article className="group relative MediaCardWidth shrink-0 cursor-pointer overflow-hidden CardRadius">
       <div className="Light flex aspect-3/4 w-full items-center justify-center">
@@ -34,14 +37,25 @@ export default function MediaCard({ title, artist, label, coverUrl = null, onPla
         <p className="text-muted-foreground TextMedium truncate">{artist}</p>
       </div>
 
-      <button
-        type="button"
-        onClick={onPlay}
-        aria-label={`Reproducir ${title}`}
-        className="Fucsia MediaCardPlaySize group-hover:opacity-100 focus-visible:opacity-100 absolute right-2.5 bottom-14.5 flex cursor-pointer items-center justify-center rounded-full opacity-0 transition-opacity duration-150"
-      >
-        <img src={playIcon} alt="" aria-hidden="true" className="h-4 w-4" />
-      </button>
+      <div className="absolute right-2.5 bottom-14.5 flex items-center gap-2 opacity-100 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
+        {onAddToQueue && (
+          <QueueActionButton
+            onAdd={onAddToQueue}
+            label={`Añadir ${title} a la cola`}
+            className="Volume MediaCardPlaySize"
+            iconClassName="h-4 w-4"
+          />
+        )}
+
+        <button
+          type="button"
+          onClick={onPlay}
+          aria-label={`Reproducir ${title}`}
+          className="Fucsia MediaCardPlaySize flex cursor-pointer items-center justify-center rounded-full"
+        >
+          <img src={playIcon} alt="" aria-hidden="true" className="h-4 w-4" />
+        </button>
+      </div>
     </article>
   )
 }

@@ -235,6 +235,15 @@ export default function PlayerProvider({ children }) {
 
     if (!queue.length) return
 
+    // Las canciones añadidas a la cola tienen prioridad sobre la próxima de la
+    // lista, también con aleatorio activo: van en bloque y en el orden en que se
+    // encolaron (FIFO). `addToQueue()` las deja justo después de la actual.
+    if (queue[index + 1]?.queued) {
+      historyRef.current.push(index)
+      setIndex(index + 1)
+      return
+    }
+
     if (shuffle && queue.length > 1) {
       // Evita la actual y las últimas SHUFFLE_MEMORY; si no queda ninguna, cae a
       // "cualquiera menos la actual" para no dejar la cola sin candidatos.
@@ -379,6 +388,73 @@ export default function PlayerProvider({ children }) {
       setIsPlaying(autoplay)
     },
     []
+  )
+
+  /**
+   * Añade una canción a la cola con prioridad sobre lo que venía.
+   *
+   * La canción se inserta **después de la actual y después de las que ya se
+   * encolaron**, antes de la próxima canción original de la lista. Eso da el
+   * comportamiento FIFO que se espera: si suena `cancion 1` (next = `cancion 2`)
+   * y se encola `X`, next pasa a ser `X`; si después se encola `Y`, el orden es
+   * `X → Y → cancion 2`.
+   *
+   * Las encoladas se marcan con `queued: true` (la copia, no el objeto de origen)
+   * para que `next()` las reconozca incluso con aleatorio activo y para que la
+   * lista "A continuación" las distinga.
+   *
+   * Sin nada cargado, la cola arranca con esa canción. En una sala no se permite:
+   * la cola la manda el servidor y un agregado local solo desincronizaría a esta
+   * persona.
+   *
+   * @param {object} songToQueue Canción del catálogo (con `id`).
+   * @returns {boolean} Si se pudo agregar.
+   */
+  const addToQueue = useCallback(
+    (songToQueue) => {
+      if (!songToQueue?.id || roomMode) return false
+
+      if (!song) {
+        playSongs([{ ...songToQueue, queued: true }], 0)
+        return true
+      }
+
+      setQueue((current) => {
+        // Salta la actual y el bloque contiguo de canciones ya encoladas.
+        let insertAt = index + 1
+        while (insertAt < current.length && current[insertAt].queued) insertAt += 1
+
+        const nextQueue = current.slice()
+        nextQueue.splice(insertAt, 0, { ...songToQueue, queued: true })
+        return nextQueue
+      })
+
+      return true
+    },
+    [index, playSongs, roomMode, song]
+  )
+
+  /**
+   * Salta a una posición de la cola. Lo usa la lista "A continuación" del
+   * reproductor expandido.
+   *
+   * El salto pasa por el historial como cualquier otro, así que "anterior"
+   * vuelve a la canción que estaba sonando. En modo sala no hace nada: el avance
+   * lo decide el servidor.
+   *
+   * @param {number} position Índice destino dentro de `queue`.
+   */
+  const jumpTo = useCallback(
+    (position) => {
+      if (roomMode || !queue.length) return
+      if (!Number.isInteger(position) || position < 0 || position >= queue.length) return
+      if (position === index) return
+
+      historyRef.current.push(index)
+      setIndex(position)
+      setIsPlaying(true)
+    },
+    [index, queue.length, roomMode]
   )
 
   /**
@@ -673,6 +749,8 @@ export default function PlayerProvider({ children }) {
       playPulse,
       hasQueue: queue.length > 0,
       playSongs,
+      addToQueue,
+      jumpTo,
       enterRoomMode,
       exitRoomMode,
       goIdle,
@@ -706,6 +784,8 @@ export default function PlayerProvider({ children }) {
       expandedOrigin,
       playPulse,
       playSongs,
+      addToQueue,
+      jumpTo,
       enterRoomMode,
       exitRoomMode,
       goIdle,

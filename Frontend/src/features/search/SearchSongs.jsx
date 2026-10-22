@@ -23,7 +23,7 @@ const EMPTY_RESULTS = { items: [], total: 0, page: 1, pageSize: 1, totalPages: 1
 
 export default function SearchSongs() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { playSongs } = usePlayer()
+  const { playSongs, addToQueue } = usePlayer()
 
   // La query vive en la URL: la búsqueda se puede compartir y el input de
   // TopBar (/buscar?q=) apunta a esta misma pantalla.
@@ -131,6 +131,7 @@ export default function SearchSongs() {
                   label={song.genre}
                   coverUrl={song.coverUrl}
                   onPlay={() => playSongs(results.items, index)}
+                  onAddToQueue={() => addToQueue(song)}
                 />
               </li>
             ))}

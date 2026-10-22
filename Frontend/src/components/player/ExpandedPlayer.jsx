@@ -37,6 +37,7 @@ export default function ExpandedPlayer({
   progressSlot, // <ProgressBar />
   transportSlot, // anterior / play-pause / siguiente
   actionsSlot, // shuffle / repetir / favorito / añadir a playlist
+  upNextSlot, // "A continuación" (cola con prioridad)
 }) {
   const reduceMotion = useReducedMotion()
   const point = origin ?? defaultOrigin()
@@ -88,6 +89,7 @@ export default function ExpandedPlayer({
         <div className="px-[18px] pt-[clamp(12px,3vh,28px)]">{progressSlot}</div>
         <div className="mt-[clamp(12px,4vh,40px)] flex justify-center gap-2">{transportSlot}</div>
         <div className="my-[clamp(12px,4vh,32px)] flex justify-center">{actionsSlot}</div>
+        {upNextSlot}
       </div>
     </motion.section>
   )
