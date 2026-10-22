@@ -12,7 +12,7 @@ const SONG_INCLUDE = {
 	lyrics: true,
 };
 
-const VALID_EXPRESSIONS = ["neutral", "happy", "sad"];
+const VALID_EXPRESSIONS = ["neutral", "happy", "sad", "angry"];
 const RECOMMENDATIONS_LIMIT = 20;
 
 async function searchSongs(query, pagination = {}) {

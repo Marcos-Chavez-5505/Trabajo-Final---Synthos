@@ -162,7 +162,7 @@ Una carpeta por dominio, con sus pantallas, componentes y hooks:
 | `auth/` | `Login`, `Register` |
 | `home/` | `Home` (elige `HomeDesktop`/`HomeMobile` por breakpoint) |
 | `profile/` | `ProfileView` (propio), `ProfilePublic` (ajeno), `ProfileEdit` + `profileImage.js` (recorte/compresión de la foto antes de subirla) |
-| `mood/` | `MoodScan` (pantalla `/animo`), `moodDetection.js` (face-api bajo demanda + mapeo de expresiones a los 3 estados), `MoodPicker`, `MoodResults` |
+| `mood/` | `MoodScan` (pantalla `/animo`), `moodDetection.js` (face-api bajo demanda + mapeo de expresiones a los 4 estados), `MoodPicker`, `MoodResults` |
 | `playlists/` | Biblioteca y detalle, formularios, `MisPlaylists` (sidebar), `FavoriteButton`, `AddToPlaylistPanel`, `useSongPlaylists` |
 | `search/` | `Search` + pestañas `SearchSongs` / `SearchAlbums` / `SearchPeople` / `SearchTabs` |
 | `social/` | `useFollow`, `FollowButton`, `FollowList`, `FollowStats`, `ProfileSummary` |

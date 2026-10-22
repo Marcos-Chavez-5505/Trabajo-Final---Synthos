@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import cameraIcon from '../../assets/microphone.svg'
 import { mapApiError } from '../../utils/mapError.js'
-import { MOODS } from './moodDetection.js'
+import { MOODS, MOOD_LABELS } from './moodDetection.js'
 import MoodPicker from './MoodPicker.jsx'
 import MoodResults from './MoodResults.jsx'
 import { detectMood, prepareDetector } from './moodDetection.js'
@@ -213,7 +213,7 @@ export default function MoodScan() {
         <div>
           <MoodPicker onPick={handlePick} title="Elegí a mano" />
           <p className="mt-3 TextTiny opacity-70">
-            Estados del catálogo: {MOODS.join(' · ')}. Si el detector no puede leer tu cara, elegí uno
+            Estados del catálogo: {MOODS.map((mood) => MOOD_LABELS[mood]).join(' · ')}. Si el detector no puede leer tu cara, elegí uno
             y seguí igual.
           </p>
         </div>

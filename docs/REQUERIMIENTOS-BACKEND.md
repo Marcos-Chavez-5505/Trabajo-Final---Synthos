@@ -24,7 +24,7 @@ romperlo.
 | Pieza | Estado | Nota |
 | --- | --- | --- |
 | Esquema Prisma | **completo** | Hay modelos para `Playlist`, `PlaylistSong`, `PlaylistMember`, `PlaylistInvitation`, `Favorite`, `Follow`, `Room`, `RoomMember`, `HostRating`, `Content`, `ContentPlayement`, `Mood`. El schema llega bastante más lejos que los endpoints. |
-| Migraciones y seed | **aplicadas** | 6 migraciones (`20260930171420_init` … `20261003183946_add_room_avg_rating_view`); `prisma migrate status` → `Database schema is up to date!` (2026-10-08). 97 canciones, 35 géneros, 3 estados de ánimo. Los `CHECK` de `host_rating` (1–5) y de `follow` (no seguirse a uno mismo) están en la migración aplicada. |
+| Migraciones y seed | **aplicadas** | 6 migraciones (`20260930171420_init` … `20261003183946_add_room_avg_rating_view`); `prisma migrate status` → `Database schema is up to date!` (2026-10-08). 97 canciones, 35 géneros, 4 estados de ánimo. Los `CHECK` de `host_rating` (1–5) y de `follow` (no seguirse a uno mismo) están en la migración aplicada. |
 | `GET /api/songs` | listo | Cursor, con `LIMIT = 10` fijo en `song.service.js`. |
 | `GET /api/songs/search` | listo | Offset, contrato en `ESPECIFICACIONES-BACKEND.md` §2. |
 | `GET /api/songs/:id` | listo | Usa `SONG_INCLUDE` (artista, géneros, estados de ánimo) y `findUniqueOrThrow`, así que un id inexistente cae en el `404` de `errorHandler`. |
@@ -401,7 +401,7 @@ el chat en sí.
       `Content` o con una tabla nueva.
 - [ ] TS-20 pide recomendación por estado de ánimo "con IA": eso es un servicio externo o un job. El
       backend sería proxy, y hay que decidir de dónde salen las recomendaciones y cómo se cachean.
-- [ ] `Mood` y `SongMood` ya están sembrados (3 estados de ánimo), así que el filtro por estado de ánimo
+- [ ] `Mood` y `SongMood` ya están sembrados (4 estados de ánimo), así que el filtro por estado de ánimo
       tiene soporte de datos aunque el resto no.
 
 ---

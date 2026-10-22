@@ -26,26 +26,27 @@ const WEIGHTS_PATH =
 export const currentModel = 'tiny';
 
 /** Estados de ánimo del catálogo: lo único que el backend acepta. */
-export const MOODS = ['happy', 'neutral', 'sad'];
+export const MOODS = ['happy', 'neutral', 'sad', 'angry'];
 
 export const MOOD_LABELS = {
 	happy: 'Feliz',
 	neutral: 'Neutral',
 	sad: 'Triste',
+	angry: 'Enojado',
 };
 
 /**
- * Las 7 expresiones de face-api reducidas a los 3 estados del catálogo. Lo que
- * no tiene estado propio se reparte por lo que expresa: enojo, miedo y asco son
- * los más cercanos a "triste", y sorpresa a "feliz".
+ * Las 7 expresiones de face-api reducidas a los 4 estados del catálogo. Lo que
+ * no tiene estado propio se reparte por lo que expresa: enojo y asco van a
+ * "enojado", sorpresa a "feliz" y miedo a "triste".
  */
 const EXPRESSION_TO_MOOD = {
 	happy: 'happy',
 	surprised: 'happy',
 	sad: 'sad',
-	angry: 'sad',
 	fearful: 'sad',
-	disgusted: 'sad',
+	angry: 'angry',
+	disgusted: 'angry',
 	neutral: 'neutral',
 };
 
