@@ -130,6 +130,11 @@ export default function PlayerProvider({ children }) {
   // a esta persona), pero reproducir no, porque alguien más decide cuándo suena.
   // Lo enciende la sala, que es quien conoce el estado del servidor.
   const [playBlocked, setPlayBlocked] = useState(false)
+  // Silencio local de este dispositivo. En una sala cada persona decide lo suyo:
+  // el estado no viaja por el socket y no cambia el audio de nadie más, ni el del
+  // anfitrión. Se aplica al <audio> sin pausar la reproducción, así el tiempo
+  // sigue sincronizado con el servidor aunque no se escuche.
+  const [isMuted, setIsMuted] = useState(false)
 
   const song = queue[index] ?? null
 
@@ -190,6 +195,14 @@ export default function PlayerProvider({ children }) {
       audio.pause()
     }
   }, [isPlaying, song])
+
+  // `muted` no corta la reproducción: el audio sigue avanzando y el tiempo sigue
+  // en fase con la sala. Solo deja de sonar en este dispositivo.
+  useEffect(() => {
+    const audio = audioRef.current
+
+    if (audio) audio.muted = isMuted
+  }, [isMuted])
 
   const seek = useCallback(
     (time) => {
@@ -613,6 +626,9 @@ export default function PlayerProvider({ children }) {
     setIsExpanded(false)
     setRoomMode(false)
     setPlayBlocked(false)
+    // El silencio solo se ofrece dentro de una sala; al salir se vuelve a sonar
+    // para no dejar un mute invisible sin botón para deshacerlo.
+    setIsMuted(false)
     historyRef.current = []
     queueSourceRef.current = null
     pendingSkipRef.current = null
@@ -656,6 +672,16 @@ export default function PlayerProvider({ children }) {
 
     setRepeat((prev) => REPEAT_MODES[(REPEAT_MODES.indexOf(prev) + 1) % REPEAT_MODES.length])
   }, [roomMode])
+
+  /**
+   * Silencia o devuelve el sonido solo en este dispositivo.
+   *
+   * A propósito no pasa por el socket ni toca el estado de la sala: en una sala
+   * cada miembro, incluido el anfitrión, controla únicamente su propio audio.
+   */
+  const toggleMute = useCallback(() => {
+    setIsMuted((prev) => !prev)
+  }, [])
 
   const expand = useCallback((event) => {
     const trigger = event?.currentTarget
@@ -743,6 +769,7 @@ export default function PlayerProvider({ children }) {
       repeat,
       roomMode,
       playBlocked,
+      isMuted,
       isIdle,
       isExpanded,
       expandedOrigin,
@@ -764,6 +791,7 @@ export default function PlayerProvider({ children }) {
       seek,
       toggleShuffle,
       cycleRepeat,
+      toggleMute,
       expand,
       collapse,
       setPlayBlocked,
@@ -779,6 +807,7 @@ export default function PlayerProvider({ children }) {
       repeat,
       roomMode,
       playBlocked,
+      isMuted,
       isIdle,
       isExpanded,
       expandedOrigin,
@@ -799,6 +828,7 @@ export default function PlayerProvider({ children }) {
       seek,
       toggleShuffle,
       cycleRepeat,
+      toggleMute,
       expand,
       collapse,
     ],

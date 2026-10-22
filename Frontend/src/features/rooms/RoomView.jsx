@@ -27,6 +27,8 @@ import playIcon from '../../assets/play.svg'
 import pauseIcon from '../../assets/pause.svg'
 import fullHeartIcon from '../../assets/full_heart.svg'
 import emptyHeartIcon from '../../assets/empty_heart.svg'
+import volumeOnIcon from '../../assets/volume_on.svg'
+import volumeOffIcon from '../../assets/volume_off.svg'
 import { mapApiError } from '../../utils/mapError.js'
 
 // Aviso que se muestra al volver al listado (expulsado, sala cerrada, salida).
@@ -506,7 +508,7 @@ function RoomPlayer({
   rating,
   onRate,
 }) {
-  const { song, currentTime, duration, seek } = usePlayer()
+  const { song, currentTime, duration, seek, isMuted, toggleMute } = usePlayer()
 
   return (
     <div className="mt-6 max-w-2xl rounded-lg p-6 SurfaceLight Elevation1">
@@ -574,6 +576,30 @@ function RoomPlayer({
           onVote={onVoteSkip}
           pending={voting}
         />
+
+        {/* Silencio local de quien mira la sala, también para el anfitrión: no
+            viaja por el socket, así que no cambia el audio de los demás. */}
+        <button
+          type="button"
+          onClick={toggleMute}
+          aria-pressed={isMuted}
+          title={
+            isMuted
+              ? 'Silenciaste este dispositivo. La sala sigue sonando para los demás.'
+              : 'Silencia el audio solo en este dispositivo.'
+          }
+          className={`flex items-center gap-2 rounded px-3 py-2 Button hover:brightness-110 ${
+            isMuted ? 'Fucsia' : 'Volume'
+          }`}
+        >
+          <img
+            src={isMuted ? volumeOffIcon : volumeOnIcon}
+            alt=""
+            aria-hidden="true"
+            className="h-4 w-4"
+          />
+          {isMuted ? 'Activar sonido' : 'Silenciar'}
+        </button>
 
         {!isHost && (
           <button
