@@ -1,5 +1,5 @@
 import musicNoteIcon from '../../assets/music_note.svg'
-import queueIcon from '../../assets/queue.svg'
+import QueueActionButton from '../player/QueueActionButton.jsx'
 
 /**
  * Tarjeta de canción compacta, sin overlay: carátula cuadrada y texto debajo
@@ -50,15 +50,12 @@ export default function MiniMediaCard({
       </div>
 
       {onAddToQueue && (
-        <button
-          type="button"
-          onClick={onAddToQueue}
-          aria-label={`Añadir ${title} a la cola`}
-          title="Añadir a la cola"
-          className="Volume absolute right-1.5 top-1.5 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full opacity-100 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
-        >
-          <img src={queueIcon} alt="" aria-hidden="true" className="h-4 w-4" />
-        </button>
+        <QueueActionButton
+          onAdd={onAddToQueue}
+          label={`Añadir ${title} a la cola`}
+          className="Volume absolute right-1.5 top-1.5 h-8 w-8 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+          iconClassName="h-4 w-4"
+        />
       )}
 
       <p className="text-foreground TextRegluar truncate">{title}</p>

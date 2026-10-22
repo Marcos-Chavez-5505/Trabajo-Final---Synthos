@@ -1,6 +1,6 @@
 import playIcon from '../../assets/play.svg'
-import queueIcon from '../../assets/queue.svg'
 import musicNoteIcon from '../../assets/music_note.svg'
+import QueueActionButton from '../player/QueueActionButton.jsx'
 
 /**
  * Tarjeta de canción con overlay inferior (label/título/artista) y botón play
@@ -39,15 +39,12 @@ export default function MediaCard({ title, artist, label, coverUrl = null, onPla
 
       <div className="absolute right-2.5 bottom-14.5 flex items-center gap-2 opacity-100 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
         {onAddToQueue && (
-          <button
-            type="button"
-            onClick={onAddToQueue}
-            aria-label={`Añadir ${title} a la cola`}
-            title="Añadir a la cola"
-            className="Volume MediaCardPlaySize flex cursor-pointer items-center justify-center rounded-full"
-          >
-            <img src={queueIcon} alt="" aria-hidden="true" className="h-4 w-4" />
-          </button>
+          <QueueActionButton
+            onAdd={onAddToQueue}
+            label={`Añadir ${title} a la cola`}
+            className="Volume MediaCardPlaySize"
+            iconClassName="h-4 w-4"
+          />
         )}
 
         <button
