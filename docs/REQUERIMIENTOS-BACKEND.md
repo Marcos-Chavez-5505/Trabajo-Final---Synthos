@@ -296,8 +296,9 @@ Cubre la pantalla `/albums` del Sidebar, que hasta ahora era un placeholder.
       (`SearchAlbums`), que reutiliza `listAlbums` y comparte `?q=`/`?page=` con canciones y personas.
 - [x] Sin migración: el modelo ya estaba.
 
-**Lo que quedó fuera:** el orden de las pistas es por `id` porque el esquema no tiene número de track, y
-no se agregó `/artistas` (sigue siendo placeholder).
+**Lo que quedó fuera:** el orden de las pistas es por `id` porque el esquema no tiene número de track.
+Los artistas se agregaron después como recurso propio (`GET /api/artists` + `/artistas/:id`; ver
+`PENDIENTES.md` §12).
 
 > Nota: `SearchAlbums` pagina de a 10, igual que `SearchSongs`, porque las dos pestañas usan la misma grilla de
 > `MiniMediaCard`. La página `/albums` usa 12 (`ALBUMS_PAGE_SIZE`), ya que ahí no compite con otra pestaña.

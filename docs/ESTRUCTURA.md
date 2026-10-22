@@ -80,7 +80,7 @@ src/
   components/
     layout/           AppLayout (Sidebar vs BottomNav), Sidebar, SidebarAutoCollapse, TopBar, BottomNav, MiniPlayerBar
     player/           PlayerBar (desktop), PlayerControls, ProgressBar
-    cards/            MediaCard, MiniMediaCard, RoomCard, UserRow
+    cards/            MediaCard, MiniMediaCard, RoomCard, UserRow, ArtistCard
     ui/               Componentes shadcn/base-ui + Avatar y LoadingScreen propios
   styles/             tokens.css (única fuente de valores), utilities.css, base.css
   assets/*.svg        Set de íconos propio. Se importan como URL y se usan con <img>
@@ -150,7 +150,7 @@ feature, no infraestructura.
 - `postForm(path, formData)`: multipart. `request()` detecta que el body es un `FormData` y lo manda
   crudo, sin `Content-Type`, para que el browser ponga el `boundary` (subida de la foto de perfil).
 
-Los services de dominio (`authService`, `songsService`, `usersService`, `playlistsService`) son la
+Los services de dominio (`authService`, `songsService`, `albumsService`, `artistsService`, `usersService`, `playlistsService`) son la
 capa que se edita al migrar un módulo de mock a la API real; nada fuera de `services/` cambia.
 
 ### 3.5 `features/`
@@ -168,6 +168,8 @@ Una carpeta por dominio, con sus pantallas, componentes y hooks:
 | `social/` | `useFollow`, `FollowButton`, `FollowList`, `FollowStats`, `ProfileSummary` |
 | `rooms/` | `Rooms.jsx`: listado con `RoomCard` (hoy contra mocks; crear/administrar salas, pendiente) |
 | `popular/` | `Populares.jsx`: ranking semanal por favoritos (`GET /songs/popular`), reutiliza `MediaCard` |
+| `albums/` | `Albums` (grilla paginada del catálogo), `AlbumDetail` (cabecera + pistas) |
+| `artists/` | `Artists` (catálogo paginado con `?q=`/`?page=`) y `ArtistDetail` (cabecera + grilla de álbumes) |
 
 ### 3.6 `components/`
 
@@ -274,6 +276,7 @@ Todo bajo `/api` (`Backend/src/app.js`). El contrato completo —requests, respo
 | Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout` | `logout` | §6 |
 | Usuarios y follow | `GET /users/search`, `GET\|PATCH /users/me`, `GET /users/:id`, `GET /users/:id/followers\|following`, `POST\|DELETE /users/:id/follow` | `me`, follow | §7 |
 | Canciones | `GET /songs`, `GET /songs/search`, `GET /songs/recommendations`, `GET /songs/popular`, `GET /songs/:id` | — | §1–§5 |
+| Álbumes y artistas | `GET /albums/:id`, `GET /artists`, `GET /artists/:id` | — | §2.4–§2.5 |
 | Favoritos | `GET /favorites`, `GET /favorites/songs/ids`, `POST /favorites/songs`, `DELETE /favorites/songs/:songId` | todas | §8 |
 | Playlists | `GET /playlists`, `GET\|PUT\|DELETE /playlists/:id`, `POST /playlists` | todas | §9 |
 | Salas | `GET /rooms?sort=` | — | §10 |
@@ -316,9 +319,9 @@ El resto es público. Errores: siempre `{ status: "error", message, code? }` (ve
   consume, vía `roomsService`; `users.js`, `songs.js` y `playlists.js` quedaron sin uso tras migrar),
   `Backend/src/const/baseUrl.js`, `Backend/src/test.js` y la llamada a `ensureFavoritesPlaylist` que
   quedó comentada en `favorite.service.js`.
-- **Vistas de una sola página**: `/artistas` es `ScreenPlaceholder`; el chat todavía no
-  existe, y `features/rooms/` sólo tiene el listado (`Rooms.jsx`). `/populares` ya no es placeholder:
-  tiene ranking semanal (`features/popular/`), y `/albums` tiene grilla y detalle (`features/albums/`).
+- **Vistas de una sola página**: `/artistas` tiene catálogo y detalle (`features/artists/`), `/albums`
+  tiene grilla y detalle (`features/albums/`) y `/populares` tiene ranking semanal
+  (`features/popular/`). El chat de salas todavía no existe.
 
 ---
 

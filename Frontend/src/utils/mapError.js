@@ -35,6 +35,8 @@ const BY_CODE = {
 	INVALID_SONG_ID: "La canción no es válida.",
 	INVALID_EXPRESSION: "Ese estado de ánimo no existe.",
 	EXPRESSION_REQUIRED: "Falta el estado de ánimo.",
+	ARTIST_NOT_FOUND: "No encontramos ese artista.",
+	ALBUM_NOT_FOUND: "No encontramos ese álbum.",
 
 	// Seguimiento y recomendaciones
 	FOLLOW_REQUIRED:
