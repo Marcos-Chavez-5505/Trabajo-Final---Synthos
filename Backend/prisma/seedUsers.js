@@ -276,6 +276,39 @@ async function pickSongs(tx, { mood, skip = 0, take = 5 }) {
 	return rows.map((r) => r.id);
 }
 
+async function ensureMutualFollow(tx, users, user1, user2) {
+	const idUser1 = idOf(users, user1);
+	const idUser2 = idOf(users, user2);
+
+	await tx.follow.upsert({
+		where: {
+			followerId_followedId: {
+				followerId: idUser1,
+				followedId: idUser2,
+			},
+		},
+		update: {},
+		create: {
+			followerId: idUser1,
+			followedId: idUser2,
+		},
+	});
+
+	await tx.follow.upsert({
+		where: {
+			followerId_followedId: {
+				followerId: idUser2,
+				followedId: idUser1,
+			},
+		},
+		update: {},
+		create: {
+			followerId: idUser2,
+			followedId: idUser1,
+		},
+	});
+}
+
 async function upsertUser(tx, { email, username, biography }, passwordHash) {
 	return tx.user.upsert({
 		where: { email },
@@ -504,11 +537,23 @@ async function main() {
 
 				for (const username of r.to) {
 					const idUser = idOf(users, username);
+
+					await ensureMutualFollow(tx, users, r.author, username);
+
 					await tx.contentPlayement.upsert({
-						where: { idContent_idUser: { idContent: content.id, idUser } },
+						where: {
+							idContent_idUser: {
+								idContent: content.id,
+								idUser,
+							},
+						},
 						update: {},
-						create: { idContent: content.id, idUser },
+						create: {
+							idContent: content.id,
+							idUser,
+						},
 					});
+
 					stats.recipients++;
 				}
 			}
