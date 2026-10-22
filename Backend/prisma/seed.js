@@ -1,36 +1,21 @@
-// Uso: node prisma/seedMusic.js [ruta/al/archivo.json]
+// Carga el catálogo de Jamendo y sus letras.
+// Es idempotente: se puede ejecutar varias veces sin duplicar canciones ni letras.
 //
-// Carga el catálogo de música (artistas, álbumes, canciones, géneros y moods) a
-// partir del JSON que genera jamendo_seed.html. Es idempotente: se puede volver
-// a correr sin duplicar nada.
+// JSON esperado: artista -> álbumes -> canciones.
+// Cada canción puede incluir:
+// lyrics: [{ text: "...", time: null }] para letra plana, o
+// lyrics: [{ text: "...", time: 12.34 }, ...] para letra sincronizada.
 //
-// Formato esperado del JSON (todo anidado):
-//   [ { id, name, image_url, albums: [ { id, name, release_date, cover_url, type,
-//       songs: [ { id, title, release_date, cover_url, duration, url, moods,
-//                  musicinfo: { tags: { genres: [] } } } ] } ] } ]
-//
-// Los ids de Jamendo se guardan tal cual como id de artista, álbum y canción.
-// Es a propósito: seedRooms.js arma las playlists con ids de canciones de
-// Jamendo (43886, 306166, etc.). Como los ids se insertan a mano, al final se
-// reajustan las secuencias de autoincrement para que los próximos INSERT de la
-// app no choquen con ellos.
-//
-// Orden: primero este archivo, después seedRooms.js.
-//
-// Los campos shorturl/shareurl del JSON se ignoran (no están en el schema).
+// Los timestamps se guardan como milisegundos enteros.
+// En el frontend se comparan con audio.currentTime * 1000.
 
 const fs = require("fs");
 const path = require("path");
-
 const prisma = require("../src/prisma/prismaClient");
 
 const DEFAULT_FILE = path.join(__dirname, "data", "songs.json");
-const MOODS = ["neutral", "happy", "sad"];
+const MOODS = ["neutral", "happy", "sad", "angry"];
 const ALBUM_TYPES = ["single", "ep", "album"];
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 const clip = (value, max) =>
 	String(value ?? "")
@@ -44,6 +29,7 @@ const toId = (value) => {
 
 const toDate = (value) => {
 	if (!value) return null;
+
 	const d = new Date(value);
 	return Number.isNaN(d.getTime()) ? null : d;
 };
@@ -57,21 +43,73 @@ function loadData(file) {
 			`No existe el archivo ${file}. Copiá ahí el JSON de jamendo_seed.html.`,
 		);
 	}
+
 	const data = JSON.parse(fs.readFileSync(file, "utf8"));
+
 	if (!Array.isArray(data)) {
-		throw new Error(
-			"El JSON tiene que ser un array de artistas (artista → álbumes → canciones).",
-		);
+		throw new Error("El JSON tiene que ser un array de artistas.");
 	}
+
 	return data;
 }
 
-// Cachés para no repetir upserts de géneros y moods (se buscan por nombre).
+function normalizeLyrics(song) {
+	const entries = Array.isArray(song.lyrics) ? song.lyrics : [];
+
+	const plainParts = [];
+	const timedLines = [];
+
+	for (const entry of entries) {
+		const text = typeof entry?.text === "string" ? entry.text.trim() : "";
+
+		if (!text) continue;
+
+		const time = Number(entry?.time);
+
+		if (
+			entry?.time !== null &&
+			entry?.time !== undefined &&
+			Number.isFinite(time) &&
+			time >= 0
+		) {
+			timedLines.push({
+				text,
+				timestampMs: Math.round(time * 1000),
+			});
+		} else {
+			plainParts.push(text);
+		}
+	}
+
+	// Ordenar las líneas sincronizadas por tiempo.
+	timedLines.sort((a, b) => a.timestampMs - b.timestampMs);
+
+	// Si la fuente proporciona texto sin timestamps, lo usamos.
+	// Si no, construimos la letra completa desde las líneas sincronizadas.
+	const plainText =
+		plainParts.length > 0
+			? plainParts.join("\n\n")
+			: timedLines.length > 0
+				? timedLines.map((line) => line.text).join("\n")
+				: null;
+
+	return {
+		text: plainText,
+		source: toText(song.lyrics_source),
+		language: toText(song.musicinfo?.lang),
+		isSynced: timedLines.length > 0,
+		lines: timedLines,
+	};
+}
+
 function createLookup(model) {
 	const cache = new Map();
+
 	return async (tx, rawName) => {
 		const name = clip(rawName, 80);
+
 		if (!name) return null;
+
 		if (!cache.has(name)) {
 			const row = await tx[model].upsert({
 				where: { name },
@@ -79,15 +117,62 @@ function createLookup(model) {
 				create: { name },
 				select: { id: true },
 			});
+
 			cache.set(name, row.id);
 		}
+
 		return cache.get(name);
 	};
 }
 
-// ---------------------------------------------------------------------------
-// Main
-// ---------------------------------------------------------------------------
+async function saveLyrics(tx, idSong, song) {
+	const normalized = normalizeLyrics(song);
+
+	// Si no hay letra, eliminar el registro anterior si existe.
+	if (!normalized.text && normalized.lines.length === 0) {
+		await tx.lyrics.deleteMany({
+			where: { idSong },
+		});
+
+		return;
+	}
+
+	// Guardar la letra completa, tenga o no sincronización.
+	const lyrics = await tx.lyrics.upsert({
+		where: { idSong },
+		update: {
+			text: normalized.text,
+			source: normalized.source,
+			language: normalized.language,
+			isSynced: normalized.isSynced,
+		},
+		create: {
+			idSong,
+			text: normalized.text,
+			source: normalized.source,
+			language: normalized.language,
+			isSynced: normalized.isSynced,
+		},
+		select: { id: true },
+	});
+
+	// Reemplazar las líneas para reflejar los timestamps actuales.
+	await tx.karaokeLine.deleteMany({
+		where: { idLyrics: lyrics.id },
+	});
+
+	// Guardar las líneas únicamente cuando tienen timestamps.
+	if (normalized.lines.length > 0) {
+		await tx.karaokeLine.createMany({
+			data: normalized.lines.map((line, index) => ({
+				idLyrics: lyrics.id,
+				position: index,
+				timestampMs: line.timestampMs,
+				text: line.text,
+			})),
+		});
+	}
+}
 
 async function main() {
 	const file = path.resolve(DEFAULT_FILE);
@@ -96,37 +181,48 @@ async function main() {
 	const getGenreId = createLookup("genre");
 	const getMoodId = createLookup("mood");
 
-	const resumen = await prisma.$transaction(
+	const summary = await prisma.$transaction(
 		async (tx) => {
-			const stats = { artists: 0, albums: 0, songs: 0, omitidos: 0 };
+			const stats = {
+				artists: 0,
+				albums: 0,
+				songs: 0,
+				lyrics: 0,
+				syncedSongs: 0,
+				karaokeLines: 0,
+				omitted: 0,
+			};
 
 			for (const artist of artists) {
 				const idArtist = toId(artist.id);
 				const name = clip(artist.name, 150);
+
 				if (!idArtist || !name) {
-					console.warn(
-						`Artista omitido (sin id o nombre): ${JSON.stringify(artist.id)}`,
-					);
-					stats.omitidos++;
+					console.warn(`Artista omitido: ${JSON.stringify(artist.id)}`);
+					stats.omitted++;
 					continue;
 				}
 
-				const artistData = { name, pictureUrl: toText(artist.image_url) };
+				const artistData = {
+					name,
+					pictureUrl: toText(artist.image_url),
+				};
+
 				await tx.artist.upsert({
 					where: { id: idArtist },
 					update: artistData,
 					create: { id: idArtist, ...artistData },
 				});
+
 				stats.artists++;
 
 				for (const album of artist.albums ?? []) {
 					const idAlbum = toId(album.id);
 					const albumName = clip(album.name, 200);
+
 					if (!idAlbum || !albumName || !ALBUM_TYPES.includes(album.type)) {
-						console.warn(
-							`Álbum omitido (id, nombre o tipo inválido): ${JSON.stringify(album.id)}`,
-						);
-						stats.omitidos++;
+						console.warn(`Álbum omitido: ${JSON.stringify(album.id)}`);
+						stats.omitted++;
 						continue;
 					}
 
@@ -137,22 +233,23 @@ async function main() {
 						coverUrl: toText(album.cover_url),
 						type: album.type,
 					};
+
 					await tx.album.upsert({
 						where: { id: idAlbum },
 						update: albumData,
 						create: { id: idAlbum, ...albumData },
 					});
+
 					stats.albums++;
 
 					for (const song of album.songs ?? []) {
 						const idSong = toId(song.id);
 						const title = clip(song.title, 200);
 						const url = toText(song.url);
+
 						if (!idSong || !title || !url) {
-							console.warn(
-								`Canción omitida (sin id, título o url): ${JSON.stringify(song.id)}`,
-							);
-							stats.omitidos++;
+							console.warn(`Canción omitida: ${JSON.stringify(song.id)}`);
+							stats.omitted++;
 							continue;
 						}
 
@@ -165,22 +262,45 @@ async function main() {
 							duration: Number.isInteger(song.duration) ? song.duration : null,
 							url,
 						};
+
 						await tx.song.upsert({
 							where: { id: idSong },
 							update: songData,
 							create: { id: idSong, ...songData },
 						});
+
 						stats.songs++;
 
-						// Géneros y moods: se reemplazan los vínculos de la canción para
-						// que volver a correr el seed deje exactamente lo del JSON.
-						const genreNames = new Set(song.musicinfo?.tags?.genres ?? []);
-						const genreIds = [];
-						for (const g of genreNames) {
-							const id = await getGenreId(tx, g);
-							if (id) genreIds.push(id);
+						const normalizedLyrics = normalizeLyrics(song);
+
+						await saveLyrics(tx, idSong, song);
+
+						if (normalizedLyrics.text || normalizedLyrics.lines.length > 0) {
+							stats.lyrics++;
 						}
-						await tx.songGenre.deleteMany({ where: { idSong } });
+
+						if (normalizedLyrics.isSynced) {
+							stats.syncedSongs++;
+							stats.karaokeLines += normalizedLyrics.lines.length;
+						}
+
+						// Géneros
+						const genreNames = new Set(song.musicinfo?.tags?.genres ?? []);
+
+						const genreIds = [];
+
+						for (const genreName of genreNames) {
+							const id = await getGenreId(tx, genreName);
+
+							if (id) {
+								genreIds.push(id);
+							}
+						}
+
+						await tx.songGenre.deleteMany({
+							where: { idSong },
+						});
+
 						await tx.songGenre.createMany({
 							data: [...new Set(genreIds)].map((idGenre) => ({
 								idSong,
@@ -189,19 +309,33 @@ async function main() {
 							skipDuplicates: true,
 						});
 
+						// Moods
 						const moodIds = [];
-						for (const m of new Set(song.moods ?? [])) {
-							if (!MOODS.includes(m)) {
+
+						for (const mood of new Set(song.moods ?? [])) {
+							if (!MOODS.includes(mood)) {
 								console.warn(
-									`Mood ignorado "${m}" en la canción ${idSong} (solo ${MOODS.join(", ")}).`,
+									`Mood ignorado "${mood}" en canción ${idSong} (solo ${MOODS.join(", ")}).`,
 								);
 								continue;
 							}
-							moodIds.push(await getMoodId(tx, m));
+
+							const idMood = await getMoodId(tx, mood);
+
+							if (idMood) {
+								moodIds.push(idMood);
+							}
 						}
-						await tx.songMood.deleteMany({ where: { idSong } });
+
+						await tx.songMood.deleteMany({
+							where: { idSong },
+						});
+
 						await tx.songMood.createMany({
-							data: moodIds.map((idMood) => ({ idSong, idMood })),
+							data: moodIds.map((idMood) => ({
+								idSong,
+								idMood,
+							})),
 							skipDuplicates: true,
 						});
 					}
@@ -213,7 +347,7 @@ async function main() {
 		{ timeout: 5 * 60 * 1000 },
 	);
 
-	// Los ids se insertaron a mano: la secuencia de autoincrement no avanza sola.
+	// Reajustar secuencias porque los IDs de Jamendo se insertan manualmente.
 	for (const table of ["artist", "album", "song"]) {
 		await prisma.$queryRawUnsafe(
 			`SELECT setval(pg_get_serial_sequence('"${table}"', 'id'), GREATEST((SELECT COALESCE(MAX(id), 1) FROM "${table}"), 1))`,
@@ -226,22 +360,26 @@ async function main() {
 	]);
 
 	console.log("\n===== RESUMEN =====");
-	console.log(`Archivo:    ${file}`);
-	console.log(`Artistas:   ${resumen.artists}`);
-	console.log(`Álbumes:    ${resumen.albums}`);
-	console.log(`Canciones:  ${resumen.songs}`);
+	console.log(`Archivo: ${file}`);
+	console.log(`Artistas: ${summary.artists}`);
+	console.log(`Álbumes: ${summary.albums}`);
+	console.log(`Canciones: ${summary.songs}`);
+	console.log(`Canciones con letras: ${summary.lyrics}`);
+	console.log(`Canciones con letras sincronizadas: ${summary.syncedSongs}`);
+	console.log(`Líneas de karaoke: ${summary.karaokeLines}`);
 	console.log(`Géneros en la base: ${genres}`);
-	console.log(`Moods en la base:   ${moods}`);
-	if (resumen.omitidos > 0) {
+	console.log(`Moods en la base: ${moods}`);
+
+	if (summary.omitted > 0) {
 		console.log(
-			`Omitidos por datos inválidos: ${resumen.omitidos} (ver avisos arriba)`,
+			`Omitidos por datos inválidos: ${summary.omitted} (ver avisos arriba).`,
 		);
 	}
 }
 
 main()
 	.catch((err) => {
-		console.log(`ARCHIVO LEIDO: ${DEFAULT_FILE}`);
+		console.error(`ARCHIVO LEÍDO: ${DEFAULT_FILE}`);
 		console.error("\nError: se revirtió todo, no se guardó nada.");
 		console.error(err);
 		process.exitCode = 1;

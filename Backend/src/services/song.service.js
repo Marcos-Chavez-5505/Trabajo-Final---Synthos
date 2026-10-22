@@ -9,6 +9,7 @@ const SONG_INCLUDE = {
 	songMoods: { include: { mood: true } },
 	artist: true,
 	album: { select: { id: true, name: true } },
+	lyrics: true,
 };
 
 const VALID_EXPRESSIONS = ["neutral", "happy", "sad"];
