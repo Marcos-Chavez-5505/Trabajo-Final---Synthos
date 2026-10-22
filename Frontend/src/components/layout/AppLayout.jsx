@@ -6,6 +6,7 @@ import ExpandedPlayer from '../player/ExpandedPlayer.jsx'
 import TransportControls from '../player/TransportControls.jsx'
 import ActionControls from '../player/ActionControls.jsx'
 import ProgressBar from '../player/ProgressBar.jsx'
+import UpNext from '../player/UpNext.jsx'
 import SidebarAutoCollapse, { SIDEBAR_AUTO_COLLAPSE_QUERY } from './SidebarAutoCollapse.jsx'
 import { SidebarProvider } from '../ui/sidebar.tsx'
 
@@ -46,6 +47,7 @@ export default function AppLayout({ children }) {
       }
       transportSlot={<TransportControls />}
       actionsSlot={<ActionControls songId={song?.id} />}
+      upNextSlot={<UpNext />}
     />
   )
 

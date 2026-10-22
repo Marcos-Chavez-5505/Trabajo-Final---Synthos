@@ -16,7 +16,7 @@ const TYPE_LABELS = { single: 'Sencillo', ep: 'EP', album: 'Álbum' }
  */
 export default function AlbumDetail() {
   const { id } = useParams()
-  const { playSongs } = usePlayer()
+  const { playSongs, addToQueue } = usePlayer()
 
   const [response, setResponse] = useState({ key: null, album: null, error: null })
 
@@ -117,6 +117,7 @@ export default function AlbumDetail() {
                 label={song.genre}
                 coverUrl={song.coverUrl}
                 onPlay={() => playSongs(album.songs, index)}
+                onAddToQueue={() => addToQueue(song)}
               />
             </li>
           ))}

@@ -10,7 +10,7 @@ import { MOOD_LABELS } from './moodDetection.js'
  * anterior sin volver a la pantalla.
  */
 export default function MoodResults({ mood, songs, onRescan }) {
-  const { playSongs } = usePlayer()
+  const { playSongs, addToQueue } = usePlayer()
 
   if (songs === null) return null
 
@@ -44,6 +44,7 @@ export default function MoodResults({ mood, songs, onRescan }) {
               label={song.genre ?? ''}
               coverUrl={song.coverUrl}
               onPlay={() => playSongs(songs, songs.indexOf(song), { type: 'mood', mood })}
+              onAddToQueue={() => addToQueue(song)}
             />
           ))}
         </div>

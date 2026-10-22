@@ -11,7 +11,7 @@ const NOVEDADES_COUNT = 6
 
 export default function HomeDesktop() {
   const { user } = useAuth()
-  const { playSongs } = usePlayer()
+  const { playSongs, addToQueue } = usePlayer()
 
   // `error` se separa de `songs` para no ocupar el estado con dos flags: con la
   // lista vacía y sin error la fila simplemente no muestra nada.
@@ -58,6 +58,7 @@ export default function HomeDesktop() {
                   label={song.genre}
                   coverUrl={song.coverUrl}
                   onPlay={() => playSongs(songs, index)}
+                  onAddToQueue={() => addToQueue(song)}
                 />
               </li>
             ))}
