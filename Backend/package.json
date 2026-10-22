@@ -35,6 +35,6 @@
 		"socket.io-client": "^4.8.4"
 	},
 	"prisma": {
-		"seed": "node prisma/seed.js && node prisma/seedRooms.js"
+		"seed": "node prisma/seed.js && node prisma/seedRooms.js && node prisma/seedUsers.js"
 	}
 }

@@ -70,6 +70,30 @@ export async function listSongs({ signal } = {}) {
 }
 
 /**
+ * Ranking semanal de canciones populares.
+ *
+ * `GET /songs/popular` devuelve las canciones con al menos
+ * `minimumFavorites` personas distintas que las marcaron como favoritas en la
+ * semana en curso, ordenadas de más a menos favoritos. El backend manda la
+ * ventana (`week`) para que la pantalla pueda mostrar de qué semana se trata.
+ *
+ * @param {{signal?: AbortSignal}} [options]
+ * @returns {Promise<{week: object|null, minimumFavorites: number, songs: object[]}>}
+ */
+export async function listPopularSongs({ signal } = {}) {
+	const data = await get(`${SONGS_PATH}/popular`, { signal });
+
+	return {
+		week: data?.week ?? null,
+		minimumFavorites: data?.minimumFavorites ?? 3,
+		songs: (data?.songs ?? []).map((raw) => ({
+			...toSong(raw),
+			favoriteCount: raw.favoriteCount ?? 0,
+		})),
+	};
+}
+
+/**
  * Una canción por id.
  *
  * @param {number|string} id Id de la canción.

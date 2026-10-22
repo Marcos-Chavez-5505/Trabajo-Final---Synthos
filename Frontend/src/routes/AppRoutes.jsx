@@ -16,6 +16,7 @@ import Playlists from '../features/playlists/Playlists.jsx'
 import PlaylistDetail from '../features/playlists/PlaylistDetail.jsx'
 import Albums from '../features/albums/Albums.jsx'
 import AlbumDetail from '../features/albums/AlbumDetail.jsx'
+import Populares from '../features/popular/Populares.jsx'
 import PublicOnly from './PublicOnly.jsx'
 import RequireAuth from './RequireAuth.jsx'
 
@@ -67,7 +68,7 @@ export default function AppRoutes() {
       />
       <Route
         path="/populares"
-        element={<Protected><ScreenPlaceholder title="Populares" /></Protected>}
+        element={<Protected><Populares /></Protected>}
       />
       {/* TS-09: biblioteca personal. react-router rankea los paths, así que el
           `/playlists/:id` no matchea el `/playlists` exacto sin importar el
