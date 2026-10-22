@@ -74,6 +74,7 @@ model Song {
   songArtists   SongArtist[]
   songGenres    SongGenre[]
   songMoods     SongMood[]
+  lyrics        Lyrics?
 
   @@index([idAlbum])
   @@map("song")
@@ -296,6 +297,33 @@ view HostAvgRating {
   // La vista se crea a mano en la migracion replace_room_avg_rating_with_host_avg_rating,
   // con este nombre en snake_case.
   @@map("host_avg_rating")
+}
+
+
+model Lyrics {
+  id        Int          @id @default(autoincrement())
+  idSong    Int          @unique @map("id_song")
+  text      String?      @db.Text
+  source    String?      @db.VarChar(80)
+  language  String?      @db.VarChar(20)
+  isSynced  Boolean      @default(false) @map("is_synced")
+  song      Song         @relation(fields: [idSong], references: [id], onDelete: Cascade)
+  lines     KaraokeLine[]
+
+  @@map("lyrics")
+}
+
+model KaraokeLine {
+  id          Int      @id @default(autoincrement())
+  idLyrics    Int      @map("id_lyrics")
+  position    Int
+  timestampMs Int      @map("timestamp_ms")
+  text        String   @db.Text
+  lyrics      Lyrics   @relation(fields: [idLyrics], references: [id], onDelete: Cascade)
+
+  @@unique([idLyrics, position])
+  @@index([idLyrics, timestampMs])
+  @@map("karaoke_line")
 }
 
 enum PlaylistType {
