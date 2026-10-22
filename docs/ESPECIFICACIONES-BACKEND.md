@@ -38,14 +38,16 @@ Todo endpoint responde los errores con el mismo cuerpo:
 | `GET /api/songs` | `{ songs, nextCursor, hasMore }` | `listSongs()` → `PlayerContext` (cola inicial) y `HomeDesktop` (fila novedades) |
 | `GET /api/songs/search` | `{ items, total, page, pageSize, totalPages }` | `searchSongs()` → `SearchSongs` (fila de páginas numeradas). `type=albums` → `listAlbums()` → `/albums` |
 | `GET /api/albums/:id` | `{ status, album }` con `artist` y `songs[]` | `getAlbumById()` → `/albums/:id` |
+| `GET /api/artists` | `{ items, total, page, pageSize, totalPages }` con `_count.albums` y `_count.songs` | `listArtists()` → `/artistas` (catálogo paginado con `?q=`) |
+| `GET /api/artists/:id` | `{ status, artist }` con `albums[]` | `getArtistById()` → `/artistas/:id` |
 | `GET /api/songs/:id` | objeto de la canción | `getSongById()` (sin consumidores por ahora) |
 | `GET /api/songs/recommendations` | `{ status, songs }` por estado de ánimo | `listSongsByMood(expression)` → `/animo` (TS-20). 400 `EXPRESSION_REQUIRED` / `INVALID_EXPRESSION` |
 | `GET /api/songs/popular` | `{ status, week, minimumFavorites, songs[] }` con `favoriteCount` | `listPopularSongs()` → `/populares`. Ranking de la semana en curso por favoritos distintos |
 
 El frontend mapea el payload crudo a su propia forma en `Frontend/src/services/songsService.js`
 (`url` → `audioUrl`, `artist.name` → `artist`, `songGenres[].genre.name` → `genre`, `album.name` → `album`), así que el backend
-no expone campos con nombres pensados para el frontend. Los álbumes tienen su propio mapper en
-`Frontend/src/services/albumsService.js`.
+no expone campos con nombres pensados para el frontend. Los álbumes y artistas tienen sus propios
+mappers en `Frontend/src/services/albumsService.js` y `artistsService.js`.
 
 `GET /api/songs` sigue con cursor a propósito: alimenta la cola inicial y la fila de novedades, que
 consumen los primeros elementos y no necesitan saltar de página.
@@ -169,6 +171,65 @@ disco. Si alguna vez importa, hace falta una columna de posición.
 **Validación tolerante.** `parsePagination` usa `Number.parseInt` y cae al default si el valor no es un
 entero ≥ 1; `pageSize` se limita a `MAX_PAGE_SIZE = 50` para que nadie pida la tabla entera. El
 controller solo pasa `req.query` al service: la normalización vive en un único lugar.
+
+### 2.5 Artistas — `GET /api/artists` y `GET /api/artists/:id`
+
+Públicos, como canciones y álbumes.
+
+**Listado**
+
+```
+GET /api/artists?query=<texto>&page=<n>&pageSize=<n>
+```
+
+| Param | Tipo | Default | Notas |
+| --- | --- | --- | --- |
+| `query` | string | `''` | Filtra por nombre de artista; vacío = catálogo completo |
+| `page` | int ≥ 1 | `1` | 1-based |
+| `pageSize` | int ≥ 1 | `10` | Tope duro de `50`; el frontend manda `18` |
+
+**Response 200** — misma envolvente que las búsquedas paginadas:
+
+```json
+{
+  "items": [
+    {
+      "id": 501273,
+      "name": "83Crutch",
+      "pictureUrl": "https://usercontent.jamendo.com?type=artist&id=501273&width=300",
+      "_count": { "albums": 3, "songs": 3 }
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "pageSize": 18,
+  "totalPages": 1
+}
+```
+
+Orden: `name` asc. El `query` usa `contains` con `mode: "insensitive"`. El listado **no** trae los
+álbumes: eso queda para el detalle, así la respuesta no crece con el catálogo.
+
+**Detalle**
+
+```
+GET /api/artists/:id
+```
+
+| Situación | Respuesta |
+|---|---|
+| Existe | 200 `{ status, artist }` |
+| Id no numérico | 400 `INVALID_ID` (viene de `getId`) |
+| No existe | 404 `ARTIST_NOT_FOUND` |
+
+El `artist` incluye `_count: { albums, songs }` y `albums[]`, cada álbum con la misma forma del listado
+de discos (`artist` y `_count.songs`). Los álbumes se ordenan por `name` asc. El frontend reutiliza
+`toAlbum()` y `MiniMediaCard`; el detalle de cada disco sigue siendo `/albums/:id`.
+
+```bash
+curl "http://localhost:3000/api/artists?query=crutch&page=1&pageSize=18"
+curl "http://localhost:3000/api/artists/501273"
+```
 
 ---
 

@@ -16,20 +16,11 @@ import Playlists from '../features/playlists/Playlists.jsx'
 import PlaylistDetail from '../features/playlists/PlaylistDetail.jsx'
 import Albums from '../features/albums/Albums.jsx'
 import AlbumDetail from '../features/albums/AlbumDetail.jsx'
+import Artists from '../features/artists/Artists.jsx'
+import ArtistDetail from '../features/artists/ArtistDetail.jsx'
 import Populares from '../features/popular/Populares.jsx'
 import PublicOnly from './PublicOnly.jsx'
 import RequireAuth from './RequireAuth.jsx'
-
-// TODO(agente): las pantallas de abajo son shells navegables. Cada una se
-// implementa en su sprint (salas, búsqueda, social).
-function ScreenPlaceholder({ title }) {
-  return (
-    <div className="p-6 md:p-10">
-      <h1 className="Header3">{title}</h1>
-      <p className="mt-2 TextRegluar opacity-70">Pantalla en construcción.</p>
-    </div>
-  )
-}
 
 function Protected({ children }) {
   return (
@@ -92,7 +83,11 @@ export default function AppRoutes() {
       />
       <Route
         path="/artistas"
-        element={<Protected><ScreenPlaceholder title="Artistas" /></Protected>}
+        element={<Protected><Artists /></Protected>}
+      />
+      <Route
+        path="/artistas/:id"
+        element={<Protected><ArtistDetail /></Protected>}
       />
       {/* TS-17/TS-16: listado de salas con buscador y orden por calificación del
           anfitrión. TS-14 agrega crear la sala y su pantalla: ambas detrás de

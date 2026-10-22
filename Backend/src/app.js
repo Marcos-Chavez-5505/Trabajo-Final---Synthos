@@ -3,6 +3,7 @@ const cors = require("cors");
 
 const songRoutes = require("./routes/song.routes");
 const albumRoutes = require("./routes/album.routes");
+const artistRoutes = require("./routes/artist.routes");
 const authRoutes = require("./routes/auth.routes");
 const userRoutes = require("./routes/user.routes");
 const favoriteRoutes = require("./routes/favorite.routes");
@@ -20,6 +21,7 @@ app.use(express.json());
 app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 app.use("/api/songs", songRoutes);
 app.use("/api/albums", albumRoutes);
+app.use("/api/artists", artistRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/favorites", favoriteRoutes);

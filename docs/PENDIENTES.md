@@ -441,9 +441,35 @@ también se buscan desde la pestaña nueva de `/buscar`.
 
 - **El orden de las pistas es por `id`**: el esquema no tiene número de track. Si alguna vez importa el
   orden real del disco, hace falta una columna de posición.
-- **`/artistas` sigue siendo un placeholder.** Hay `Artist` en el esquema, pero no hay endpoints ni
-  pantalla para artistas.
 - El ícono de Albums en el Sidebar sigue siendo `Disc3` de lucide-react, aunque existe
   `src/assets/album.svg`. Se deja así para no mezclar el set; migrar los cinco íconos juntos es lo que
   cierra la deuda de `lucide-react` (§2).
 - Sin E2E: verificado con `curl` contra la base real (104 álbumes, 134 canciones), no en navegador.
+
+---
+
+## 12. Artistas: endpoints y pantalla (nuevo, 2026-10-22)
+
+**Estado: implementado.** La pantalla `/artistas` del Sidebar dejó de ser un placeholder: lista el
+catálogo paginado, permite buscar por nombre y abre el detalle con los álbumes del artista.
+
+- **Listado:** `GET /api/artists?query=&page=&pageSize=` devuelve el mismo envelope paginado que las
+  búsquedas (`{ items, total, page, pageSize, totalPages }`), ordenado por `name` asc. Cada item trae
+  `_count.albums` y `_count.songs`. Es público.
+- **Detalle:** `GET /api/artists/:id` → `{ status, artist }` con `_count` y `albums[]`; `404
+  ARTIST_NOT_FOUND` y `400 INVALID_ID`. Cada álbum conserva la forma del listado de discos, así que el
+  frontend reutiliza `toAlbum()` y `MiniMediaCard`.
+- **Frontend:** `artistsService.js` con `toArtist()`/`toArtistDetail()`, `ArtistCard` (foto redonda,
+  nombre y cantidad de álbumes) y las pantallas `Artists`/`ArtistDetail`. La query y la página viven en
+  `?q=`/`?page=` y el input usa `useDebounce(300)`. El clic en un disco navega a `/albums/:id`.
+- **Sin migración:** el modelo `Artist` y su relación con `Album` ya existían.
+- **Verificación:** `curl` contra la base real y pantalla probada en navegador (listado, búsqueda y
+  detalle); `npm run lint` y `npm run build` en verde.
+
+**Lo que sigue:**
+
+- Sin E2E automatizado: la prueba fue manual, contra el backend local.
+- Los artistas se ordenan por nombre, no por popularidad ni por cantidad de álbumes. Si se pide un
+  ranking de artistas, hace falta definir la métrica y probablemente un endpoint nuevo.
+- El avatar del artista cae al `blobatar` determinístico solo cuando falta `pictureUrl`; si Jamendo
+  devuelve una URL rota, no hay fallback de imagen (mismo comportamiento que `UserRow`).
