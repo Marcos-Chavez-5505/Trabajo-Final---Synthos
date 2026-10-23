@@ -23,11 +23,11 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '../../components/ui/too
 /**
  * Menú de "agregar a playlist" del reproductor.
  *
- * Es el mismo `DropdownMenu` de Base UI que el menú de cuenta del Sidebar
+ * Es el mismo `DropdownMenu` local que el menú de cuenta del Sidebar
  * (`ProfileSummary`) y el de orden de `/salas` (`Rooms`): trigger propio,
  * `Portal` + `Positioner` + `Popup` con el estilo por defecto, y el cierre a
  * cargo del menú, con Escape o con el clic afuera. Por eso el botón "+" vive
- * acá adentro y no suelto en el reproductor: el `Positioner` de Base UI exige un
+ * acá adentro y no suelto en el reproductor: el `Positioner` exige un
  * `Portal` y se posiciona contra su trigger, así que un "+" externo dejaba el
  * menú sin ancla.
  *

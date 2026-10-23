@@ -67,7 +67,7 @@ export default function PlayerBar() {
             {/* Favoritos y "agregar a playlist" (TS-09) viven acá porque el
                 reproductor es el único lugar donde ya se sabe qué canción está
                 cargada. El menú de playlists trae su propio trigger: es un
-                `DropdownMenu` de Base UI, con `Portal`, y necesita que su botón sea
+                `DropdownMenu` local, con `Portal`, y necesita que su botón sea
                 el trigger para poder posicionarse y cerrarse con Escape o clic
                 afuera. */}
             <div className="flex min-w-0 items-center justify-end gap-0.5 sm:gap-1">
