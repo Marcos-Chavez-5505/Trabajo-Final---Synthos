@@ -1,42 +1,29 @@
 import * as React from "react"
-
-import { cn } from "@/lib/utils"
-import {
-  Dialog,
-  DialogTrigger,
-  DialogClose,
-  DialogPortal,
-  DialogBackdrop,
-  DialogPopup,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog"
+import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
-function Sheet(props: React.ComponentProps<typeof Dialog>) {
-  return <Dialog {...props} />
+function Sheet({ ...props }: SheetPrimitive.Root.Props) {
+  return <SheetPrimitive.Root data-slot="sheet" {...props} />
 }
 
-function SheetTrigger(props: React.ComponentProps<typeof DialogTrigger>) {
-  return <DialogTrigger data-slot="sheet-trigger" {...props} />
+function SheetTrigger({ ...props }: SheetPrimitive.Trigger.Props) {
+  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />
 }
 
-function SheetClose(props: React.ComponentProps<typeof DialogClose>) {
-  return <DialogClose data-slot="sheet-close" {...props} />
+function SheetClose({ ...props }: SheetPrimitive.Close.Props) {
+  return <SheetPrimitive.Close data-slot="sheet-close" {...props} />
 }
 
-function SheetPortal(props: React.ComponentProps<typeof DialogPortal>) {
-  return <DialogPortal {...props} />
+function SheetPortal({ ...props }: SheetPrimitive.Portal.Props) {
+  return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
 }
 
-function SheetOverlay({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogBackdrop>) {
+function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
   return (
-    <DialogBackdrop
+    <SheetPrimitive.Backdrop
       data-slot="sheet-overlay"
       className={cn(
         "fixed inset-0 z-50 bg-foreground/15 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-xs",
@@ -53,14 +40,14 @@ function SheetContent({
   side = "right",
   showCloseButton = true,
   ...props
-}: React.ComponentProps<typeof DialogPopup> & {
+}: SheetPrimitive.Popup.Props & {
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
 }) {
   return (
     <SheetPortal>
       <SheetOverlay />
-      <DialogPopup
+      <SheetPrimitive.Popup
         data-slot="sheet-content"
         data-side={side}
         className={cn(
@@ -71,7 +58,7 @@ function SheetContent({
       >
         {children}
         {showCloseButton && (
-          <DialogClose
+          <SheetPrimitive.Close
             data-slot="sheet-close"
             render={
               <Button
@@ -81,11 +68,12 @@ function SheetContent({
               />
             }
           >
-            <XIcon />
+            <XIcon
+            />
             <span className="sr-only">Close</span>
-          </DialogClose>
+          </SheetPrimitive.Close>
         )}
-      </DialogPopup>
+      </SheetPrimitive.Popup>
     </SheetPortal>
   )
 }
@@ -110,12 +98,9 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function SheetTitle({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogTitle>) {
+function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
   return (
-    <DialogTitle
+    <SheetPrimitive.Title
       data-slot="sheet-title"
       className={cn(
         "font-heading text-base font-medium text-foreground",
@@ -129,9 +114,9 @@ function SheetTitle({
 function SheetDescription({
   className,
   ...props
-}: React.ComponentProps<typeof DialogDescription>) {
+}: SheetPrimitive.Description.Props) {
   return (
-    <DialogDescription
+    <SheetPrimitive.Description
       data-slot="sheet-description"
       className={cn("text-sm text-muted-foreground", className)}
       {...props}
