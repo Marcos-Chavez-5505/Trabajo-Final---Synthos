@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import useDebounce from '../../hooks/useDebounce.js'
-import buildPageRange from '../../lib/pageRange.js'
-import { listArtists } from '../../services/artistsService.js'
+import { useDebounce } from '@synthos/shared'
+import { buildPageRange } from '@synthos/shared'
+import { listArtists } from '@synthos/shared'
 import ArtistCard from '../../components/cards/ArtistCard.jsx'
 import microphoneIcon from '../../assets/microphone.svg'
 import searchIcon from '../../assets/search.svg'
@@ -15,7 +15,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../../components/ui/pagination'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 const DEBOUNCE_MS = 300
 

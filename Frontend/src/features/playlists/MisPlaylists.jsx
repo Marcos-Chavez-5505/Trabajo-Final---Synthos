@@ -1,7 +1,7 @@
 import { SidebarGroup, SidebarGroupLabel } from '../../components/ui/sidebar.tsx'
 import SidebarAnimatedGroup from '../../components/layout/SidebarAnimatedGroup.jsx'
 import PlaylistSidebarList from './PlaylistSidebarList.jsx'
-import usePlaylistList from './usePlaylistList.js'
+import { usePlaylistList } from '@synthos/shared'
 
 /**
  * Sección "Mis Playlists" del Sidebar (TS-09): las playlists que creó el

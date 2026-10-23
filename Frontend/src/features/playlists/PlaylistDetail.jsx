@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import useAuth from '../../hooks/useAuth.js'
-import useFavorites from '../../hooks/useFavorites.js'
-import usePlayer from '../../hooks/usePlayer.js'
+import { useAuth } from '@synthos/shared'
+import { useFavorites } from '@synthos/shared'
+import { usePlayer } from '@synthos/shared'
 import Avatar from '../../components/ui/Avatar.jsx'
-import { getSongById } from '../../services/songsService.js'
+import { getSongById } from '@synthos/shared'
 import {
   getPlaylistById,
   listSentInvitations,
@@ -12,12 +12,12 @@ import {
   removePlaylistMember,
   removeSongFromPlaylist,
   updatePlaylist,
-} from '../../services/playlistsService.js'
+} from '@synthos/shared'
 import musicNoteIcon from '../../assets/music_note.svg'
 import PlaylistSongRow from './PlaylistSongRow.jsx'
 import PlaylistEditForm from './PlaylistEditForm.jsx'
 import InviteUserDialog from './InviteUserDialog.jsx'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 /**
  * Detalle de una playlist (TS-09): reproducir, quitar canciones, renombrar y

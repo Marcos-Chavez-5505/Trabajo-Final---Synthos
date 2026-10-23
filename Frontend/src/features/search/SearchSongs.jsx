@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import useDebounce from '../../hooks/useDebounce.js'
-import usePlayer from '../../hooks/usePlayer.js'
-import buildPageRange from '../../lib/pageRange.js'
-import { searchSongs } from '../../services/songsService.js'
+import { useDebounce } from '@synthos/shared'
+import { usePlayer } from '@synthos/shared'
+import { buildPageRange } from '@synthos/shared'
+import { searchSongs } from '@synthos/shared'
 import MiniMediaCard from '../../components/cards/MiniMediaCard.jsx'
 import SearchTabs from './SearchTabs.jsx'
 import {
@@ -15,7 +15,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../../components/ui/pagination'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 export const DEBOUNCE_MS = 300
 

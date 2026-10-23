@@ -3,9 +3,16 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
-import AuthProvider from './context/AuthContext.jsx'
-import PlayerProvider from './context/PlayerContext.jsx'
-import { configureApi } from './services/api.js'
+import { AuthProvider, PlayerProvider } from '@synthos/shared'
+import { configureApi } from '@synthos/shared'
+import { createHtmlAudioMotor } from './lib/audioMotor.js'
+
+// Motor de audio web (HTMLAudioElement) inyectado al PlayerProvider compartido.
+const audioElement = document.createElement('audio')
+audioElement.preload = 'metadata'
+audioElement.className = 'hidden'
+document.body.appendChild(audioElement)
+const audioMotor = createHtmlAudioMotor(audioElement)
 
 // Adaptador web de storage: envuelve localStorage en Promise (contrato async).
 const webStorage = {
@@ -22,7 +29,7 @@ configureApi({
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
-      <PlayerProvider>
+      <PlayerProvider motor={audioMotor}>
         <BrowserRouter>
           <App />
         </BrowserRouter>

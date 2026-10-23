@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import useSongSearch from "../../hooks/useSongsSearch";
-import { useRecommendationContext } from "../../context/recommendationContext.jsx";
+import { useSongSearch } from '@synthos/shared';
+import { useRecommendationContext } from '@synthos/shared';
 import SongSearchStep from "../SongSearchStep/SongSearchStep.jsx";
 
 const MAX_TEXT = 280;

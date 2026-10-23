@@ -1,12 +1,12 @@
 import { useState } from "react";
 import Avatar from "../../components/ui/Avatar.jsx";
 import RecommendationSection from "../../components/RecommendationSection/RecommendationSection.jsx";
-import useAuth from "../../hooks/useAuth.js";
+import { useAuth } from '@synthos/shared';
 import FollowStats from "../social/FollowStats.jsx";
 import HostRatingBadge from "../social/HostRatingBadge.jsx";
-import useFollow from "../social/useFollow.js";
+import { useFollow } from '@synthos/shared';
 import ProfileEdit from "./ProfileEdit.jsx";
-import { RecommendationProvider } from "../../context/recommendationContext.jsx";
+import { RecommendationProvider } from '@synthos/shared';
 
 export default function ProfileView() {
 	const { user, loading } = useAuth();

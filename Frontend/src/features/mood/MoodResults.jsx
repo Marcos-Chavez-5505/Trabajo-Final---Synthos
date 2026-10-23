@@ -1,5 +1,5 @@
 import MediaCard from '../../components/cards/MediaCard.jsx'
-import usePlayer from '../../hooks/usePlayer.js'
+import { usePlayer } from '@synthos/shared'
 import { MOOD_LABELS } from './moodDetection.js'
 
 /**

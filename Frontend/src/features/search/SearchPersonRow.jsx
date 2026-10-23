@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import UserRow from '../../components/cards/UserRow.jsx'
 import FollowButton from '../social/FollowButton.jsx'
-import useAuth from '../../hooks/useAuth.js'
-import { followUser, unfollowUser } from '../../services/usersService.js'
-import { mapApiError } from '../../utils/mapError.js'
+import { useAuth } from '@synthos/shared'
+import { followUser, unfollowUser } from '@synthos/shared'
+import { mapApiError } from '@synthos/shared'
 
 /**
  * Resultado de la búsqueda de personas con botón seguir (TS-10b).

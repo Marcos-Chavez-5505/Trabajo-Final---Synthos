@@ -15,14 +15,14 @@ import {
   DEFAULT_ROOM_SORT,
   ROOM_ORDERS,
   DEFAULT_ROOM_ORDER,
-} from '../../services/roomsService.js'
-import useDebounce from '../../hooks/useDebounce.js'
+} from '@synthos/shared'
+import { useDebounce } from '@synthos/shared'
 import RoomCard from '../../components/cards/RoomCard.jsx'
 import JoinRoomDialog from './JoinRoomDialog.jsx'
 import roomIcon from '../../assets/join_music_room.svg'
 import searchIcon from '../../assets/search.svg'
 import threeDotsIcon from '../../assets/three_dots.svg'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 const DEBOUNCE_MS = 300
 

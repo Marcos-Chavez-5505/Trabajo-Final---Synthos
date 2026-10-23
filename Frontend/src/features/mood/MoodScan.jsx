@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import cameraIcon from '../../assets/microphone.svg'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 import { MOODS, MOOD_LABELS } from './moodDetection.js'
 import MoodPicker from './MoodPicker.jsx'
 import MoodResults from './MoodResults.jsx'
 import { detectMood, prepareDetector } from './moodDetection.js'
-import { listSongsByMood } from '../../services/songsService.js'
+import { listSongsByMood } from '@synthos/shared'
 
 /**
  * Recomendaciones por estado de ánimo (TS-20 / F9, decisión D4).

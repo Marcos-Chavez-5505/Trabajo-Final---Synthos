@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 /**
  * Edición de nombre y descripción. Se abre en el lugar del encabezado en

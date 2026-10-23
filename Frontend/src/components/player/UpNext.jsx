@@ -1,5 +1,5 @@
 import musicNoteIcon from '../../assets/music_note.svg'
-import usePlayer from '../../hooks/usePlayer.js'
+import { usePlayer } from '@synthos/shared'
 
 /**
  * Lista "A continuación" del reproductor expandido.

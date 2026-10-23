@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { listPlaylists } from '../../services/playlistsService.js'
-import { createRoom } from '../../services/roomsService.js'
-import useAuth from '../../hooks/useAuth.js'
-import { mapApiError } from '../../utils/mapError.js'
+import { listPlaylists } from '@synthos/shared'
+import { createRoom } from '@synthos/shared'
+import { useAuth } from '@synthos/shared'
+import { mapApiError } from '@synthos/shared'
 
 const MAX_NAME = 60
 const MAX_DESCRIPTION = 200

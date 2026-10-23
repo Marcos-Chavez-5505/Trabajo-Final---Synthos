@@ -45,7 +45,7 @@ export class ApiError extends Error {
 
 // El token de la sesión vive acá y no en cada service: lo setea `authService`
 // al iniciar/cerrar sesión (ver REQ-HTTP-1). Se guarda en memoria a propósito,
-// no se relee de localStorage en cada request: así el service no conoce el
+// no se relee de storage local en cada request: así el service no conoce el
 // formato de la sesión y no hay dos fuentes de verdad.
 let authToken = null
 
@@ -63,7 +63,7 @@ export function setAuthToken(token) {
  * Vive acá porque el token es de `api.js`: `socketService` lo necesita para el
  * handshake de Socket.IO, que no pasa por `fetch` ni por el header
  * `Authorization`. Es la única forma de que otro módulo use el token sin que
- * tenga que leer `localStorage` (que es el formato de la sesión, no del
+ * tenga que leer `storage local` (que es el formato de la sesión, no del
  * transporte).
  *
  * @returns {string|null}

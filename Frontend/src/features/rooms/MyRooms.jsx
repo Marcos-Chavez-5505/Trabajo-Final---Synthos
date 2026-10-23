@@ -1,7 +1,7 @@
 import { SidebarGroup, SidebarGroupLabel } from '../../components/ui/sidebar.tsx'
 import SidebarAnimatedGroup from '../../components/layout/SidebarAnimatedGroup.jsx'
 import RoomSidebarList from './RoomSidebarList.jsx'
-import useMyRooms from './useMyRooms.js'
+import { useMyRooms } from '@synthos/shared'
 
 /**
  * Sección "Mis Salas" del Sidebar (TS-14): las salas de las que el usuario es

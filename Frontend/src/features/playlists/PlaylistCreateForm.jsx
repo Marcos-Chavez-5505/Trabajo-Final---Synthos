@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 /**
  * Formulario de creación de playlist. Se usa suelto en `/playlists`; la edición

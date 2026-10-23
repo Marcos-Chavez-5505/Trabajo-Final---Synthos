@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import useAuth from '../../hooks/useAuth.js'
-import usePlayer from '../../hooks/usePlayer.js'
-import { listSongs } from '../../services/songsService.js'
+import { useAuth } from '@synthos/shared'
+import { usePlayer } from '@synthos/shared'
+import { listSongs } from '@synthos/shared'
 import MediaCard from '../../components/cards/MediaCard.jsx'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 // Cuántas canciones muestra la fila de novedades. Es una muestra del catálogo,
 // no la grilla completa: esa vive en /buscar.

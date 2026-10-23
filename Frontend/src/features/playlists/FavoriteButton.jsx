@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import emptyHeartIcon from '../../assets/empty_heart.svg'
 import fullHeartIcon from '../../assets/full_heart.svg'
-import useFavorites from '../../hooks/useFavorites.js'
-import usePlayer from '../../hooks/usePlayer.js'
+import { useFavorites } from '@synthos/shared'
+import { usePlayer } from '@synthos/shared'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../components/ui/tooltip.tsx'
 
 /**

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PlayerContext } from './playerContext.js'
 import useAuth from '../hooks/useAuth.js'
-import { createHtmlAudioMotor } from '../lib/audioMotor.js'
+// El motor de audio se inyecta por prop (web: createHtmlAudioMotor). shared/
+// no importa nada de las apps (regla permanente).
 
 const REPEAT_MODES = ['off', 'track', 'list']
 const RESTART_THRESHOLD_SECONDS = 3
@@ -9,18 +10,6 @@ const SHUFFLE_MEMORY = 10
 
 function sameSong(a, b) {
   return String(a) === String(b)
-}
-
-function getExpandOrigin(element) {
-  const rect = element.getBoundingClientRect()
-  const x = rect.left + rect.width / 2
-  const y = rect.top + rect.height / 2
-  const radius = Math.hypot(
-    Math.max(x, window.innerWidth - x),
-    Math.max(y, window.innerHeight - y),
-  )
-
-  return { x, y, radius }
 }
 
 function removeIndex(queue, position, current, setQueue, setIndex, historyRef) {
@@ -43,7 +32,6 @@ function removeIndex(queue, position, current, setQueue, setIndex, historyRef) {
 
 export default function PlayerProvider({ children, motor: injectedMotor }) {
   const { user } = useAuth()
-  const audioRef = useRef(null)
   const motorRef = useRef(injectedMotor || null)
   const historyRef = useRef([])
   const queueSourceRef = useRef(null)
@@ -68,15 +56,10 @@ export default function PlayerProvider({ children, motor: injectedMotor }) {
   const song = queue[index] ?? null
   const isIdle = song === null
 
-  // Inicializa el motor (web por defecto, inyectado en mobile).
+  // El motor se inyecta por prop (web lo crea en main.jsx). Si cambia, se
+  // actualiza la referencia.
   useEffect(() => {
-    if (injectedMotor) {
-      motorRef.current = injectedMotor
-      return
-    }
-    if (audioRef.current && !motorRef.current) {
-      motorRef.current = createHtmlAudioMotor(audioRef.current)
-    }
+    motorRef.current = injectedMotor || null
   }, [injectedMotor])
 
   // Idle: sin canción, soltar el track anterior.
@@ -240,32 +223,6 @@ export default function PlayerProvider({ children, motor: injectedMotor }) {
 
   const pause = useCallback(() => setIsPlaying(false), [])
 
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.code !== 'Space' || event.repeat || event.isComposing) return
-      if (event.ctrlKey || event.metaKey || event.altKey) return
-      if (isIdle) return
-
-      const target = event.target
-
-      if (
-        typeof target?.closest === 'function' &&
-        target.closest(
-          'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]'
-        )
-      ) {
-        return
-      }
-
-      event.preventDefault()
-      event.stopPropagation()
-      togglePlay()
-    }
-
-    window.addEventListener('keydown', handleKeyDown, true)
-    return () => window.removeEventListener('keydown', handleKeyDown, true)
-  }, [togglePlay, isIdle])
-
   const playSongs = useCallback((songs, startIndex = 0, source = null, options = {}) => {
     if (!songs?.length) return
 
@@ -424,27 +381,14 @@ export default function PlayerProvider({ children, motor: injectedMotor }) {
     setIsMuted((prev) => !prev)
   }, [])
 
-  const expand = useCallback((event) => {
-    const trigger = event?.currentTarget
-
-    if (trigger?.getBoundingClientRect) {
-      setExpandedOrigin(getExpandOrigin(trigger))
+  const expand = useCallback((origin) => {
+    if (origin && typeof origin.x === 'number' && typeof origin.y === 'number') {
+      setExpandedOrigin(origin)
     }
 
     setIsExpanded(true)
   }, [])
   const collapse = useCallback(() => setIsExpanded(false), [])
-
-  useEffect(() => {
-    if (isExpanded) {
-      document.body.setAttribute('data-player-expanded', 'true')
-    } else {
-      document.body.removeAttribute('data-player-expanded')
-    }
-    return () => {
-      document.body.removeAttribute('data-player-expanded')
-    }
-  }, [isExpanded])
 
   // Eventos del motor.
   useEffect(() => {
@@ -570,7 +514,6 @@ export default function PlayerProvider({ children, motor: injectedMotor }) {
   return (
     <PlayerContext.Provider value={value}>
       {children}
-      {!injectedMotor && <audio ref={audioRef} preload="metadata" className="hidden" />}
     </PlayerContext.Provider>
   )
 }

@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import useAuth from '../../hooks/useAuth.js'
-import { createPlaylist as createPlaylistService } from '../../services/playlistsService.js'
+import { useAuth } from '@synthos/shared'
+import { createPlaylist as createPlaylistService } from '@synthos/shared'
 import playlistIcon from '../../assets/playlist.svg'
 import PlaylistCreateForm from './PlaylistCreateForm.jsx'
 import PlaylistInvitations from './PlaylistInvitations.jsx'
 import PlaylistTile from './PlaylistTile.jsx'
-import usePlaylistList from './usePlaylistList.js'
+import { usePlaylistList } from '@synthos/shared'
 
 const TABS = [
   { key: 'mis', label: 'Mis playlists' },

@@ -1,5 +1,5 @@
 import { motion } from 'motion/react'
-import { SIDEBAR_SPRING } from '../../lib/sidebarMotion.js'
+import { SIDEBAR_SPRING } from '@synthos/shared'
 
 // El mismo cierre que hace un label del sidebar al colapsarlo a íconos (fade +
 // wipe con `clip-path`, ver `useSidebarLabelSlides` en `ui/sidebar.tsx`), pero

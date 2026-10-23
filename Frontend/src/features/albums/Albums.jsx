@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import buildPageRange from '../../lib/pageRange.js'
-import { listAlbums, ALBUM_TYPE_LABELS } from '../../services/albumsService.js'
+import { buildPageRange } from '@synthos/shared'
+import { listAlbums, ALBUM_TYPE_LABELS } from '@synthos/shared'
 import MiniMediaCard from '../../components/cards/MiniMediaCard.jsx'
 import albumIcon from '../../assets/album.svg'
 import {
@@ -13,7 +13,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../../components/ui/pagination'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 const EMPTY_RESULTS = { items: [], total: 0, page: 1, pageSize: 1, totalPages: 1 }
 

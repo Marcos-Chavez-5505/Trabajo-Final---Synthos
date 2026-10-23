@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Avatar from '../../components/ui/Avatar.jsx'
-import useAuth from '../../hooks/useAuth.js'
-import { mapApiError } from '../../utils/mapError.js'
+import { useAuth } from '@synthos/shared'
+import { mapApiError } from '@synthos/shared'
 import { prepareProfileImage, previewUrlFor } from './profileImage.js'
 
 const ACCEPT = 'image/jpeg,image/png,image/webp'

@@ -17,6 +17,9 @@ export default defineConfig({
   // en dev. En las llamadas se usan rutas relativas y nunca el host del backend:
   // el mismo build funciona contra un reverse proxy en producción.
   server: {
+    fs: {
+      allow: ['..']
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:3000',

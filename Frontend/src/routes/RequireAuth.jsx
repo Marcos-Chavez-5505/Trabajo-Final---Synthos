@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import LoadingScreen from '../components/ui/LoadingScreen.jsx'
-import useAuth from '../hooks/useAuth.js'
+import { useAuth } from '@synthos/shared'
 
 export default function RequireAuth({ children }) {
   const { user, loading } = useAuth()

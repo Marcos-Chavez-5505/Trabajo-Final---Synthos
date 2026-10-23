@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Avatar from '../../components/ui/Avatar.jsx'
 import UserRow from '../../components/cards/UserRow.jsx'
-import useAuth from '../../hooks/useAuth.js'
+import { useAuth } from '@synthos/shared'
 import {
   getUserById,
   listFollowers,
   listFollowing,
-} from '../../services/usersService.js'
-import { mapApiError } from '../../utils/mapError.js'
+} from '@synthos/shared'
+import { mapApiError } from '@synthos/shared'
 
 const TIPOS = ['seguidores', 'siguiendo']
 

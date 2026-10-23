@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import useAuth from '../../hooks/useAuth.js'
+import { useAuth } from '@synthos/shared'
 import {
   addSongToPlaylist,
   removeSongFromPlaylist,
-} from '../../services/playlistsService.js'
-import useSongPlaylists from './useSongPlaylists.js'
+} from '@synthos/shared'
+import { useSongPlaylists } from '@synthos/shared'
 import addToPlaylistIcon from '../../assets/add_to_playlist.svg'
 import playlistIcon from '../../assets/playlist.svg'
 import {

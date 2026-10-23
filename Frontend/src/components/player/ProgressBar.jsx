@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { formatDuration } from '../../lib/formatTime.js'
+import { formatDuration } from '@synthos/shared'
 
 const SEEK_STEP_SECONDS = 5
 

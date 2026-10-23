@@ -3,13 +3,13 @@ import { Link, useParams } from "react-router-dom";
 import Avatar from "../../components/ui/Avatar.jsx";
 import RecommendationsSection from "../../components/RecommendationSection/RecommendationSection.jsx";
 import RecommendSongModal from "../../components/RecommendSongModal/RecommendSongModal.jsx";
-import useAuth from "../../hooks/useAuth.js";
-import { getUserById } from "../../services/usersService.js";
+import { useAuth } from '@synthos/shared';
+import { getUserById } from '@synthos/shared';
 import FollowButton from "../social/FollowButton.jsx";
 import FollowStats from "../social/FollowStats.jsx";
 import HostRatingBadge from "../social/HostRatingBadge.jsx";
-import useFollow from "../social/useFollow.js";
-import { RecommendationProvider } from "../../context/recommendationContext.jsx";
+import { useFollow } from '@synthos/shared';
+import { RecommendationProvider } from '@synthos/shared';
 
 /**
  * Perfil público de otra persona (TS-08). Es la vista básica del criterio de

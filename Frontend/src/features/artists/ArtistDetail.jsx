@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { getArtistById } from '../../services/artistsService.js'
-import { ALBUM_TYPE_LABELS } from '../../services/albumsService.js'
+import { getArtistById } from '@synthos/shared'
+import { ALBUM_TYPE_LABELS } from '@synthos/shared'
 import Avatar from '../../components/ui/Avatar.jsx'
 import MiniMediaCard from '../../components/cards/MiniMediaCard.jsx'
 import albumIcon from '../../assets/album.svg'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 /**
  * `/artistas/:id`: cabecera del artista y grilla de sus álbumes.

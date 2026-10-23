@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import usePlayer from '../../hooks/usePlayer.js'
-import { listPopularSongs } from '../../services/songsService.js'
+import { usePlayer } from '@synthos/shared'
+import { listPopularSongs } from '@synthos/shared'
 import MediaCard from '../../components/cards/MediaCard.jsx'
 import fullHeartIcon from '../../assets/full_heart.svg'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 /**
  * `/populares`: ranking semanal de canciones por favoritos.

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import useDebounce from '../../hooks/useDebounce.js'
-import buildPageRange from '../../lib/pageRange.js'
-import { searchUsers, SEARCH_PAGE_SIZE } from '../../services/usersService.js'
+import { useDebounce } from '@synthos/shared'
+import { buildPageRange } from '@synthos/shared'
+import { searchUsers, USERS_SEARCH_PAGE_SIZE as SEARCH_PAGE_SIZE } from '@synthos/shared'
 import SearchPersonRow from './SearchPersonRow.jsx'
 import SearchTabs from './SearchTabs.jsx'
 import {
@@ -14,7 +14,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../../components/ui/pagination'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 const DEBOUNCE_MS = 300
 

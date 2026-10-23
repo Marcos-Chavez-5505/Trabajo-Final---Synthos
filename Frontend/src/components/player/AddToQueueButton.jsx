@@ -1,4 +1,4 @@
-import usePlayer from '../../hooks/usePlayer.js'
+import { usePlayer } from '@synthos/shared'
 import QueueActionButton from './QueueActionButton.jsx'
 
 /**
