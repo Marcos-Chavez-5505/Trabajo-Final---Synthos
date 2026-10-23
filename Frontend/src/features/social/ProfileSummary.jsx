@@ -89,7 +89,7 @@ export default function ProfileSummary() {
 
 	const menu = (
 		<DropdownMenuPortal>
-			<DropdownMenuPositioner side="top" align="end">
+			<DropdownMenuPositioner side="right" align="end" sideOffset={12}>
 				<DropdownMenuPopup>
 					<DropdownMenuGroup>
 						<DropdownMenuGroupLabel>

@@ -144,3 +144,176 @@
     color: var(--ds-placeholder);
     opacity: 1;
   }
+
+@layer components {
+  /* Alert Dialog (ReUI adaptado al design system de Synthos).
+     Reemplaza las clases Tailwind/shadcn del original por clases propias
+     que usan los tokens de tokens.css. Base UI aporta la accesibilidad y
+     los data-attributes de estado (data-open, data-closed, data-starting-style,
+     data-ending-style, data-size). */
+  .AlertDialogOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--ds-surface) 60%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: opacity 100ms ease-out;
+  }
+  .AlertDialogOverlay[data-starting-style],
+  .AlertDialogOverlay[data-ending-style] {
+    opacity: 0;
+  }
+
+  .AlertDialogContent {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 50;
+    width: calc(100% - 32px);
+    max-width: 24rem;
+    transform: translate(-50%, -50%) scale(1);
+    transform-origin: center;
+    display: grid;
+    gap: 16px;
+    padding: 20px;
+    background: var(--ds-surface-light);
+    color: var(--ds-lighter);
+    border: 1px solid var(--ds-volume);
+    border-radius: var(--ds-radius-card);
+    outline: none;
+    transition: transform 100ms ease-out, opacity 100ms ease-out;
+  }
+  .AlertDialogContent[data-size="sm"] {
+    max-width: 20rem;
+    gap: 12px;
+    padding: 16px;
+  }
+  .AlertDialogContent[data-starting-style],
+  .AlertDialogContent[data-ending-style] {
+    transform: translate(-50%, -50%) scale(0.95);
+    opacity: 0;
+  }
+  .AlertDialogContent[data-starting-style],
+  .AlertDialogContent[data-ending-style] {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+
+  .AlertDialogHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .AlertDialogHeaderCentered {
+    align-items: center;
+    text-align: center;
+  }
+
+  .AlertDialogFooter {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  @media (min-width: 640px) {
+    .AlertDialogFooter {
+      flex-direction: row;
+      justify-content: flex-end;
+    }
+    .AlertDialogFooterCentered {
+      justify-content: center;
+    }
+    .AlertDialogFooterBetween {
+      justify-content: space-between;
+    }
+  }
+
+  .AlertDialogMedia {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 9999px;
+    flex-shrink: 0;
+  }
+  .AlertDialogMediaDestructive {
+    background: color-mix(in srgb, var(--ds-red) 15%, transparent);
+    color: var(--ds-red);
+  }
+  /* Amber no tiene token equivalente en el design system; se usa literal. */
+  .AlertDialogMediaWarning {
+    background: color-mix(in srgb, #f59e0b 15%, transparent);
+    color: #f59e0b;
+  }
+
+  .AlertDialogTitle {
+    font-family: var(--ds-font);
+    font-weight: var(--ds-weight-bold);
+    font-size: var(--ds-size-header4);
+    line-height: var(--ds-lh-header4);
+    color: var(--ds-lighter);
+    margin: 0;
+  }
+  .AlertDialogTitleSmall {
+    font-size: var(--ds-size-regluar);
+    line-height: var(--ds-lh-regluar);
+  }
+
+  .AlertDialogDescription {
+    font-family: var(--ds-font);
+    font-size: var(--ds-size-medium);
+    line-height: var(--ds-lh-medium);
+    color: var(--ds-light-muted);
+    margin: 0;
+  }
+
+  .AlertDialogRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .AlertDialogTextBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    justify-content: center;
+  }
+  .AlertDialogFooterActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .AlertDialogCheckboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--ds-font);
+    font-size: var(--ds-size-medium);
+    line-height: var(--ds-lh-medium);
+    color: var(--ds-light-muted);
+    cursor: pointer;
+  }
+  .AlertDialogCheckbox {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--ds-fucsia);
+    cursor: pointer;
+  }
+
+  .AlertDialogLink {
+    text-decoration: underline;
+    color: var(--ds-fucsia);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .AlertDialogOverlay,
+    .AlertDialogContent {
+      transition: none;
+    }
+    .AlertDialogContent[data-starting-style],
+    .AlertDialogContent[data-ending-style] {
+      transform: translate(-50%, -50%);
+    }
+  }
+}
