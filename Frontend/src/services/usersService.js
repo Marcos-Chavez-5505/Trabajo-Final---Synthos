@@ -125,7 +125,10 @@ export async function updateProfile({ username, bio, avatarUrl }) {
  */
 export async function uploadProfilePicture(file) {
   const form = new FormData()
-  form.append('picture', file, file.name)
+  // `file` puede ser un `File` (web) o un objeto `{ uri, name, type }` (RN):
+  // no se asume `File`, solo se usa el nombre si existe.
+  const filename = (file && typeof file.name === 'string' && file.name) || 'picture'
+  form.append('picture', file, filename)
 
   const data = await postForm('/users/me/picture', form)
 

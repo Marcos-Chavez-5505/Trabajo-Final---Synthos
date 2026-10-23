@@ -5,6 +5,26 @@
 // La base es `/api` y las llamadas son relativas a propósito. En dev las redirige
 // el proxy de `vite.config.js` hacia `localhost:3000`; en producción las sirve el
 // reverse proxy. Así el mismo build funciona en los dos sin variables de entorno.
+let baseUrl = '/api'
+let storage = null
+
+export function getApiBaseUrl() {
+  return baseUrl
+}
+
+export function getStorage() {
+  return storage
+}
+
+export function configureApi({ baseUrl: newBaseUrl, storage: newStorage, onUnauthorized } = {}) {
+  if (newBaseUrl) baseUrl = newBaseUrl
+  if (newStorage) storage = newStorage
+  if (typeof onUnauthorized === 'function') {
+    unauthorizedHandler = onUnauthorized
+  }
+}
+
+// Compat: alias del valor inicial. Preferir getApiBaseUrl().
 export const API_BASE_URL = '/api'
 
 /**
@@ -80,7 +100,7 @@ function buildUrl(path, params) {
 
   const query = search.toString()
 
-  return `${API_BASE_URL}${path}${query ? `?${query}` : ''}`
+  return `${baseUrl}${path}${query ? `?${query}` : ''}`
 }
 
 /**
