@@ -258,7 +258,7 @@ function JoinRoomButton({ room }) {
 /**
  * Menú de ordenamiento.
  *
- * Es el dropdown local (`components/ui/dropdown-menu.tsx`), el mismo que usa
+ * Es el dropdown de Base UI (`components/ui/dropdown-menu.tsx`), el mismo que usa
  * el menú de cuenta del Sidebar. El trigger muestra el criterio activo, no un
  * ícono suelto: con dos opciones, "Mejor calificado" es más claro de leer que un
  * botón con tres puntitos.

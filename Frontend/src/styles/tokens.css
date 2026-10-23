@@ -58,32 +58,7 @@
 
   /* Componentes */
   --ds-radius-card: 6px;
-  --ds-radius-control: 8px;
   --ds-size-media-card: 180px;
   --ds-size-mini-media-card: 150px;
   --ds-size-media-card-play: 36px;
-
-  /* Formas semitransparentes de un token ya definido: no son colores nuevos,
-     son ese mismo color con alfa (fondo de la acción destructiva). */
-  --ds-red-soft: color-mix(in oklab, var(--ds-red) 16%, transparent);
-
-  /* Espaciado y control del design system (escala de 4px) */
-  --ds-space-1: 4px;
-  --ds-space-1-5: 6px;
-  --ds-space-2: 8px;
-  --ds-space-2-5: 10px;
-  --ds-space-3: 12px;
-  --ds-space-4: 16px;
-  --ds-space-5: 20px;
-  --ds-space-6: 24px;
-  --ds-control-height: 32px;
-  --ds-icon-size: 20px;
-  --ds-duration-fast: 120ms;
-  --ds-duration-overlay: 160ms;
-
-  /* Capas. El proyecto no tenía z-index como token porque cada componente traía
-     el suyo de Tailwind (z-10 sidebar, z-50 sheet); acá quedan los dos niveles
-     del design system, con el modal por encima del velo. */
-  --ds-z-overlay: 50;
-  --ds-z-modal: 60;
 }

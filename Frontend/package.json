@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@floating-ui/react-dom": "^2.1.9",
+    "@base-ui/react": "^1.8.0",
     "@tailwindcss/vite": "^4.3.3",
     "blobatar": "^2.7.0",
     "class-variance-authority": "^0.7.1",

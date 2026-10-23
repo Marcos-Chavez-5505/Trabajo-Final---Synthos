@@ -7,7 +7,7 @@ import threeDots from '@/assets/three_dots.svg'
 /**
  * Paginación adapted del registry de shadcn (style base-nova) al proyecto:
  * íconos del set propio (`src/assets`) en vez de la librería, y navegación con
- * `render` local en vez de `<a>`, para que quien la use enchufe un <Link>
+ * `render` de Base UI en vez de `<a>`, para que quien la use enchufe un <Link>
  * de React Router y la navegación sea de verdad.
  *
  * La página activa se marca con `variant="default"` (Fucsia) y el resto con
