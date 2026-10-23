@@ -81,7 +81,7 @@ src/
     layout/           AppLayout (Sidebar vs BottomNav), Sidebar, SidebarAutoCollapse, TopBar, BottomNav, MiniPlayerBar
     player/           PlayerBar (desktop), PlayerControls, ProgressBar
     cards/            MediaCard, MiniMediaCard, RoomCard, UserRow, ArtistCard
-    ui/               Componentes shadcn/base-ui + Avatar y LoadingScreen propios
+    ui/               Componentes shadcn con primitivas locales + Avatar y LoadingScreen propios
   styles/             tokens.css (única fuente de valores), utilities.css, base.css
   assets/*.svg        Set de íconos propio. Se importan como URL y se usan con <img>
   lib/                utils.ts (cn), formatTime.js, pageRange.js
@@ -173,8 +173,10 @@ Una carpeta por dominio, con sus pantallas, componentes y hooks:
 
 ### 3.6 `components/`
 
-Presentación pura. `components/ui/` es shadcn sobre `@base-ui/react` (Button, Input, Sidebar, Sheet,
-Tooltip, Pagination, Skeleton, Separator) y no se edita a mano salvo por el puente de tokens.
+Presentación pura. `components/ui/` es shadcn con primitivas locales (Button, Input, Sidebar, Sheet,
+Tooltip, Pagination, Skeleton, Separator) y no se edita a mano salvo por el puente de tokens. El
+polimorfismo (`render`) vive en `src/lib/render.ts`; las primitivas de Dialog/Menu/Tooltip viven en
+`components/ui/`. Ya no hay dependencia de `@base-ui/react`.
 
 `AppLayout` es el que decide el shell: **desktop** = `Sidebar` + `TopBar` + `PlayerBar`;
 **mobile** = `BottomNav` + `MiniPlayerBar`. Ambos players consumen el mismo `PlayerContext`.
