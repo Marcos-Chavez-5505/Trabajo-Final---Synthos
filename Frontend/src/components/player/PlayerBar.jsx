@@ -38,7 +38,7 @@ function SongCover({ song }) {
  * canción.
  */
 export default function PlayerBar() {
-  const { song, currentTime, duration, seek, isIdle, isExpanded, expand } = usePlayer()
+  const { song, currentTime, duration, seek, isIdle, isExpanded, expand, roomMode } = usePlayer()
 
   return (
     <footer className="Volume relative shrink-0 border-t border-sidebar-border">
@@ -108,6 +108,7 @@ export default function PlayerBar() {
             duration={duration}
             onSeek={seek}
             size="sm"
+            disabled={roomMode}
             className="px-2 pb-3 sm:px-4"
           />
         </div>

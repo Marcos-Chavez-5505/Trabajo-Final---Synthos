@@ -21,6 +21,7 @@ export default function ProgressBar({
   onSeek,
   size = 'md',
   className = '',
+  disabled = false,
 }) {
   const trackRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -30,7 +31,7 @@ export default function ProgressBar({
   const percent = `${progress * 100}%`
 
   const handlePointerDown = (event) => {
-    if (safeDuration === 0) return
+    if (disabled || safeDuration === 0) return
 
     event.preventDefault()
     trackRef.current?.setPointerCapture(event.pointerId)
@@ -39,7 +40,7 @@ export default function ProgressBar({
   }
 
   const handlePointerMove = (event) => {
-    if (!isDragging || safeDuration === 0) return
+    if (disabled || !isDragging || safeDuration === 0) return
 
     onSeek(ratioFromEvent(event, trackRef.current) * safeDuration)
   }
@@ -52,7 +53,7 @@ export default function ProgressBar({
   }
 
   const handleKeyDown = (event) => {
-    if (safeDuration === 0) return
+    if (disabled || safeDuration === 0) return
 
     if (event.key === 'ArrowRight') {
       event.preventDefault()
@@ -85,7 +86,7 @@ export default function ProgressBar({
       <div
         ref={trackRef}
         role="slider"
-        tabIndex={safeDuration === 0 ? -1 : 0}
+        tabIndex={disabled || safeDuration === 0 ? -1 : 0}
         aria-label="Progreso de la canción"
         aria-valuemin={0}
         aria-valuemax={Math.round(safeDuration)}

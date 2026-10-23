@@ -68,6 +68,7 @@ export default function MiniPlayerBar() {
           duration={duration}
           onSeek={seek}
           size="sm"
+          disabled={roomMode}
           className="px-4 pb-2"
         />
       </div>

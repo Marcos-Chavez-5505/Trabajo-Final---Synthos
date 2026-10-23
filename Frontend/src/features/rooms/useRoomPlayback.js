@@ -192,7 +192,7 @@ export default function useRoomPlayback({ roomId, songs, isHost, onEnded }) {
       const drift = Math.abs(getAudioCurrentTime() * 1000 - position)
 
       if (drift > DRIFT_TOLERANCE_MS) {
-        seek(position / 1000)
+        seek(position / 1000, true)
       }
     }, DRIFT_CHECK_MS)
 

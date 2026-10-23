@@ -132,7 +132,12 @@ export default function PlayerProvider({ children, motor: injectedMotor }) {
     if (motor) motor.setMuted(isMuted)
   }, [isMuted])
 
-  const seek = useCallback((time) => {
+  const seek = useCallback((time, force = false) => {
+    // En una sala la posición la decide el servidor: ni el anfitrión ni los
+    // participantes pueden desplazar la barra de tiempo. El sincronizador
+    // interno (useRoomPlayback) fuerza la corrección de deriva con `force`.
+    if (roomMode && !force) return
+
     const motor = motorRef.current
 
     if (!motor || !motor.hasSource()) return
@@ -142,7 +147,7 @@ export default function PlayerProvider({ children, motor: injectedMotor }) {
 
     motor.seek(target)
     setCurrentTime(target)
-  }, [])
+  }, [roomMode])
 
   const next = useCallback(() => {
     if (roomMode) return
