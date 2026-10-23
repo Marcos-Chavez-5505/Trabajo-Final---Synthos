@@ -6,3 +6,6 @@ build/
 *.log
 .DS_Store
 .vscode/settings.json
+skills-lock.json
+.agents/skills/find-skills/SKILL.md
+PR-DESCRIPTION.md
