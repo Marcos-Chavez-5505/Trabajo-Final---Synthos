@@ -166,7 +166,7 @@ Tablas mapeadas a snake_case (`@@map`, `@map`), claves compuestas como `@@id([a,
 
 ## 4. Frontend
 
-**Stack:** React **19**, Vite **8**, Tailwind **4** vía `@tailwindcss/vite` (sin tailwind.config: config en CSS), `react-router-dom` **7**, `@base-ui/react` (primitivas) + primitivas estilo **shadcn** (`components/ui/*.tsx`, style `base-nova`), `class-variance-authority`, `clsx`/`tailwind-merge` (`cn` en `lib/utils.ts`), `lucide-react` (deuda: ver §7), `oxlint` como linter. Mezcla de `.jsx` (app) y `.tsx/.ts` (ui de shadcn, hooks `use-mobile.ts`).
+**Stack:** React **19**, Vite **8**, Tailwind **4** vía `@tailwindcss/vite` (sin tailwind.config: config en CSS), `react-router-dom` **7**, primitivas locales estilo **shadcn** (`components/ui/*.tsx`, style `base-nova`) sobre `src/lib/render.ts` y `@floating-ui/react-dom` para tooltip/menú, `class-variance-authority`, `clsx`/`tailwind-merge` (`cn` en `lib/utils.ts`), `lucide-react` (deuda: ver §7), `oxlint` como linter. Mezcla de `.jsx` (app) y `.tsx/.ts` (ui de shadcn, hooks `use-mobile.ts`).
 
 **Scripts:** `npm run dev` | `build` | `lint` (oxlint) | `preview`. Alias `@ → src`. Proxy Vite: `/api → http://localhost:3000`.
 

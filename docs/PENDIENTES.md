@@ -473,3 +473,116 @@ catálogo paginado, permite buscar por nombre y abre el detalle con los álbumes
   ranking de artistas, hace falta definir la métrica y probablemente un endpoint nuevo.
 - El avatar del artista cae al `blobatar` determinístico solo cuando falta `pictureUrl`; si Jamendo
   devuelve una URL rota, no hay fallback de imagen (mismo comportamiento que `UserRow`).
+
+---
+
+## 13. Reducir la dependencia de Base UI (nuevo, 2026-10-22)
+
+**Estado: migración completa (pasos 1–5), verificada en Chrome.** La opción elegida fue reimplementar
+localmente el comportamiento que aportaba `@base-ui/react@^1.8.0` (MIT), primitiva por primitiva y
+con paridad verificada. Los pasos 1–5 se hicieron sobre `dev` (sin rama ni commit, por decisión
+explícita de esa tanda) porque `Button` consume `render` en la mayoría de sus call sites y el resto
+del trabajo ya estaba sin commitear en el árbol. `@base-ui/react` ya no está instalado.
+
+**Por qué.** El objetivo es **reducir dependencia**, no bajar el bundle ni "arreglar" estabilidad.
+Antes de la migración, Base UI sostenía el comportamiento de ocho componentes de `components/ui/`:
+
+| Archivo             | Módulo de Base UI            | Qué aporta                                                  |
+| ------------------- | ---------------------------- | ----------------------------------------------------------- |
+| `button.tsx`        | `button`                     | botón nativo + polimorfismo (`render`)                      |
+| `input.tsx`         | `input`                      | input nativo + polimorfismo (`render`)                      |
+| `separator.tsx`     | `separator`                  | `role`/`aria-orientation` según orientación                 |
+| `tooltip.tsx`       | `tooltip`                    | trigger + popup, delay, posicionamiento, `aria-describedby` |
+| `sheet.tsx`         | `dialog`                     | modal, portal, backdrop, focus trap, Escape                 |
+| `alert-dialog.jsx`  | `dialog`                     | lo mismo + `role="alertdialog"` e `initialFocus`            |
+| `dropdown-menu.tsx` | `menu`                       | trigger, portal, posicionamiento, teclado, submenús         |
+| `sidebar.tsx`       | `merge-props`, `use-render` | composición de props y polimorfismo (`render`)              |
+
+**Por qué reimplementar y no vendorizar.** Se evaluó copiar Base UI al repo y se descartó: son ~250
+archivos `.mjs` para menú + diálogo + tooltip (más `floating-ui-react`, `internals` y `utils`) y
+seguiría dependiendo de `@floating-ui/react-dom`, `@floating-ui/utils`, `use-sync-external-store` y
+`@babel/runtime`. Copiar no reduce superficie: la esconde y agrega el mantenimiento de un fork. Si
+alguna vez se adapta código de Base UI en lugar de reescribirlo, hay que conservar el aviso de
+licencia MIT.
+
+**Qué hacer.** El plan original era migrar en este orden, de menor a mayor riesgo, con una rama
+`feat/` desde `dev` (AGENTS.md §12.1) por paso y paridad verificada **antes** de tocar el siguiente.
+En esta tanda los pasos 1–5 se hicieron sobre `dev`, sin rama ni commit (ver reglas):
+
+| Paso | Primitiva                       | Reemplazo local                                             | Estimación           | Riesgo | Estado |
+| ---- | ------------------------------- | ----------------------------------------------------------- | -------------------- | ------ | ------ |
+| 1    | `button`, `input`, `separator`  | nativos + `useRender` local (`src/lib/render.ts`)           | 50–100 líneas        | Bajo   | Hecho  |
+| 2    | `merge-props`, `use-render`     | `mergeProps` + `useRender` propios (`src/lib/render.ts`)    | 150–250 líneas       | Medio  | Hecho  |
+| 3    | `tooltip`                       | trigger/popup sobre `@floating-ui/react-dom`                | 150–250 líneas       | Medio  | Hecho  |
+| 4    | `dialog` (alert dialog + sheet) | portal + focus trap + scroll lock + retorno de foco         | 300–400 líneas       | Medio  | Hecho  |
+| 5    | `menu`                          | trigger, portal, posicionamiento y teclado propios          | 600–800 líneas + CSS | Alto   | Hecho  |
+
+Notas por paso:
+
+- **1 y 2 se tocan** y por eso se resolvieron juntos: `Button` es el que más consume `render` (la
+  mayoría de los 30 usos de `render=` en 16 archivos son `Button`, `PaginationLink`,
+  `SidebarMenuButton` y `TooltipTrigger`). El polimorfismo local entró primero y los primitivos se
+  apoyaron en él. `sidebar.tsx` ya importa `mergeProps`/`useRender` desde `@/lib/render`.
+- **Verificación de los pasos 1–2:** build verde con Base UI todavía instalado (2714 módulos,
+  859,93 kB / 263,84 kB gzip) y lint sin warnings nuevos. En Chrome: inputs de login con `data-slot` y valor controlado; 12 botones del
+  sidebar renderizados como `<a>` con `data-slot`/`data-size`/`data-active` y navegación real;
+  trigger `<button type="button">` que alterna `expanded`→`collapsed`; tooltip del trigger abre por
+  foco (`data-popup-open`, contenido "Alternar sidebar"); paginación de `/albums` con 6 links,
+  `aria-current="page"` y click a `?page=3`; menú de perfil abre con `aria-expanded="true"` e ítems
+  con `href`; consola sin errores. Markup SSR de `Separator` (role/aria/data-orientation), `Button`
+  (default, `disabled`, `render={<a>}`) e `Input` verificado con `vite.ssrLoadModule`.
+- **Verificación de los pasos 3–5:** build verde (2493 módulos, 748,93 kB / 226,95 kB gzip) y lint
+  sin warnings nuevos en los archivos migrados. En Chrome: AlertDialog con `role`/`aria-modal`,
+  `aria-labelledby`/`aria-describedby`, foco inicial en Cancelar (incluida la variante 9), Tab y
+  Shift+Tab atrapados, Escape/backdrop cierran y devuelven foco al trigger; `JoinRoomDialog` enfoca
+  el input y al cerrar vuelve a "Unirme con código"; Sheet mobile oculta el sidebar de escritorio
+  al asentarse y lo restaura al cerrar (`onOpenChangeComplete`); menús con `aria-expanded`/
+  `aria-controls`, roving tabindex, flechas, typeahead, checkbox que no cierra, cierre y foco al
+  trigger; tooltip con delay de 600 ms, flip, arrow, `aria-describedby`, cierre al salir y `hidden`
+  en sidebar expandido; consola sin errores. En Dialog y Menu el cierre se verificó por
+  `data-ending-style` y desmontaje posterior; la apertura aplica `data-starting-style` durante los
+  dos primeros frames. Tooltip también conserva el montaje hasta el final de su transición, pero esa
+  transición mide 0s porque el proyecto no define `tailwindcss-animate`: su salida es inmediata,
+  igual que antes.
+- **Tooltip** (`components/ui/tooltip.tsx`) usa `@floating-ui/react-dom` directo, ya declarado en
+  `package.json` en lugar de venir transitivo por Base UI. Conserva delay por proveedor/trigger,
+  apertura por hover y foco, `aria-describedby`, `hidden` y el flip/arrow. El contenido oculto no se
+  monta ni deja `aria-describedby`. No implementa popup hoverable ni `keepMounted`; la app no los usa.
+- **Dialog** (`components/ui/dialog.jsx`) se resolvió con portal, focus trap, scroll lock, Escape,
+  clic en backdrop y retorno de foco; no se usó `<dialog>` nativo. `Sheet` y `AlertDialog` se
+  apoyan en el mismo núcleo. El foco inicial se resuelve con `initialFocus` (en AlertDialog va a
+  Cancelar) y el retorno usa un historial de `focusin` para sobrevivir al `autoFocus` que mueve el
+  foco dentro del popup antes de los efectos. Los diálogos anidados se apilan y solo el superior
+  atiende Escape/Tab.
+- **Menu** (`components/ui/dropdown-menu.tsx`) cubre solo la API usada por la app: trigger, portal,
+  backdrop modal, positioner, popup, group/label, item, link item, checkbox item y separator.
+  Quedaron afuera submenús y radio items; si una pantalla futura los necesita, se extiende el
+  primitivo y se vuelve a verificar. Tiene roving tabindex, flechas/Home/End, typeahead, cierre y
+  foco al trigger, y los checkbox no cierran el menú.
+
+**Reglas de la migración:**
+
+- Una primitiva por rama `feat/` desde `dev`; nada de big bang ni de mezclar dos pasos en un commit.
+  (Los pasos 1–5 fueron la excepción: se hicieron sobre `dev` por decisión explícita de esa tanda,
+  para no arrastrar el trabajo sin commitear que ya estaba en el árbol.)
+- `@base-ui/react` se borró recién cuando `rg "@base-ui/react" src` no devolvió nada y el build
+  quedó en verde. `npm ls @base-ui/react` sale vacío.
+- Paridad antes de borrar: mismo teclado, mismos roles/atributos ARIA, mismo foco, misma animación.
+  Si algo no se puede igualar, se documenta la diferencia y se decide ahí, no después. Las
+  diferencias de alcance conscientes son que el menú no implementa submenús ni radio items, y que el
+  tooltip no implementa popup hoverable ni `keepMounted`; la app no usa ninguna de esas partes.
+- Ante la duda, no migrar: la dependencia es aceptable y el costo de un menú o un diálogo con bugs es
+  mucho más alto que el de mantener Base UI.
+
+**Verificación:** build y lint de `Frontend` en cada paso; en navegador, checklist por primitiva
+(foco inicial y al cerrar, Tab/Shift+Tab, Escape, click en backdrop, flechas/Home/End, typeahead,
+submenús/radio items solo si se implementan, roles y `aria-*` en el DOM, consola sin warnings nuevos,
+animación de entrada y salida).
+Hoy la verificación es solo en Chrome: Safari/Firefox y lectores de pantalla quedan como riesgo
+abierto. `npm ls @base-ui/react` sale vacío. El bundle quedó en 748,93 kB / 226,95 kB gzip (frente a
+748,24 kB / 226,63 kB de los pasos 1–2): subió apenas por el código local, no se tomó como criterio
+de éxito.
+
+**Qué falta definir:** el polimorfismo se quedó como `render` (API actual, 30 call sites), sin migrar
+a `asChild`; `tooltip` conserva `@floating-ui/react-dom` como dependencia directa; y si una pantalla
+necesita submenús o radio items, hay que extender `dropdown-menu.tsx` y volver a verificar esa parte.
