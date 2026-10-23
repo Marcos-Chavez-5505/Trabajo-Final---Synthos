@@ -13,6 +13,7 @@ import MoodScan from '../features/mood/MoodScan.jsx'
 import FollowList from '../features/social/FollowList.jsx'
 import Search from '../features/search/Search.jsx'
 import Playlists from '../features/playlists/Playlists.jsx'
+import Components from '../pages/components/Components.jsx'
 import PlaylistDetail from '../features/playlists/PlaylistDetail.jsx'
 import Albums from '../features/albums/Albums.jsx'
 import AlbumDetail from '../features/albums/AlbumDetail.jsx'
@@ -127,6 +128,7 @@ export default function AppRoutes() {
         element={<AppLayout><FollowList relation="siguiendo" /></AppLayout>}
       />
 
+      <Route path="/components" element={<Protected><Components /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
