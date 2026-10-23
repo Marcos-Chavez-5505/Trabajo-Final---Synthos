@@ -7,6 +7,7 @@
 @import "./styles/tokens.css";
 @import "./styles/utilities.css";
 @import "./styles/base.css";
+@import "./styles/components.css";
 
 /* Puente entre los design tokens y las utilidades semánticas de shadcn
    (base-nova). `@theme inline` hace que utilidades como bg-sidebar,
@@ -41,6 +42,11 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* No hay tema claro: el proyecto es dark-only (base.css fija color-scheme).
+     `border` existe solo para que la utilidad semántica de shadcn tenga un
+     valor claro definido y no dependa de `dark:`. */
+  --color-border: var(--ds-volume);
 }
 
 /* Tema shadcn (base-nova) traducido a los design tokens.

@@ -1,0 +1,368 @@
+/* Estilos de los componentes que no se resuelven solo con utilidades de
+ * Tailwind: alert-dialog (sobre el Dialog local) y el checkbox de su
+ * variante 9, adaptados de ReUI (MIT, commit 067aa0d).
+ *
+ * Traducción siguiendo la convención del proyecto:
+ *   - ningún literal de color: todo sale de tokens.css con var()
+ *   - los colores y medidas replican los que ya usa la app en el `Sheet`
+ *     (modal), para que este componente no se vea de otra aplicación
+ *   - las variantes se resuelven con data-attributes, como el resto del repo
+ *
+ * Está en @layer components para que una utilidad de Tailwind pueda pisarla,
+ * igual que las clases de utilities.css.
+ */
+
+@layer components {
+  /* ==========================================================================
+   * Alert dialog
+   * ======================================================================== */
+
+  /* El Dialog local monta backdrop y popup en un portal; acá solo quedan
+     el velo y la tarjeta centrada. El cierre con Escape, el clic afuera, el
+     bloqueo del scroll y el foco los maneja la primitiva. */
+  .AlertDialogBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: var(--ds-z-overlay);
+    background: color-mix(in oklab, var(--ds-lighter) 15%, transparent);
+    backdrop-filter: blur(4px);
+    transition: opacity var(--ds-duration-overlay) ease-out;
+  }
+
+  .AlertDialogBackdrop[data-starting-style],
+  .AlertDialogBackdrop[data-ending-style] {
+    opacity: 0;
+  }
+
+  /* Tarjeta del diálogo: los mismos valores que el popup del menú y el Sheet
+     (bg-popover, borde sidebar-border, shadow-lg, rounded-lg). */
+  .AlertDialogContent {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: var(--ds-z-modal);
+    display: grid;
+    gap: var(--ds-space-6);
+    width: calc(100% - 2 * var(--ds-space-4));
+    max-width: 420px;
+    max-height: calc(100% - 2 * var(--ds-space-4));
+    overflow-y: auto;
+    padding: var(--ds-space-6);
+    border: 1px solid var(--ds-volume);
+    border-radius: var(--ds-radius-control);
+    background: var(--ds-surface-light);
+    box-shadow: var(--ds-elevation-1);
+    color: var(--ds-lighter);
+    outline: none;
+    translate: -50% -50%;
+    scale: 1;
+    transition:
+      opacity var(--ds-duration-overlay) ease-out,
+      scale var(--ds-duration-overlay) ease-out;
+  }
+
+  /* La primitiva expone estos dos estados alrededor de la transición, así que
+     la entrada y la salida se animan solo con CSS (sin `motion`). */
+  .AlertDialogContent[data-starting-style],
+  .AlertDialogContent[data-ending-style] {
+    opacity: 0;
+    scale: 0.96;
+  }
+
+  .AlertDialogContent[data-size='sm'] {
+    max-width: 340px;
+  }
+
+  /* La variante 9 desarma el marco de la tarjeta para que el Frame la ocupe
+     entera, con el mismo radio. */
+  .AlertDialogContent[data-flush='true'] {
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    overflow: hidden;
+  }
+
+  .AlertDialogHeader {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    place-items: center;
+    gap: var(--ds-space-1);
+    text-align: center;
+  }
+
+  /* Con círculo de ícono, dos columnas: el círculo a la izquierda y el texto a
+     su derecha. Sin esto el `grid-row: span 2` dejaría todo apilado. */
+  .AlertDialogHeader:has([data-slot='alert-dialog-media']) {
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto 1fr;
+    place-items: start;
+    column-gap: var(--ds-space-4);
+    text-align: left;
+  }
+
+  .AlertDialogMedia {
+    grid-row: 1 / span 2;
+    grid-column: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 9999px;
+    background: var(--ds-volume);
+    color: var(--ds-lighter);
+  }
+
+  /* El rojo del design system, en su forma suave (la misma proporción que usa
+     el botón `destructive` de la app: destructive/10). */
+  .AlertDialogMedia[data-variant='danger'] {
+    background: var(--ds-red-soft);
+    color: var(--ds-red);
+  }
+
+  .AlertDialogMedia[data-variant='warning'] {
+    background: color-mix(in oklab, var(--ds-salmon) 20%, transparent);
+    color: var(--ds-salmon);
+  }
+
+  .AlertDialogTitle {
+    font-size: var(--ds-size-large);
+    font-family: var(--ds-font);
+    font-weight: var(--ds-weight-medium);
+    line-height: var(--ds-lh-large);
+    color: var(--ds-lighter);
+  }
+
+  .AlertDialogDescription {
+    font-size: var(--ds-size-regluar);
+    font-family: var(--ds-font);
+    font-weight: var(--ds-weight-regular);
+    line-height: var(--ds-lh-regluar);
+    color: var(--ds-light-muted);
+    text-wrap: balance;
+  }
+
+  .AlertDialogDescription a {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .AlertDialogDescription a:hover {
+    color: var(--ds-lighter);
+  }
+
+  /* El footer apila al revés en mobile (la acción principal queda abajo, más
+     cerca del pulgar) y se alinea a la derecha en pantallas anchas. */
+  .AlertDialogFooter {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: var(--ds-space-2);
+  }
+
+  .AlertDialogFooter > * {
+    width: 100%;
+  }
+
+  /* Barra de acciones repartida (variante 9): "no volver a preguntar" a un
+     lado y los botones al otro. */
+  .AlertDialogFooter[data-layout='split'] {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-4);
+  }
+
+  .AlertDialogFooter[data-layout='split'] > * {
+    width: auto;
+  }
+
+  .AlertDialogButtons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ds-space-2);
+  }
+
+  .AlertDialogRemember {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+  }
+
+  .AlertDialogRememberLabel {
+    font-size: var(--ds-size-regluar);
+    font-family: var(--ds-font);
+    font-weight: var(--ds-weight-regular);
+    line-height: var(--ds-lh-regluar);
+    color: var(--ds-light-muted);
+    cursor: pointer;
+  }
+
+  /* Botones del diálogo. Mismas medidas que el Button de la app: h-8, px-2.5,
+     rounded-lg, text-sm/medium. Cancelar = `outline`; confirmar = `default`;
+     confirmar destructivo = `destructive` (rojo suave, no relleno). */
+  .AlertDialogCancel,
+  .AlertDialogAction,
+  .AlertDialogButton {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ds-space-1-5);
+    height: var(--ds-control-height);
+    padding: 0 var(--ds-space-2-5);
+    border: 1px solid transparent;
+    border-radius: var(--ds-radius-control);
+    font-family: var(--ds-font);
+    font-size: var(--ds-size-button);
+    font-weight: var(--ds-weight-medium);
+    line-height: var(--ds-lh-button);
+    white-space: nowrap;
+    cursor: pointer;
+    outline: none;
+    transition: background-color var(--ds-duration-fast) ease-out,
+      border-color var(--ds-duration-fast) ease-out;
+  }
+
+  /* Cancelar: `variant="outline"`. */
+  .AlertDialogCancel,
+  .AlertDialogButton {
+    border-color: var(--ds-volume);
+    background: var(--ds-surface);
+    color: var(--ds-lighter);
+  }
+
+  .AlertDialogCancel:hover,
+  .AlertDialogButton:hover {
+    background: var(--ds-volume);
+  }
+
+  /* Confirmar: `variant="default"` (acento de la app). */
+  .AlertDialogAction {
+    background: var(--ds-fucsia);
+    color: var(--ds-surface);
+  }
+
+  .AlertDialogAction:hover {
+    background: color-mix(in oklab, var(--ds-fucsia) 80%, transparent);
+  }
+
+  /* Confirmar destructivo: `variant="destructive"` de la app (rojo suave). */
+  .AlertDialogAction[data-variant='destructive'] {
+    background: var(--ds-red-soft);
+    color: var(--ds-red);
+  }
+
+  .AlertDialogAction[data-variant='destructive']:hover {
+    background: color-mix(in oklab, var(--ds-red) 24%, transparent);
+  }
+
+  .AlertDialogCancel:active,
+  .AlertDialogAction:active,
+  .AlertDialogButton:active {
+    background: var(--ds-shadow);
+  }
+
+  .AlertDialogCancel:focus-visible,
+  .AlertDialogAction:focus-visible,
+  .AlertDialogButton:focus-visible {
+    border-color: var(--ds-fucsia);
+    box-shadow: 0 0 0 3px var(--ds-red-soft);
+  }
+
+  .AlertDialogCancel:disabled,
+  .AlertDialogAction:disabled,
+  .AlertDialogButton:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  @media (min-width: 640px) {
+    .AlertDialogFooter:not([data-layout='split']) {
+      flex-direction: row;
+      justify-content: flex-end;
+    }
+
+    .AlertDialogFooter:not([data-layout='split']) > * {
+      width: auto;
+    }
+  }
+
+  /* ==========================================================================
+   * Frame (ReUI). Acá vive solo lo que usa la variante 9.
+   * ======================================================================== */
+
+  .Frame {
+    display: flex;
+    flex-direction: column;
+    padding: var(--ds-space-1);
+    border: 1px solid var(--ds-volume);
+    border-radius: var(--ds-radius-control);
+    background: var(--ds-surface);
+  }
+
+  .FramePanel {
+    position: relative;
+    flex-grow: 1;
+    padding: var(--ds-space-5);
+    border: 1px solid var(--ds-volume);
+    border-radius: var(--ds-radius-card);
+    background: var(--ds-surface-light);
+  }
+
+  /* ==========================================================================
+   * Checkbox (el proyecto no tenía; la variante 9 lo necesita)
+   * ======================================================================== */
+
+  .Checkbox {
+    position: relative;
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--ds-volume);
+    border-radius: var(--ds-space-1);
+    background: var(--ds-volume);
+    color: var(--ds-surface);
+    cursor: pointer;
+    outline: none;
+    transition: background-color var(--ds-duration-fast) ease-out;
+  }
+
+  /* Área táctil más grande que la caja, sin agrandar la caja. */
+  .Checkbox::after {
+    content: '';
+    position: absolute;
+    inset: -6px -8px;
+  }
+
+  .Checkbox[data-checked] {
+    border-color: var(--ds-fucsia);
+    background: var(--ds-fucsia);
+  }
+
+  .Checkbox:focus-visible {
+    border-color: var(--ds-fucsia);
+    box-shadow: 0 0 0 3px var(--ds-red-soft);
+  }
+
+  .Checkbox:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .CheckboxIndicator {
+    display: grid;
+    place-content: center;
+    color: currentColor;
+  }
+
+  .CheckboxIndicator[hidden] {
+    display: none;
+  }
+}
+

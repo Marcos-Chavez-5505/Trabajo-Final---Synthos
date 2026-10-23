@@ -1,6 +1,7 @@
-import { Button as ButtonPrimitive } from "@base-ui/react/button"
+import type * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils";
+import { mergeProps, useRender } from "@/lib/render"
 
 const buttonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -39,19 +40,44 @@ const buttonVariants = cva(
   }
 )
 
+type ButtonProps = useRender.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & {
+    /** Si el elemento renderizado no es un `<button>` nativo (ej. un `<Link>`). */
+    nativeButton?: boolean
+    /** Permite enfocar el botón aunque esté deshabilitado. */
+    focusableWhenDisabled?: boolean
+  }
+
 function Button({
   className,
   variant = "default",
   size = "default",
+  disabled = false,
+  focusableWhenDisabled = false,
+  nativeButton = true,
+  render,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
-  return (
-    <ButtonPrimitive
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  )
+}: ButtonProps) {
+  const interactionProps: Record<string, unknown> = nativeButton
+    ? { disabled: disabled || undefined }
+    : {
+        "aria-disabled": disabled || undefined,
+        tabIndex: disabled ? (focusableWhenDisabled ? 0 : -1) : 0,
+        onClick: disabled ? (event: React.MouseEvent) => event.preventDefault() : undefined,
+      }
+
+  return useRender({
+    defaultTagName: "button",
+    render,
+    props: mergeProps<"button">(
+      {
+        "data-slot": "button",
+        className: cn(buttonVariants({ variant, size, className })),
+      },
+      props,
+      interactionProps as React.ComponentPropsWithRef<"button">
+    ),
+  })
 }
 
 export { Button, buttonVariants }

@@ -16,7 +16,7 @@ import { mapApiError } from '../../utils/mapError.js'
  * Es la única vía de entrada a una sala privada (D14): las privadas no salen en el
  * listado de `/salas`, así que sin este diálogo no habría forma de llegar a una.
  *
- * El proyecto no tiene `dialog.tsx`: el modal del repo es el `Sheet` de Base UI,
+ * El proyecto no tiene `dialog.tsx`: el modal del repo es el `Sheet` local,
  * el mismo que usa `InviteUserDialog` para las invitaciones de playlist.
  *
  * La contraseña solo se pide si la sala resultara privada, y el backend responde

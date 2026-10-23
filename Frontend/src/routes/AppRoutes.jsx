@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AppLayout from '../components/layout/AppLayout.jsx'
 import Landing from '../pages/Landing/Landing.jsx'
+import Componentes from '../pages/Componentes.jsx'
 import Home from '../features/home/Home.jsx'
 import Login from '../features/auth/Login.jsx'
 import Register from '../features/auth/Register.jsx'
@@ -99,6 +100,12 @@ export default function AppRoutes() {
           cuando se entra a la pantalla, no al cargar la app. */}
       <Route path="/animo" element={<Protected><MoodScan /></Protected>} />
       <Route path="/buscar" element={<Protected><Search /></Protected>} />
+      {/* Catálogo de los componentes adaptados desde ReUI (alert-dialog).
+          Es una pantalla de revisión, no de producto. */}
+      <Route
+        path="/componentes"
+        element={<Protected><Componentes /></Protected>}
+      />
       {/* Listas de seguidores y seguidos (TS-10). Las del propio usuario van
           dentro de `Protected` porque dependen de la sesión; las de otra persona
           no, igual que el perfil público del que cuelgan. Cada ruta declara la
