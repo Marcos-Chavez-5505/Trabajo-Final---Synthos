@@ -1,12 +1,9 @@
-import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '@synthos/shared'
-import { createPlaylist as createPlaylistService } from '@synthos/shared'
+import { usePlaylistList, usePlaylistsPage } from '@synthos/shared'
 import playlistIcon from '../../assets/playlist.svg'
 import PlaylistCreateForm from './PlaylistCreateForm.jsx'
 import PlaylistInvitations from './PlaylistInvitations.jsx'
 import PlaylistTile from './PlaylistTile.jsx'
-import { usePlaylistList } from '@synthos/shared'
 
 const TABS = [
   { key: 'mis', label: 'Mis playlists' },
@@ -14,38 +11,20 @@ const TABS = [
   { key: 'invitaciones', label: 'Invitaciones' },
 ]
 
-/**
- * "/playlists": la biblioteca con las playlists del usuario (TS-09) separada en
- * sub-pestañas (TS-12/TS-13): las que creó, las colaborativas donde entró y la
- * bandeja de invitaciones.
- *
- * Una sola request de `listPlaylists` alimenta las dos primeras: el backend ya
- * devuelve las que creaste y las que compartieron (`getUserPlaylists`), y cada
- * playlist trae `role`, así que el reparto es del cliente. La pestaña viva en la
- * URL (`?tab=`), como el resto de los filtros de la app, para que el botón
- * atrás y el link compartido lleven a la misma vista.
- */
 export default function Playlists() {
-  const { user } = useAuth()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { playlists, error, loading } = usePlaylistList()
-
-  const userId = user?.id ?? null
+  const { creating, setCreating, handleCreate } = usePlaylistsPage()
 
   const tab = TABS.some((item) => item.key === searchParams.get('tab'))
     ? searchParams.get('tab')
     : 'mis'
 
-  const [creating, setCreating] = useState(false)
-
-  async function handleCreate({ name, description, type }) {
-    const created = await createPlaylistService(userId, { name, description, type })
-
-    setCreating(false)
+  async function onSubmitCreate({ name, description, type }) {
+    const created = await handleCreate({ name, description, type })
     // Se navega a la playlist recién creada: el usuario ya la nombró, lo que
-    // sigue es agregar canciones. Eso también evita tener que patching la lista
-    // en memoria para un caso en el que esta pantalla se va a desmontar igual.
+    // sigue es agregar canciones.
     navigate(`/playlists/${created.id}`)
   }
 
@@ -90,7 +69,7 @@ export default function Playlists() {
 
       {creating && (
         <div className="mt-6">
-          <PlaylistCreateForm onCreate={handleCreate} onCancel={() => setCreating(false)} />
+          <PlaylistCreateForm onCreate={onSubmitCreate} onCancel={() => setCreating(false)} />
         </div>
       )}
 
@@ -115,10 +94,6 @@ export default function Playlists() {
   )
 }
 
-/**
- * La bandeja de invitaciones de TS-13. Cada estado (carga, error, vacío y la
- * lista) es de `PlaylistInvitations`.
- */
 function EmptyState({ tab }) {
   const copy = {
     mis: {
