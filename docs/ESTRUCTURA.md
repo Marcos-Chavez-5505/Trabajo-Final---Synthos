@@ -8,13 +8,13 @@ No reemplaza a los demás documentos del proyecto (ver [§7](#7-otros-documentos
 ## 1. Panorama general
 
 SYNTHOS es una app social de música (reproducción, playlists, favoritos, salas, seguimiento, búsqueda).
-El repo es un **monorepo sin gestor de workspaces**: dos apps con `package.json` independiente.
+El repo es un **monorepo con workspaces npm** (`frontend`, `shared`, `mobile`; `backend` queda fuera y conserva su propio lockfile).
 
-| | `Frontend/` | `Backend/` |
-|---|---|---|
-| Stack | React 19, Vite 8, Tailwind 4, react-router 7 | Node, Express 5, Prisma 7, PostgreSQL 17 |
-| Puerto | 5173 (Vite) | 3000 (`PORT`) |
-| Rol | SPA; consume la API | API REST; todo bajo `/api` |
+| | `frontend/` | `shared/` | `mobile/` | `backend/` |
+|---|---|---|---|---|
+| Stack | React 19, Vite 8, Tailwind 4, react-router 7 | JS puro (sin DOM/CSS/router) | Expo (React Native) | Node, Express 5, Prisma 7, PostgreSQL 17 |
+| Puerto | 5173 (Vite) | — | Expo | 3000 (`PORT`) |
+| Rol | SPA; consume la API | Lógica de negocio compartida | App mobile (Fase 7+) | API REST; todo bajo `/api` |
 
 - **La API siempre está bajo `/api`** y el Frontend llama con **rutas relativas** (`/api/songs/search`).
   En dev el proxy de `Frontend/vite.config.js` las redirige a `localhost:3000`; en producción las sirve un
