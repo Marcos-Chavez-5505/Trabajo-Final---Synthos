@@ -1,83 +1,17 @@
-import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '@synthos/shared'
+import { useRegister } from '@synthos/shared'
 import { Button } from '../../components/ui/button.tsx'
 import { Input } from '../../components/ui/input.tsx'
 
-const PASSWORD_RULES = {
-  minLength: 8,
-  label: 'La contraseña necesita al menos 8 caracteres, 1 número y 1 mayúscula.',
-}
-
-function validatePassword(password) {
-  if (password.length < PASSWORD_RULES.minLength) {
-    return PASSWORD_RULES.label
-  }
-
-  if (!/\d/.test(password) || !/[A-Z]/.test(password)) {
-    return PASSWORD_RULES.label
-  }
-
-  return ''
-}
-
 export default function Register() {
-  const { register } = useAuth()
   const navigate = useNavigate()
+  const { formData, error, submitting, handleChange, handleSubmit } = useRegister()
 
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  })
-  const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  const handleChange = (e) => {
-    const { name, value } = e.target
-
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    setError('')
-
-    if (!formData.username || !formData.email || !formData.password) {
-      setError('Completá todos los campos.')
-      return
+  const onSubmit = async (e) => {
+    const result = await handleSubmit(e)
+    if (result?.success) {
+      navigate('/home', { replace: true })
     }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Las contraseñas no coinciden.')
-      return
-    }
-
-    const passwordError = validatePassword(formData.password)
-
-    if (passwordError) {
-      setError(passwordError)
-      return
-    }
-
-    setSubmitting(true)
-
-    const result = await register({
-      username: formData.username,
-      email: formData.email,
-      password: formData.password,
-    })
-
-    setSubmitting(false)
-
-    if (!result.success) {
-      setError(result.message)
-      return
-    }
-
-    navigate('/home', { replace: true })
   }
 
   return (
@@ -86,7 +20,7 @@ export default function Register() {
         <h1 className="Header3">Crear cuenta</h1>
         <p className="mt-1 TextMedium opacity-70">Registrate para empezar a escuchar.</p>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <label className="block">
             <span className="TextMedium opacity-80">Nombre de usuario</span>
             <Input

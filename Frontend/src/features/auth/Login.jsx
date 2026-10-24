@@ -1,45 +1,17 @@
-import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '@synthos/shared'
+import { useLogin } from '@synthos/shared'
 import { Button } from '../../components/ui/button.tsx'
 import { Input } from '../../components/ui/input.tsx'
 
 export default function Login() {
-  const { login } = useAuth()
   const navigate = useNavigate()
+  const { formData, error, submitting, handleChange, handleSubmit } = useLogin()
 
-  const [formData, setFormData] = useState({ email: '', password: '' })
-  const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  const handleChange = (e) => {
-    const { name, value } = e.target
-
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    setError('')
-
-    if (!formData.email || !formData.password) {
-      setError('Completá todos los campos.')
-      return
+  const onSubmit = async (e) => {
+    const result = await handleSubmit(e)
+    if (result?.success) {
+      navigate('/home', { replace: true })
     }
-
-    setSubmitting(true)
-
-    const result = await login(formData.email, formData.password)
-
-    setSubmitting(false)
-
-    if (!result.success) {
-      setError(result.message)
-      return
-    }
-
-    navigate('/home', { replace: true })
   }
 
   return (
@@ -48,7 +20,7 @@ export default function Login() {
         <h1 className="Header3">Iniciar sesión</h1>
         <p className="mt-1 TextMedium opacity-70">Ingresá a tu cuenta de Synthos.</p>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <label className="block">
             <span className="TextMedium opacity-80">Email</span>
             <Input
