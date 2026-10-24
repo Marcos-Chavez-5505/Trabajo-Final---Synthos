@@ -69,30 +69,25 @@ function MenuItem({ item, isActive }) {
             : ''
         }
       >
-        <div className="relative">
+        <div className="relative flex size-4 shrink-0 items-center justify-center">
           {item.src ? (
             <img
               src={item.src}
               alt=""
               aria-hidden="true"
-              className={`size-4 shrink-0${isActive ? ' invert' : ''}`}
+              className={`size-4 shrink-0 block mx-auto${isActive ? ' invert' : ''}`}
             />
           ) : (
-            <Icon />
+            <Icon className="mx-auto" />
           )}
-          {unreadCount > 0 && (
-            <span className="Fucsia absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[9px] text-white group-data-[collapsible=icon]:flex">
+          {unreadCount > 0 && item.to === '/notificaciones' && (
+            <span className="Fucsia absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[9px] text-white">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
         </div>
         <SidebarLabel className="flex items-center gap-2">
           {item.label}
-          {unreadCount > 0 && (
-            <span className="Fucsia ml-auto rounded-full px-1.5 py-0.5 text-[10px] text-white group-data-[collapsible=icon]:hidden">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
         </SidebarLabel>
       </SidebarMenuButton>
     </SidebarMenuItem>
