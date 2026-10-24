@@ -1,9 +1,6 @@
-import { useEffect, useState } from 'react'
-import { usePlayer } from '@synthos/shared'
-import { listPopularSongs } from '@synthos/shared'
+import { usePopularSongs } from '@synthos/shared'
 import MediaCard from '../../components/cards/MediaCard.jsx'
 import fullHeartIcon from '../../assets/full_heart.svg'
-import { mapApiError } from '@synthos/shared'
 
 /**
  * `/populares`: ranking semanal de canciones por favoritos.
@@ -13,30 +10,7 @@ import { mapApiError } from '@synthos/shared'
  * que la tarjeta sea la misma del resto de la app.
  */
 export default function Populares() {
-  const { playSongs, addToQueue } = usePlayer()
-  const [response, setResponse] = useState({ data: null, error: null })
-
-  useEffect(() => {
-    const controller = new AbortController()
-    let active = true
-
-    listPopularSongs({ signal: controller.signal })
-      .then((data) => {
-        if (active) setResponse({ data, error: null })
-      })
-      .catch((cause) => {
-        if (active) setResponse({ data: null, error: mapApiError(cause) })
-      })
-
-    return () => {
-      active = false
-      controller.abort()
-    }
-  }, [])
-
-  const { data, error } = response
-  const songs = data?.songs ?? []
-  const minimumFavorites = data?.minimumFavorites ?? 3
+  const { data, error, songs, minimumFavorites, playSongs, addToQueue } = usePopularSongs()
 
   return (
     <section className="px-6 py-4 md:px-10">

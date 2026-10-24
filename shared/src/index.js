@@ -35,6 +35,7 @@ export { default as buildPageRange } from './utils/pageRange.js'
 export * from './utils/sidebarMotion.js'
 
 // feature hooks
+export { default as usePopularSongs } from './features/popular/usePopularSongs.js'
 export { default as usePlaylistList } from './features/playlists/usePlaylistList.js'
 export { default as useSongPlaylists } from './features/playlists/useSongPlaylists.js'
 export { default as useMyRooms } from './features/rooms/useMyRooms.js'
