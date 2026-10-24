@@ -37,6 +37,7 @@ export * from './utils/sidebarMotion.js'
 // feature hooks
 export { default as usePopularSongs } from './features/popular/usePopularSongs.js'
 export { default as useHomeSongs } from './features/home/useHomeSongs.js'
+export { default as useMoodSongs } from './features/mood/useMoodSongs.js'
 export { default as useAlbums } from './features/albums/useAlbums.js'
 export { default as useProfilePublic } from './features/profile/useProfilePublic.js'
 export { default as useFollowList } from './features/social/useFollowList.js'

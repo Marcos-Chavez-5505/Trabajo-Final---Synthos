@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import cameraIcon from '../../assets/microphone.svg'
-import { mapApiError } from '@synthos/shared'
+import { mapApiError, useMoodSongs } from '@synthos/shared'
 import { MOODS, MOOD_LABELS } from './moodDetection.js'
 import MoodPicker from './MoodPicker.jsx'
 import MoodResults from './MoodResults.jsx'
 import { detectMood, prepareDetector } from './moodDetection.js'
-import { listSongsByMood } from '@synthos/shared'
 
 /**
  * Recomendaciones por estado de ánimo (TS-20 / F9, decisión D4).
@@ -32,9 +31,7 @@ export default function MoodScan() {
   const [analyzing, setAnalyzing] = useState(false)
   const [notice, setNotice] = useState(null)
 
-  const [mood, setMood] = useState(null)
-  const [songs, setSongs] = useState(null)
-  const [songsError, setSongsError] = useState(null)
+  const { mood, songs, songsError, loadSongs, setSongs } = useMoodSongs()
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop())
@@ -58,18 +55,6 @@ export default function MoodScan() {
 
     return () => {
       active = false
-    }
-  }, [])
-
-  const loadSongs = useCallback(async (nextMood) => {
-    setMood(nextMood)
-    setSongs(null)
-    setSongsError(null)
-
-    try {
-      setSongs(await listSongsByMood(nextMood))
-    } catch (cause) {
-      setSongsError(mapApiError(cause, 'No pudimos buscar canciones.'))
     }
   }, [])
 
