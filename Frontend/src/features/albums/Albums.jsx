@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { buildPageRange } from '@synthos/shared'
-import { listAlbums, ALBUM_TYPE_LABELS } from '@synthos/shared'
+import { buildPageRange, useAlbums, ALBUM_TYPE_LABELS } from '@synthos/shared'
 import MiniMediaCard from '../../components/cards/MiniMediaCard.jsx'
 import albumIcon from '../../assets/album.svg'
 import {
@@ -13,9 +12,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../../components/ui/pagination'
-import { mapApiError } from '@synthos/shared'
-
-const EMPTY_RESULTS = { items: [], total: 0, page: 1, pageSize: 1, totalPages: 1 }
 
 /**
  * `/albums`: el catálogo de discos de la sección "Mi Colección" del Sidebar.
@@ -31,34 +27,7 @@ export default function Albums() {
 
   const page = Math.max(Number(searchParams.get('page')) || 1, 1)
 
-  const requestKey = String(page)
-  const [response, setResponse] = useState({ key: null, data: null, error: null })
-
-  useEffect(() => {
-    const controller = new AbortController()
-    let active = true
-
-    listAlbums('', page, undefined, { signal: controller.signal })
-      .then((data) => {
-        if (!active) return
-
-        setResponse({ key: requestKey, data, error: null })
-      })
-      .catch((cause) => {
-        if (!active) return
-
-        setResponse({ key: requestKey, data: null, error: mapApiError(cause) })
-      })
-
-    return () => {
-      active = false
-      controller.abort()
-    }
-  }, [page, requestKey])
-
-  const isCurrent = response.key === requestKey
-  const error = isCurrent ? response.error : null
-  const results = isCurrent ? (response.data ?? EMPTY_RESULTS) : EMPTY_RESULTS
+  const { isCurrent, error, results } = useAlbums(page)
 
   // Si la URL pedía una página que ya no existe, se corrige la URL en vez de
   // mostrar un vacío engañoso.
