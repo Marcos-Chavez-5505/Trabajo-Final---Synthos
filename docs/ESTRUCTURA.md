@@ -338,4 +338,5 @@ El resto es pÃºblico. Errores: siempre `{ status: "error", message, code? }` (
 | [`PENDIENTES.md`](PENDIENTES.md) | Backlog vivo: quÃ© estÃ¡ migrado, quÃ© falta y las decisiones abiertas |
 | [`REQUERIMIENTOS-BACKEND.md`](REQUERIMIENTOS-BACKEND.md) | Requisitos por historia de usuario y estado de cada uno |
 | [`ESPECIFICACIONES-BACKEND.md`](ESPECIFICACIONES-BACKEND.md) | Contratos vigentes de la API en detalle (canciones Â§1â€“5, resto Â§6â€“10), con comandos de `curl` (Â§5.2) |
+| [`NOTIFICACIONES-BACKEND.md`](NOTIFICACIONES-BACKEND.md) | Guía para implementar notificaciones: modelo Prisma, REST, WebSocket y adaptación a mobile |
 | [`plan/sprint-*.md`](plan/sprint-1-plan.md) | Planes de sprint con el detalle de implementaciÃ³n |
