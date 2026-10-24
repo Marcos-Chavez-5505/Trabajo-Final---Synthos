@@ -74,6 +74,34 @@ src/
 └── App.jsx
 ```
 
+## Estructura del monorepo (raíz)
+
+```
+/
+├── backend/     # sin cambios. Fuera de "workspaces". Conserva su package-lock.json
+├── frontend/    # web (Vite). No se renombra. Queda solo la UI
+├── shared/      # paquete @synthos/shared. Sin DOM, sin CSS, sin router. Exporta código fuente (main: src/index.js)
+├── mobile/      # app Expo (Fase 7+)
+└── package.json # { "workspaces": ["frontend", "shared", "mobile"] }
+```
+
+`shared/` no importa nada de `frontend/` ni de `mobile/` (regla permanente). `react` es `peerDependency` de `shared`.
+
+## Adaptadores (compartir lógica entre web y mobile)
+
+1. **Storage del token.** Contrato async (`getItem/setItem/removeItem` en Promise). Web envuelve `localStorage`; mobile usa `expo-secure-store`. `AuthContext` lo espera al arrancar.
+2. **Config.** `configureApi({ baseUrl, storage, onUnauthorized })`, llamado al iniciar cada app. El código compartido no lee `import.meta.env` ni `process.env`. Web: `VITE_API_URL`. Mobile: `EXPO_PUBLIC_API_URL`.
+3. **Motor de audio.** `PlayerContext` se separa en lógica (cola, shuffle, repeat, modo sala, posición con `serverNow`) y un motor con interfaz `load / play / pause / seek / onTimeUpdate / onEnded`. Web: `HTMLAudioElement` (adaptador en `frontend/src/lib/audioMotor.js`). Mobile: `react-native-track-player`.
+4. **Archivos.** `uploadProfilePicture` recibe "un archivo"; cada plataforma lo construye (`File` en web, `{ uri, name, type }` en RN).
+
+## Scripts desde la raíz
+
+- `npm run dev -w frontend` (o `npm run dev`): dev server de Vite.
+- `npm run build -w frontend` (o `npm run build`): build de producción.
+- `npm run lint -w frontend` (o `npm run lint`): lint del frontend (oxlint).
+- `npm run lint -w shared`: lint de `shared/` (ESLint, guardas de DOM/imports).
+- `npm run generate:tokens -w shared`: regenera `frontend/src/styles/tokens.css` desde `shared/src/tokens/tokens.js`.
+
 La documentación del proyecto vive en `docs/` (raíz del repo). **No leer todos**: elegir el documento según la pregunta y abrir solo ese (ahorra tokens):
 
 | Pregunta / necesidad                                                                                              | Documento y dónde mirar                                                                                                                                                   |
@@ -144,6 +172,7 @@ Ejemplos: `roomsService.js` → `searchRooms({query,sort,order})`, `getRoomById(
 11. **Tokens: los literales viven solo en `src/styles/tokens.css`.** `styles/utilities.css` (clases `.Wall`, `.Fucsia`, `.TextRegluar`…) y `styles/base.css` (resets) se derivan con `var(--ds-*)`, y el puente semántico de shadcn en `src/index.css` (`:root` con `--background`, `--primary`, `--sidebar*`… y el `@theme inline`) también: **nunca** escribir un hex, un `px` de fuente o un `box-shadow` en otro archivo CSS ni en estilos inline de un componente. Para un color nuevo: primero el token en `tokens.css`, después su clase (si corresponde al design system) o su mapeo en el `:root` de `index.css` (si es una utilidad semántica de shadcn que lo necesita). Las clases del design system viven en `@layer components`, así que una utilidad Tailwind las sobrescribe (`className="Wall bg-red-500"`). ⚠️ `components.json` apunta `tailwind.css` a `src/index.css`: el CLI de shadcn reinyecta ahí su propio `:root` neutral, que al ir después en la cascada pisa el design system — si se corre `npx shadcn add`, hay que revisar y volver a dejar el bloque en `var(--ds-*)`.
 12. **Git: no subir commits ni crear ramas sin autorización previa.** No ejecutar `git push` (ni `--force`/`--force-with-lease`, ni tags), **no crear ramas o tags**, no abrir PRs, y no hacer `reset --hard`/`rebase` sobre ramas ya publicadas, salvo que el usuario lo pida o lo autorice explícitamente en el mensaje. Sí se pueden hacer lecturas (`status`, `diff`, `log`, `show`) y commits locales. Ante la duda, **preguntar antes**: publicar afecta a otras personas y no se improvisa.
 13. **No salir del proyecto.** Todo lo que se lea o se escriba tiene que estar dentro de la raíz del repo. Nada de subir un nivel con `..` ni de asomarse a carpetas vecinas (por ejemplo, la carpeta que contiene al repo, que puede tener otros proyectos): ni para leer, ni para escribir, ni para comprobar si algo existe ahí. Aplica a todas las herramientas: rutas de `Read`/`Grep`/`Glob`, y comandos de shell, donde además conviene usar rutas relativas al `workdir` en vez de absolutas. Si de verdad hace falta un archivo temporal (un script suelto, una salida), va en la carpeta temporal que autorice el entorno, nunca dentro de otra carpeta del disco y nunca en una ruta que se pueda stagear por error.
+14. **`shared/` no importa de las apps.** `shared/` no puede importar de `frontend/` ni de `mobile/`. Los adaptadores se inyectan por configuración. El lint de `shared/` lo garantiza (`no-restricted-imports`).
 
 ### 12.1 Criterio para ramas desprendidas de `dev`
 

@@ -5,12 +5,16 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "generate:tokens": "node scripts/generate-tokens.mjs"
+    "generate:tokens": "node scripts/generate-tokens.mjs",
+    "lint": "eslint ."
   },
   "dependencies": {
     "socket.io-client": "^4.8.4"
   },
   "peerDependencies": {
     "react": "^19.3.1"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5"
   }
 }

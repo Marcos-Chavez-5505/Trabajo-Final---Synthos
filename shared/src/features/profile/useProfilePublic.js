@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { getUserById } from '../../services/usersService.js'
-import { mapApiError } from '../../utils/mapError.js'
 
 /**
  * Estado del perfil público de otra persona.

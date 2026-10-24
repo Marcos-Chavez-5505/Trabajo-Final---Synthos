@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react'
 import { getUserById, listFollowers, listFollowing } from '../../services/usersService.js'
 import { mapApiError } from '../../utils/mapError.js'
 
-const TIPOS = ['seguidores', 'siguiendo']
-
 /**
  * Estado de la lista de seguidores/seguidos.
  *
