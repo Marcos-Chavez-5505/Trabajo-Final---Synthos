@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "workspaces": [
     "frontend",
-    "shared"
+    "shared",
+    "mobile"
   ],
   "scripts": {
     "dev": "npm run dev -w frontend",
