@@ -1,11 +1,8 @@
-import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { getArtistById } from '@synthos/shared'
-import { ALBUM_TYPE_LABELS } from '@synthos/shared'
+import { useArtistDetail, ALBUM_TYPE_LABELS } from '@synthos/shared'
 import Avatar from '../../components/ui/Avatar.jsx'
 import MiniMediaCard from '../../components/cards/MiniMediaCard.jsx'
 import albumIcon from '../../assets/album.svg'
-import { mapApiError } from '@synthos/shared'
 
 /**
  * `/artistas/:id`: cabecera del artista y grilla de sus álbumes.
@@ -17,29 +14,7 @@ export default function ArtistDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  const [response, setResponse] = useState({ key: null, artist: null, error: null })
-
-  useEffect(() => {
-    let active = true
-
-    getArtistById(id)
-      .then((artist) => {
-        if (active) setResponse({ key: String(id), artist, error: null })
-      })
-      .catch((cause) => {
-        if (active) {
-          setResponse({ key: String(id), artist: null, error: mapApiError(cause) })
-        }
-      })
-
-    return () => {
-      active = false
-    }
-  }, [id])
-
-  const isCurrent = response.key === String(id)
-  const artist = isCurrent ? response.artist : null
-  const error = isCurrent ? response.error : null
+  const { artist, error } = useArtistDetail(id)
 
   if (error) {
     return (
