@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import useDebounce from '../../hooks/useDebounce.js'
-import buildPageRange from '../../lib/pageRange.js'
-import { searchUsers, SEARCH_PAGE_SIZE } from '../../services/usersService.js'
+import { buildPageRange, useSearchPeople } from '@synthos/shared'
 import SearchPersonRow from './SearchPersonRow.jsx'
 import SearchTabs from './SearchTabs.jsx'
 import {
@@ -14,54 +12,15 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../../components/ui/pagination'
-import { mapApiError } from '../../utils/mapError.js'
-
-const DEBOUNCE_MS = 300
-
-const EMPTY_RESULTS = { items: [], total: 0, page: 1, pageSize: 1, totalPages: 1 }
 
 export default function SearchPeople() {
   const [searchParams, setSearchParams] = useSearchParams()
 
-  // Igual que en SearchSongs: la query y la página viven en la URL para que el
-  // resultado sea compartible y el "atrás" del browser funcione.
   const query = searchParams.get('q') ?? ''
   const page = Math.max(Number(searchParams.get('page')) || 1, 1)
 
-  const debouncedQuery = useDebounce(query, DEBOUNCE_MS)
+  const { isLoading, error, results } = useSearchPeople(query, page)
 
-  // La respuesta se guarda con la key que la pidió: el loading se deriva en vez
-  // de setear un booleano, y nunca se ve un resultado viejo con la query nueva.
-  const requestKey = `${debouncedQuery}::${page}`
-  const [response, setResponse] = useState({ key: null, data: null, error: null })
-
-  useEffect(() => {
-    let active = true
-
-    searchUsers(debouncedQuery, page, SEARCH_PAGE_SIZE)
-      .then((data) => {
-        if (!active) return
-
-        setResponse({ key: requestKey, data, error: null })
-      })
-      .catch((cause) => {
-        if (!active) return
-
-        setResponse({ key: requestKey, data: null, error: mapApiError(cause) })
-      })
-
-    return () => {
-      active = false
-    }
-  }, [debouncedQuery, page, requestKey])
-
-  const isCurrent = response.key === requestKey
-  const isLoading = !isCurrent
-  const error = isCurrent ? response.error : null
-  const results = isCurrent ? (response.data ?? EMPTY_RESULTS) : EMPTY_RESULTS
-
-  // Si la URL pedía una página que ya no existe (el total bajó al cambiar la
-  // query), se corrige acá en vez de mostrar un "sin resultados" engañoso.
   useEffect(() => {
     if (results.total > 0 && results.page !== page) {
       setSearchParams(
@@ -117,11 +76,7 @@ export default function SearchPeople() {
         <>
           <ul className="flex flex-col gap-3">
             {results.items.map((person) => (
-              // La key incluye la página: al repaginar las filas se remontan
-              // con el estado fresco de `isFollowing` que trae la respuesta.
               <li key={`${results.page}-${person.id}`}>
-                {/* Misma fila que seguidores/seguidos (TS-10) + botón seguir
-                    que se actualiza solo, sin recargar (TS-10b). */}
                 <SearchPersonRow person={person} />
               </li>
             ))}

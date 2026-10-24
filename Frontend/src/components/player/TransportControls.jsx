@@ -4,7 +4,7 @@ import previousIcon from '../../assets/previous_track.svg'
 import playIcon from '../../assets/play.svg'
 import pauseIcon from '../../assets/pause.svg'
 import nextIcon from '../../assets/next_track.svg'
-import usePlayer from '../../hooks/usePlayer.js'
+import { usePlayer } from '@synthos/shared'
 
 /* ======================================================
    TRANSPORT - valores de expansión originales

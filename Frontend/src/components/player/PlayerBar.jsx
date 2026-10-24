@@ -1,11 +1,12 @@
 import musicNoteIcon from '../../assets/music_note.svg'
 import expandIcon from '../../assets/expand.svg'
 import collapseIcon from '../../assets/collapse.svg'
-import usePlayer from '../../hooks/usePlayer.js'
+import { usePlayer } from '@synthos/shared'
 import AddToPlaylistPanel from '../../features/playlists/AddToPlaylistPanel.jsx'
 import FavoriteButton from '../../features/playlists/FavoriteButton.jsx'
 import PlayerControls from './PlayerControls.jsx'
 import ProgressBar from './ProgressBar.jsx'
+import { getExpandOrigin } from '../../lib/expandOrigin.js'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '../ui/tooltip.tsx'
 
 // Los tooltips del reproductor (mismos del sidebar) aparecen recién después de
@@ -38,7 +39,7 @@ function SongCover({ song }) {
  * canción.
  */
 export default function PlayerBar() {
-  const { song, currentTime, duration, seek, isIdle, isExpanded, expand } = usePlayer()
+  const { song, currentTime, duration, seek, isIdle, isExpanded, expand, roomMode } = usePlayer()
 
   return (
     <footer className="Volume relative shrink-0 border-t border-sidebar-border">
@@ -82,7 +83,7 @@ export default function PlayerBar() {
                   render={
                     <button
                       type="button"
-                      onClick={expand}
+                      onClick={(event) => expand(getExpandOrigin(event.currentTarget))}
                       aria-label={isExpanded ? "Colapsar" : "Expandir"}
                       aria-expanded={isExpanded}
                       className="shrink-0 rounded-full p-2 Volume hover:opacity-80"
@@ -108,6 +109,7 @@ export default function PlayerBar() {
             duration={duration}
             onSeek={seek}
             size="sm"
+            disabled={roomMode}
             className="px-2 pb-3 sm:px-4"
           />
         </div>

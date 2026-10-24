@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import usePlayer from '../../hooks/usePlayer.js'
-import { getAlbumById } from '../../services/albumsService.js'
+import { usePlayer } from '@synthos/shared'
+import { getAlbumById } from '@synthos/shared'
 import MiniMediaCard from '../../components/cards/MiniMediaCard.jsx'
 import albumIcon from '../../assets/album.svg'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 const TYPE_LABELS = { single: 'Sencillo', ep: 'EP', album: 'Álbum' }
 

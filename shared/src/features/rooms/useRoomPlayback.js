@@ -81,6 +81,8 @@ export default function useRoomPlayback({ roomId, songs, isHost, onEnded }) {
     exitRoomMode,
     goIdle,
     setPlayBlocked,
+    getAudioCurrentTime,
+    hasAudio,
   } = usePlayer()
 
   const [playback, setPlayback] = useState(null)
@@ -184,20 +186,18 @@ export default function useRoomPlayback({ roomId, songs, isHost, onEnded }) {
 
       if (!current || current.status !== 'playing') return
 
-      const audio = document.querySelector('audio')
-
-      if (!audio) return
+      if (!hasAudio()) return
 
       const position = remotePositionMs(current)
-      const drift = Math.abs(audio.currentTime * 1000 - position)
+      const drift = Math.abs(getAudioCurrentTime() * 1000 - position)
 
       if (drift > DRIFT_TOLERANCE_MS) {
-        seek(position / 1000)
+        seek(position / 1000, true)
       }
     }, DRIFT_CHECK_MS)
 
     return () => clearInterval(id)
-  }, [roomId, seek])
+  }, [roomId, seek, getAudioCurrentTime, hasAudio])
 
   // El navegador bloquea el autoplay si nadie tocó nada todavía. Cuando eso pasa,
   // `play()` es rechazado, el player queda pausado y el de la sala no puede hacer

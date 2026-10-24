@@ -5,6 +5,26 @@
 // La base es `/api` y las llamadas son relativas a propósito. En dev las redirige
 // el proxy de `vite.config.js` hacia `localhost:3000`; en producción las sirve el
 // reverse proxy. Así el mismo build funciona en los dos sin variables de entorno.
+let baseUrl = '/api'
+let storage = null
+
+export function getApiBaseUrl() {
+  return baseUrl
+}
+
+export function getStorage() {
+  return storage
+}
+
+export function configureApi({ baseUrl: newBaseUrl, storage: newStorage, onUnauthorized } = {}) {
+  if (newBaseUrl) baseUrl = newBaseUrl
+  if (newStorage) storage = newStorage
+  if (typeof onUnauthorized === 'function') {
+    unauthorizedHandler = onUnauthorized
+  }
+}
+
+// Compat: alias del valor inicial. Preferir getApiBaseUrl().
 export const API_BASE_URL = '/api'
 
 /**
@@ -25,7 +45,7 @@ export class ApiError extends Error {
 
 // El token de la sesión vive acá y no en cada service: lo setea `authService`
 // al iniciar/cerrar sesión (ver REQ-HTTP-1). Se guarda en memoria a propósito,
-// no se relee de localStorage en cada request: así el service no conoce el
+// no se relee de storage local en cada request: así el service no conoce el
 // formato de la sesión y no hay dos fuentes de verdad.
 let authToken = null
 
@@ -43,7 +63,7 @@ export function setAuthToken(token) {
  * Vive acá porque el token es de `api.js`: `socketService` lo necesita para el
  * handshake de Socket.IO, que no pasa por `fetch` ni por el header
  * `Authorization`. Es la única forma de que otro módulo use el token sin que
- * tenga que leer `localStorage` (que es el formato de la sesión, no del
+ * tenga que leer `storage local` (que es el formato de la sesión, no del
  * transporte).
  *
  * @returns {string|null}
@@ -80,7 +100,7 @@ function buildUrl(path, params) {
 
   const query = search.toString()
 
-  return `${API_BASE_URL}${path}${query ? `?${query}` : ''}`
+  return `${baseUrl}${path}${query ? `?${query}` : ''}`
 }
 
 /**

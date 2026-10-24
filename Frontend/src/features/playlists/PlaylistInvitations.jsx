@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import useAuth from '../../hooks/useAuth.js'
+import { useAuth } from '@synthos/shared'
 import {
   acceptPlaylistInvitation,
   listReceivedInvitations,
   rejectPlaylistInvitation,
   subscribeToPlaylists,
-} from '../../services/playlistsService.js'
+} from '@synthos/shared'
 import Avatar from '../../components/ui/Avatar.jsx'
 import playlistIcon from '../../assets/playlist.svg'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 /**
  * Bandeja de invitaciones a playlists colaborativas (TS-13), la tercera sub-pestaña

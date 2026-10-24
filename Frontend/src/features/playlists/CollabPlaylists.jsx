@@ -1,7 +1,7 @@
 import { SidebarGroup, SidebarGroupLabel } from '../../components/ui/sidebar.tsx'
 import SidebarAnimatedGroup from '../../components/layout/SidebarAnimatedGroup.jsx'
 import PlaylistSidebarList from './PlaylistSidebarList.jsx'
-import usePlaylistList from './usePlaylistList.js'
+import { usePlaylistList } from '@synthos/shared'
 
 /**
  * Sección "Playlists Colaborativas" del Sidebar (TS-12): las colaborativas donde

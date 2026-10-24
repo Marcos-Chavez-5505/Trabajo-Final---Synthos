@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import useDebounce from '../../hooks/useDebounce.js'
-import buildPageRange from '../../lib/pageRange.js'
-import { listArtists } from '../../services/artistsService.js'
+import { buildPageRange, useArtists } from '@synthos/shared'
 import ArtistCard from '../../components/cards/ArtistCard.jsx'
 import microphoneIcon from '../../assets/microphone.svg'
 import searchIcon from '../../assets/search.svg'
@@ -15,11 +13,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../../components/ui/pagination'
-import { mapApiError } from '../../utils/mapError.js'
-
-const DEBOUNCE_MS = 300
-
-const EMPTY_RESULTS = { items: [], total: 0, page: 1, pageSize: 1, totalPages: 1 }
 
 /**
  * `/artistas`: catálogo de artistas de la sección "Mi Colección".
@@ -35,36 +28,7 @@ export default function Artists() {
   const query = searchParams.get('q') ?? ''
   const page = Math.max(Number(searchParams.get('page')) || 1, 1)
 
-  const debouncedQuery = useDebounce(query, DEBOUNCE_MS)
-
-  const requestKey = `${debouncedQuery}::${page}`
-  const [response, setResponse] = useState({ key: null, data: null, error: null })
-
-  useEffect(() => {
-    const controller = new AbortController()
-    let active = true
-
-    listArtists(debouncedQuery, page, undefined, { signal: controller.signal })
-      .then((data) => {
-        if (!active) return
-
-        setResponse({ key: requestKey, data, error: null })
-      })
-      .catch((cause) => {
-        if (!active) return
-
-        setResponse({ key: requestKey, data: null, error: mapApiError(cause) })
-      })
-
-    return () => {
-      active = false
-      controller.abort()
-    }
-  }, [debouncedQuery, page, requestKey])
-
-  const isCurrent = response.key === requestKey
-  const error = isCurrent ? response.error : null
-  const results = isCurrent ? (response.data ?? EMPTY_RESULTS) : EMPTY_RESULTS
+  const { isCurrent, error, results } = useArtists(query, page)
 
   // Si la URL pedía una página fuera de rango (el total bajó al buscar), se
   // corrige acá en vez de mostrar un vacío que parezca "no hay artistas".

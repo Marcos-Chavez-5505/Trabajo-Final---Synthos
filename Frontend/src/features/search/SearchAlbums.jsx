@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import useDebounce from '../../hooks/useDebounce.js'
-import buildPageRange from '../../lib/pageRange.js'
-import { listAlbums, ALBUM_TYPE_LABELS } from '../../services/albumsService.js'
+import { buildPageRange, useSearchAlbums, ALBUM_TYPE_LABELS } from '@synthos/shared'
 import MiniMediaCard from '../../components/cards/MiniMediaCard.jsx'
 import SearchTabs from './SearchTabs.jsx'
 import {
@@ -14,63 +12,15 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../../components/ui/pagination'
-import { mapApiError } from '../../utils/mapError.js'
 
-const DEBOUNCE_MS = 300
-
-const EMPTY_RESULTS = { items: [], total: 0, page: 1, pageSize: 1, totalPages: 1 }
-
-// Mismo tamaño de página que la pestaña de canciones: son las dos grillas de
-// `MiniMediaCard`, así que paginan igual.
-const PAGE_SIZE = 10
-
-/**
- * Pestaña "Álbumes" de `/buscar`: la búsqueda de discos por nombre o por artista.
- *
- * Es `SearchSongs` con otro service y otra card. La query y la página viven en la
- * URL (`?q=`, `?page=`), igual que en las otras dos pestañas, así que el input
- * global de `TopBar` y el botón "atrás" funcionan igual.
- *
- * La card lleva al detalle del disco (`/albums/:id`) y no lo reproduce: para
- * reproducir haría falta pedir las pistas de cada álbum de la página.
- */
 export default function SearchAlbums() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
   const query = searchParams.get('q') ?? ''
   const page = Math.max(Number(searchParams.get('page')) || 1, 1)
-  const debouncedQuery = useDebounce(query, DEBOUNCE_MS)
 
-  const requestKey = `${debouncedQuery}::${page}`
-  const [response, setResponse] = useState({ key: null, data: null, error: null })
-
-  useEffect(() => {
-    const controller = new AbortController()
-    let active = true
-
-    listAlbums(debouncedQuery, page, PAGE_SIZE, { signal: controller.signal })
-      .then((data) => {
-        if (!active) return
-
-        setResponse({ key: requestKey, data, error: null })
-      })
-      .catch((cause) => {
-        if (!active) return
-
-        setResponse({ key: requestKey, data: null, error: mapApiError(cause) })
-      })
-
-    return () => {
-      active = false
-      controller.abort()
-    }
-  }, [debouncedQuery, page, requestKey])
-
-  const isCurrent = response.key === requestKey
-  const isLoading = !isCurrent
-  const error = isCurrent ? response.error : null
-  const results = isCurrent ? (response.data ?? EMPTY_RESULTS) : EMPTY_RESULTS
+  const { isLoading, error, results } = useSearchAlbums(query, page)
 
   useEffect(() => {
     if (results.total > 0 && results.page !== page) {

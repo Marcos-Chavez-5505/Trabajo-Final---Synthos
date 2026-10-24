@@ -1,9 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import useDebounce from '../../hooks/useDebounce.js'
-import usePlayer from '../../hooks/usePlayer.js'
-import buildPageRange from '../../lib/pageRange.js'
-import { searchSongs } from '../../services/songsService.js'
+import { usePlayer, buildPageRange, useSearchSongs } from '@synthos/shared'
 import MiniMediaCard from '../../components/cards/MiniMediaCard.jsx'
 import SearchTabs from './SearchTabs.jsx'
 import {
@@ -15,57 +12,15 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../../components/ui/pagination'
-import { mapApiError } from '../../utils/mapError.js'
-
-export const DEBOUNCE_MS = 300
-
-const EMPTY_RESULTS = { items: [], total: 0, page: 1, pageSize: 1, totalPages: 1 }
 
 export default function SearchSongs() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { playSongs, addToQueue } = usePlayer()
 
-  // La query vive en la URL: la búsqueda se puede compartir y el input de
-  // TopBar (/buscar?q=) apunta a esta misma pantalla.
   const query = searchParams.get('q') ?? ''
   const page = Math.max(Number(searchParams.get('page')) || 1, 1)
 
-  // Se busca con la query ya debounceada: tipear rápido no dispara una
-  // búsqueda por tecla.
-  const debouncedQuery = useDebounce(query, DEBOUNCE_MS)
-
-  // Cada respuesta se guarda junto a la query+página que la pidió. El loading se
-  // deriva comparando keys en vez de setear un booleano, así no hay un render
-  // extra en cascada y nunca se muestra un resultado viejo con la query nueva.
-  const requestKey = `${debouncedQuery}::${page}`
-  const [response, setResponse] = useState({ key: null, data: null, error: null })
-
-  useEffect(() => {
-    const controller = new AbortController()
-    let active = true
-
-    searchSongs(debouncedQuery, page, undefined, { signal: controller.signal })
-      .then((data) => {
-        if (!active) return
-
-        setResponse({ key: requestKey, data, error: null })
-      })
-      .catch((cause) => {
-        if (!active) return
-
-        setResponse({ key: requestKey, data: null, error: mapApiError(cause) })
-      })
-
-    return () => {
-      active = false
-      controller.abort()
-    }
-  }, [debouncedQuery, page, requestKey])
-
-  const isCurrent = response.key === requestKey
-  const isLoading = !isCurrent
-  const error = isCurrent ? response.error : null
-  const results = isCurrent ? (response.data ?? EMPTY_RESULTS) : EMPTY_RESULTS
+  const { isLoading, error, results } = useSearchSongs(query, page)
 
   // El service acota la página a un rango válido. Si la URL pedía una que ya no
   // existe (bajó el total de resultados al cambiar la query), se corrige en la
@@ -76,8 +31,6 @@ export default function SearchSongs() {
     }
   }, [results, page, query, setSearchParams])
 
-  // Href de cada página. Sin query no se escribe ?q= vacío en la URL, y `tipo` se
-  // arrastra para que la paginación no salte a la pestaña de personas.
   const pageHref = (target) => {
     const params = new URLSearchParams()
 

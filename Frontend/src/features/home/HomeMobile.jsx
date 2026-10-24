@@ -1,4 +1,4 @@
-import useAuth from '../../hooks/useAuth.js'
+import { useAuth } from '@synthos/shared'
 
 // TODO(agente, TS-06/TS-07): este es solo el shell para que /home sea navegable.
 // Cuando se implemente el contenido (novedades y salas sugeridas) hay que

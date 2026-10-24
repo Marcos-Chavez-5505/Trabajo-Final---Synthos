@@ -1,4 +1,4 @@
-import usePlayer from '../../hooks/usePlayer.js'
+import { usePlayer } from '@synthos/shared'
 import Sidebar from './Sidebar.jsx'
 import TopBar from './TopBar.jsx'
 import PlayerBar from '../player/PlayerBar.jsx'

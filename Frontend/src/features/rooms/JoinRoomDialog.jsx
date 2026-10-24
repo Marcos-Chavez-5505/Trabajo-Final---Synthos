@@ -7,8 +7,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../../components/ui/sheet'
-import { joinRoom } from '../../services/roomsService.js'
-import { mapApiError } from '../../utils/mapError.js'
+import { joinRoom } from '@synthos/shared'
+import { mapApiError } from '@synthos/shared'
 
 /**
  * Modal "Unirme con código" (TS-14).

@@ -1,7 +1,7 @@
 import playIcon from '../../assets/play.svg'
 import pauseIcon from '../../assets/pause.svg'
 import nextIcon from '../../assets/next_track.svg'
-import usePlayer from '../../hooks/usePlayer.js'
+import { usePlayer } from '@synthos/shared'
 import FavoriteButton from '../../features/playlists/FavoriteButton.jsx'
 import { ControlButton } from '../player/PlayerControls.jsx'
 import ProgressBar from '../player/ProgressBar.jsx'
@@ -68,6 +68,7 @@ export default function MiniPlayerBar() {
           duration={duration}
           onSeek={seek}
           size="sm"
+          disabled={roomMode}
           className="px-4 pb-2"
         />
       </div>

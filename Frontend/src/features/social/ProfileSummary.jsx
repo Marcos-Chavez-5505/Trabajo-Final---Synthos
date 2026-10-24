@@ -20,8 +20,8 @@ import {
 	SidebarMenuItem,
 	useSidebarLabelMotion,
 } from "../../components/ui/sidebar.tsx";
-import useAuth from "../../hooks/useAuth.js";
-import useFollow from "./useFollow.js";
+import { useAuth } from '@synthos/shared';
+import { useFollow } from '@synthos/shared';
 import logoutIcon from "../../assets/logout.svg";
 import playlistIcon from "../../assets/playlist.svg";
 import userIcon from "../../assets/user.svg";

@@ -1,8 +1,8 @@
 import shuffleIcon from '../../assets/shuffle.svg'
 import repeatIcon from '../../assets/repeat.svg'
 import repeatOneIcon from '../../assets/repeat_only_one.svg'
-import usePlayer from '../../hooks/usePlayer.js'
-import useFavorites from '../../hooks/useFavorites.js'
+import { usePlayer } from '@synthos/shared'
+import { useFavorites } from '@synthos/shared'
 import FavoriteButton from '../../features/playlists/FavoriteButton.jsx'
 import AddToPlaylistPanel from '../../features/playlists/AddToPlaylistPanel.jsx'
 

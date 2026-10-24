@@ -1,34 +1,10 @@
-import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Avatar from '../../components/ui/Avatar.jsx'
 import UserRow from '../../components/cards/UserRow.jsx'
-import useAuth from '../../hooks/useAuth.js'
-import {
-  getUserById,
-  listFollowers,
-  listFollowing,
-} from '../../services/usersService.js'
-import { mapApiError } from '../../utils/mapError.js'
+import { useAuth, useFollowList } from '@synthos/shared'
 
 const TIPOS = ['seguidores', 'siguiendo']
 
-/**
- * Lista de seguidores o seguidos (TS-10).
- *
- * Una sola pantalla para las cuatro rutas: `/perfil/seguidores`,
- * `/perfil/siguiendo` (las propias) y `/profile/:id/seguidores`,
- * `/profile/:id/siguiendo` (de otra persona). El `id` de la URL decide a quién
- * se le piden los datos; si no viene, es el usuario de la sesión.
- *
- * La relación llega por prop y no por `:tipo` en la URL a propósito: con rutas
- * literales, `/perfil/cualquiera` no matchea nada y cae en el catch-all, en vez
- * de mostrar una lista equivocada. Igual se valida, porque el día que estas
- * rutas se armen con un parámetro el default silencioso es un bug esperando.
- *
- * Las listas son cortas y no se paginan: el criterio del plan pide verlas, y en
- * el mock son un puñado de personas. Si más adelante hacen falta páginas, el
- * contrato es el mismo de `searchUsers`.
- */
 export default function FollowList({ relation: requested }) {
   const { id } = useParams()
   const { user } = useAuth()
@@ -37,55 +13,7 @@ export default function FollowList({ relation: requested }) {
   const personId = isOwn ? (user?.id ?? null) : id
   const relation = TIPOS.includes(requested) ? requested : 'seguidores'
 
-  // La lista se pide con la key que la pidió, igual que en SearchPeople: al
-  // navegar de una persona a otra nunca se ve la lista anterior.
-  const requestKey = `${personId ?? 'anon'}::${relation}`
-  const [response, setResponse] = useState({ key: null, people: [], error: null })
-  const [personResult, setPersonResult] = useState({ id: null, person: null })
-
-  useEffect(() => {
-    if (!personId) return undefined
-
-    let active = true
-
-    const request =
-      relation === 'seguidores' ? listFollowers(personId) : listFollowing(personId)
-
-    request
-      .then((people) => {
-        if (active) setResponse({ key: requestKey, people, error: null })
-      })
-      .catch((cause) => {
-        if (active) setResponse({ key: requestKey, people: [], error: mapApiError(cause) })
-      })
-
-    return () => {
-      active = false
-    }
-  }, [personId, relation, requestKey])
-
-  // El encabezado se resuelve contra el backend (id real). Si falla, degrada a
-  // un título sin avatar en vez de romper la pantalla.
-  useEffect(() => {
-    if (!personId) return undefined
-
-    const controller = new AbortController()
-    let active = true
-
-    getUserById(personId, { signal: controller.signal })
-      .then((found) => {
-        if (active) setPersonResult({ id: personId, person: found })
-      })
-      .catch((error) => {
-        if (!active || error.name === 'AbortError') return
-        setPersonResult({ id: personId, person: null })
-      })
-
-    return () => {
-      active = false
-      controller.abort()
-    }
-  }, [personId])
+  const { isCurrent, people, person, error } = useFollowList(personId, relation)
 
   if (!personId) {
     return (
@@ -97,11 +25,6 @@ export default function FollowList({ relation: requested }) {
     )
   }
 
-  const isCurrent = response.key === requestKey
-  const people = isCurrent ? response.people : []
-  // La persona a la que pertenece la lista. Puede no estar (el id viene de la
-  // URL), y en ese caso el encabezado degrada a un título sin avatar.
-  const person = personResult.id === personId ? personResult.person : null
   const title = relation === 'seguidores' ? 'Seguidores' : 'Seguidos'
 
   const backTo = isOwn ? '/perfil' : `/profile/${personId}`
@@ -132,8 +55,8 @@ export default function FollowList({ relation: requested }) {
 
       {!isCurrent ? (
         <p className="text-muted-foreground TextRegluar mt-8">Cargando…</p>
-      ) : response.error ? (
-        <p className="text-muted-foreground TextRegluar mt-8">{response.error}</p>
+      ) : error ? (
+        <p className="text-muted-foreground TextRegluar mt-8">{error}</p>
       ) : people.length === 0 ? (
         <div className="mt-8">
           <p className="text-foreground Header4 mb-1">

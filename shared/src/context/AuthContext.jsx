@@ -22,8 +22,8 @@ export default function AuthProvider({ children }) {
   // se limpia la sesión y `RequireAuth` redirige a /login al ver `user` null.
   // No se navega desde acá porque el provider está fuera del Router.
   useEffect(() => {
-    setUnauthorizedHandler(() => {
-      clearSession()
+    setUnauthorizedHandler(async () => {
+      await clearSession()
       setUser(null)
     })
 

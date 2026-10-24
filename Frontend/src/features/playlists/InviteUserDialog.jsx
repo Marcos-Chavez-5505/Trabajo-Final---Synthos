@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import useDebounce from '../../hooks/useDebounce.js'
-import { searchUsers } from '../../services/usersService.js'
-import { sendInvitation } from '../../services/playlistsService.js'
+import { useDebounce } from '@synthos/shared'
+import { searchUsers } from '@synthos/shared'
+import { sendInvitation } from '@synthos/shared'
 import {
   Sheet,
   SheetContent,
@@ -11,7 +11,7 @@ import {
 } from '../../components/ui/sheet'
 import { Input } from '../../components/ui/input'
 import UserRow from '../../components/cards/UserRow.jsx'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 const DEBOUNCE_MS = 300
 const PAGE_SIZE = 10

@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import LoadingScreen from '../components/ui/LoadingScreen.jsx'
-import useAuth from '../hooks/useAuth.js'
+import { useAuth } from '@synthos/shared'
 
 export default function PublicOnly({ children }) {
   const { user, loading } = useAuth()

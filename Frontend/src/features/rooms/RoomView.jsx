@@ -9,16 +9,16 @@ import {
   leaveRoom,
   voteSkip,
   rateHost,
-} from '../../services/roomsService.js'
+} from '@synthos/shared'
 import {
   connectSocket,
   joinRoomChannel,
   leaveRoomChannel,
   subscribeToRoomEvent,
-} from '../../services/socketService.js'
-import useAuth from '../../hooks/useAuth.js'
-import usePlayer from '../../hooks/usePlayer.js'
-import useRoomPlayback from './useRoomPlayback.js'
+} from '@synthos/shared'
+import { useAuth } from '@synthos/shared'
+import { usePlayer } from '@synthos/shared'
+import { useRoomPlayback } from '@synthos/shared'
 import Avatar from '../../components/ui/Avatar.jsx'
 import ProgressBar from '../../components/player/ProgressBar.jsx'
 import roomIcon from '../../assets/join_music_room.svg'
@@ -29,7 +29,7 @@ import fullHeartIcon from '../../assets/full_heart.svg'
 import emptyHeartIcon from '../../assets/empty_heart.svg'
 import volumeOnIcon from '../../assets/volume_on.svg'
 import volumeOffIcon from '../../assets/volume_off.svg'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 // Aviso que se muestra al volver al listado (expulsado, sala cerrada, salida).
 // Va en `sessionStorage` porque la redirección cambia la ruta, no sobrevive un

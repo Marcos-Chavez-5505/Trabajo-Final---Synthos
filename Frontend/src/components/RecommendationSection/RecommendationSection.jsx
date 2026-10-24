@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import Avatar from "../ui/Avatar.jsx";
-import usePlayer from "../../hooks/usePlayer.js";
-import { useRecommendationContext } from "../../context/recommendationContext.jsx";
+import { usePlayer } from '@synthos/shared';
+import { useRecommendationContext } from '@synthos/shared';
 
 export default function RecommendationSection({ emptyMessage }) {
 	const { items, loading, error, retry } = useRecommendationContext();

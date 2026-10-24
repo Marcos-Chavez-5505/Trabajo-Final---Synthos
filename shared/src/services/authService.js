@@ -1,7 +1,7 @@
 // Sesión contra el backend real. La API de este módulo es async y devuelve
 // `{ success, user }` en register/login (el componente no maneja excepciones de
 // red: se traducen a `success: false` con mensaje).
-import { get, post, setAuthToken, ApiError } from './api.js'
+import { get, post, setAuthToken, ApiError, getStorage } from './api.js'
 
 // Guarda el token y el usuario ya mapeado (no la respuesta cruda del backend):
 // así una recarga sin conexión puede reconstruir la sesión sin volver a mapear.
@@ -33,26 +33,33 @@ function toUser(raw) {
   }
 }
 
-function readSession() {
+async function readSession() {
   try {
-    const stored = localStorage.getItem(SESSION_KEY)
+    const storage = getStorage()
+    const stored = storage ? await storage.getItem(SESSION_KEY) : null
     return stored ? JSON.parse(stored) : null
   } catch {
     return null
   }
 }
 
-function writeSession({ token, user }) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ token, user }))
+async function writeSession({ token, user }) {
+  const storage = getStorage()
+  if (storage) {
+    await storage.setItem(SESSION_KEY, JSON.stringify({ token, user }))
+  }
 }
 
 /**
  * Cierra la sesión local: quita el token de la API y borra lo guardado.
  * Lo usan `logoutUser` y el handler de 401 de `AuthProvider`.
  */
-export function clearSession() {
+export async function clearSession() {
   setAuthToken(null)
-  localStorage.removeItem(SESSION_KEY)
+  const storage = getStorage()
+  if (storage) {
+    await storage.removeItem(SESSION_KEY)
+  }
 }
 
 /**
@@ -66,7 +73,7 @@ export function clearSession() {
  * sesión sobreviva a un problema pasajero del servidor.
  */
 export async function getCurrentUser() {
-  const session = readSession()
+  const session = await readSession()
 
   if (!session?.token) return null
 
@@ -76,7 +83,7 @@ export async function getCurrentUser() {
     const raw = await get('/users/me')
     const user = toUser(raw)
 
-    writeSession({ token: session.token, user })
+    await writeSession({ token: session.token, user })
 
     return user
   } catch (error) {
@@ -91,7 +98,7 @@ export async function getCurrentUser() {
     // Token vencido o usuario que ya no existe: la sesión no sirve más y se
     // descarta, así no se reintenta en cada arranque.
     if (error.status === 401 || error.status === 404) {
-      clearSession()
+      await clearSession()
     }
 
     // Cualquier otro status (5xx) no borra lo guardado, pero tampoco habilita el
@@ -110,7 +117,7 @@ export async function registerUser({ email, username, password }) {
     const user = toUser(data.user)
 
     setAuthToken(data.token)
-    writeSession({ token: data.token, user })
+    await writeSession({ token: data.token, user })
 
     return { success: true, user }
   } catch (error) {
@@ -126,7 +133,7 @@ export async function loginUser(email, password) {
     const user = toUser(data.user)
 
     setAuthToken(data.token)
-    writeSession({ token: data.token, user })
+    await writeSession({ token: data.token, user })
 
     return { success: true, user }
   } catch (error) {
@@ -140,6 +147,6 @@ export async function logoutUser() {
   } catch {
     // El logout del backend es best-effort: la sesión local se cierra igual.
   } finally {
-    clearSession()
+    await clearSession()
   }
 }

@@ -1,138 +1,70 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import Avatar from '../../components/ui/Avatar.jsx'
-import useAuth from '../../hooks/useAuth.js'
-import { mapApiError } from '../../utils/mapError.js'
+import { useProfileEdit } from '@synthos/shared'
 import { prepareProfileImage, previewUrlFor } from './profileImage.js'
 
 const ACCEPT = 'image/jpeg,image/png,image/webp'
 
 export default function ProfileEdit({ onDone }) {
-  const { user, updateProfile, uploadProfilePicture } = useAuth()
+  const {
+    username,
+    setUsername,
+    bio,
+    setBio,
+    error,
+    saving,
+    status,
+    pending,
+    setPending,
+    removing,
+    setRemoving,
+    handleSubmit,
+    avatarSrc: savedAvatarSrc,
+    canRemove,
+  } = useProfileEdit(onDone)
 
-  const [username, setUsername] = useState(user?.username ?? '')
-  const [bio, setBio] = useState(user?.bio ?? '')
-  const [error, setError] = useState('')
-
-  // Estado propio de submit: el `loading` de `useAuth` es el de la sesión
-  // (arranque, login), no el de guardar el perfil, así que no sirve para
-  // bloquear el botón.
-  const [saving, setSaving] = useState(false)
-
-  // Texto de progreso. No hay barra de porcentaje porque el archivo ya viene
-  // recortado a ≤1 MB (ver `profileImage.js`): la subida dura lo que dura un
-  // request normal y alcanza con decir en qué paso está.
-  const [status, setStatus] = useState('')
-
-  // Archivo elegido, ya recortado y todavía NO subido, y la URL de objeto para
-  // previsualizarlo. `avatarUrl` del usuario es la foto guardada; estos dos son
-  // el borrador de arriba.
-  const [pending, setPending] = useState(null)
-  const [preview, setPreview] = useState(null)
-
-  // Quitar la foto no borra nada hasta que se guarda: la URL va en el PATCH con
-  // `pictureUrl: null` y el backend borra el archivo de ImageKit.
-  const [removing, setRemoving] = useState(false)
+  const preview = useMemo(() => (pending ? previewUrlFor(pending) : null), [pending])
 
   const previewRef = useRef(null)
 
-  // Cada elección de archivo suma un tick: si el usuario elige dos fotos seguidas
-  // y la primera tarda más en procesarse, solo se muestra la última.
-  const pickRef = useRef(0)
-
   useEffect(() => {
+    if (preview) {
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+      previewRef.current = preview
+    }
     return () => {
       if (previewRef.current) URL.revokeObjectURL(previewRef.current)
+      previewRef.current = null
     }
-  }, [])
+  }, [preview])
 
-  function clearPreview() {
-    if (previewRef.current) URL.revokeObjectURL(previewRef.current)
-    previewRef.current = null
-    setPreview(null)
-  }
+  const avatarSrc = removing ? null : (preview ?? savedAvatarSrc)
+
+  const pickRef = useRef(0)
 
   async function handleFileChange(e) {
     const file = e.target.files?.[0]
 
-    // Vaciar el input permite volver a elegir el mismo archivo después de un
-    // error (si no, el `change` no vuelve a disparar).
     e.target.value = ''
 
     if (!file) return
 
     const pick = ++pickRef.current
 
-    setError('')
-    setStatus('Recortando la imagen…')
-
     try {
       const prepared = await prepareProfileImage(file)
 
       if (pick !== pickRef.current) return
 
-      if (previewRef.current) URL.revokeObjectURL(previewRef.current)
-      previewRef.current = previewUrlFor(prepared)
-      setPreview(previewRef.current)
       setPending(prepared)
       setRemoving(false)
-      setStatus('')
-    } catch (err) {
+    } catch {
       if (pick !== pickRef.current) return
 
-      clearPreview()
       setPending(null)
-      setStatus('')
-      setError(err instanceof Error ? err.message : 'No se pudo leer la imagen.')
+      setRemoving(false)
     }
   }
-
-  function handleCancelRemove() {
-    setRemoving(false)
-    setError('')
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-
-    setError('')
-    setSaving(true)
-
-    try {
-      // Primero la foto: si la subida falla no se manda el resto del perfil, que
-      // es lo que pide el criterio de TS-21 de no dejar guardar a medias.
-      if (pending) {
-        setStatus('Subiendo la foto…')
-        await uploadProfilePicture(pending)
-
-        clearPreview()
-        setPending(null)
-        setRemoving(false)
-        setStatus('Guardando…')
-        await updateProfile({ username, bio })
-      } else if (removing) {
-        setStatus('Quitando la foto…')
-        await updateProfile({ username, bio, avatarUrl: null })
-        setRemoving(false)
-      } else {
-        setStatus('Guardando…')
-        await updateProfile({ username, bio })
-      }
-
-      onDone()
-    } catch (err) {
-      // Por `code`: el texto del servidor puede cambiar sin romper la pantalla
-      // (y el error de compresión de la foto, que es local, ya llega en español).
-      setError(mapApiError(err, 'No se pudo guardar el perfil.'))
-    } finally {
-      // Va en `finally` y no solo en el camino feliz: si el guardado falla y el
-      // botón queda deshabilitado, el usuario no puede reintentar ni cancelar.
-      setStatus('')
-      setSaving(false)
-    }
-  }
-
-  const avatarSrc = removing ? null : (preview ?? user?.avatarUrl ?? null)
-  const canRemove = !preview && Boolean(user?.avatarUrl)
 
   return (
     <div className="p-6 md:p-10">
@@ -162,9 +94,6 @@ export default function ProfileEdit({ onDone }) {
                 />
               </label>
 
-              {/* `capture` pide la cámara directo en los dispositivos que la tienen.
-                  En desktop el atributo no hace nada, así que el botón se oculta
-                  para no prometer algo que ahí no existe. */}
               <label
                 className={`rounded px-3 py-2 Volume Button hover:brightness-110 md:hidden ${
                   saving ? 'cursor-wait opacity-60 pointer-events-none' : 'cursor-pointer'
@@ -207,7 +136,7 @@ export default function ProfileEdit({ onDone }) {
               La foto se quita cuando guardes.
               <button
                 type="button"
-                onClick={handleCancelRemove}
+                onClick={() => setRemoving(false)}
                 disabled={saving}
                 className="underline disabled:opacity-50"
               >

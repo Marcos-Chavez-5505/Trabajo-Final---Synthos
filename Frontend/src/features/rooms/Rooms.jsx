@@ -9,36 +9,24 @@ import {
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu.tsx'
 import {
-  searchRooms,
   joinRoom,
   ROOM_SORTS,
   DEFAULT_ROOM_SORT,
   ROOM_ORDERS,
   DEFAULT_ROOM_ORDER,
-} from '../../services/roomsService.js'
-import useDebounce from '../../hooks/useDebounce.js'
+} from '@synthos/shared'
+import { useDebounce, useRoomsList } from '@synthos/shared'
 import RoomCard from '../../components/cards/RoomCard.jsx'
 import JoinRoomDialog from './JoinRoomDialog.jsx'
 import roomIcon from '../../assets/join_music_room.svg'
 import searchIcon from '../../assets/search.svg'
 import threeDotsIcon from '../../assets/three_dots.svg'
-import { mapApiError } from '../../utils/mapError.js'
+import { mapApiError } from '@synthos/shared'
 
 const DEBOUNCE_MS = 300
 
 /**
  * `/salas`: listado de salas con buscador y filtros (TS-16 + TS-17).
- *
- * La búsqueda y el orden viven en la URL (`?q=`, `?sort=`, `?order=`) por la misma
- * razón que en `/buscar`: la vista es compartible y el botón "atrás" del browser
- * deshace el cambio. Por eso no son `useState`: salen de `useSearchParams`.
- *
- * El orden lo resuelve el servidor (`GET /api/rooms?query=&sort=&order=`), así
- * que esta pantalla no reordena nada: el array que llega ya viene en el orden
- * pedido.
- *
- * Las salas privadas no aparecen en este listado (D14): a esas se entra con el
- * código, desde el botón "Unirme con código".
  */
 export default function Rooms() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -48,11 +36,8 @@ export default function Rooms() {
   const order = readOrder(searchParams.get('order'))
 
   const [input, setInput] = useState(query)
-  const [response, setResponse] = useState({ key: null, rooms: [], error: null })
   const [joinOpen, setJoinOpen] = useState(false)
 
-  // El input es controlado desde la URL, como el de la TopBar: si el `?q=` cambia
-  // (por ejemplo al navegar atrás) el input se entera sin duplicar estado.
   const debounced = useDebounce(input, DEBOUNCE_MS)
 
   useEffect(() => {
@@ -77,24 +62,7 @@ export default function Rooms() {
     )
   }, [debounced, query, setSearchParams])
 
-  // Patrón "key": mientras la respuesta no sea de la request vigente se muestra
-  // vacío, así no se ve la lista vieja con los filtros nuevos.
-  useEffect(() => {
-    let active = true
-    const key = `${query}|${sort}|${order}`
-
-    searchRooms({ query, sort, order })
-      .then((rooms) => {
-        if (active) setResponse({ key, rooms, error: null })
-      })
-      .catch((cause) => {
-        if (active) setResponse({ key, rooms: [], error: mapApiError(cause) })
-      })
-
-    return () => {
-      active = false
-    }
-  }, [query, sort, order])
+  const { isCurrent, rooms, error } = useRoomsList(query, sort, order)
 
   function patchParams(patch) {
     setSearchParams((prev) => {
@@ -110,20 +78,12 @@ export default function Rooms() {
   }
 
   function handleSort(criterio) {
-    // El default no se escribe en la URL: `/salas` a secas tiene que significar lo
-    // mismo que `/salas?sort=name`, si no la vista del criterio por defecto queda
-    // con un query param de más.
     patchParams({ sort: criterio === DEFAULT_ROOM_SORT ? null : criterio })
   }
 
   function handleOrder(sentido) {
     patchParams({ order: sentido === DEFAULT_ROOM_ORDER ? null : sentido })
   }
-
-  const key = `${query}|${sort}|${order}`
-  const isCurrent = response.key === key
-  const rooms = isCurrent ? response.rooms : []
-  const error = isCurrent ? response.error : null
 
   return (
     <section className="px-6 py-4 md:px-10">
@@ -194,17 +154,6 @@ export default function Rooms() {
   )
 }
 
-/**
- * Acción de la tarjeta: unirse si hay lugar.
- *
- * No hay "ver la sala" en el listado: `GET /api/rooms/:id` es solo para
- * miembros (`room.controller.js` → 403), así que una vista previa no tiene
- * endpoint que la sostenga. "Unirme" además es idempotente (`200` si ya era
- * miembro), así que sirve también para volver a una sala propia.
- *
- * La sala privada no aparece en el listado, así que acá siempre es pública: no
- * hace falta el código ni la contraseña, y el backend responde 201 directo.
- */
 function RoomCardAction({ room }) {
   const full = room.maxCapacity !== null && room.membersCount >= room.maxCapacity
 
@@ -255,18 +204,6 @@ function JoinRoomButton({ room }) {
   )
 }
 
-/**
- * Menú de ordenamiento.
- *
- * Es el dropdown de Base UI (`components/ui/dropdown-menu.tsx`), el mismo que usa
- * el menú de cuenta del Sidebar. El trigger muestra el criterio activo, no un
- * ícono suelto: con dos opciones, "Mejor calificado" es más claro de leer que un
- * botón con tres puntitos.
- *
- * El ítem activo se marca con `Fucsia` y una fuente medium. Los SVG traen el
- * color hardcodeado (#F4F0F9) y no se recolorean, así que el estado activo se
- * juega con el fondo del ítem, no con el ícono (regla 10 de AGENTS.md).
- */
 function RoomSortMenu({ sort, order, onSort, onOrder }) {
   const active = ROOM_SORTS.find((c) => c.value === sort) ?? ROOM_SORTS[0]
   const sentido = ROOM_ORDERS.find((o) => o.value === order) ?? ROOM_ORDERS[0]
@@ -351,12 +288,6 @@ function EmptyState({ hasQuery }) {
   )
 }
 
-/**
- * Lee el criterio de la URL.
- *
- * Un `?sort=` desconocido cae al default en vez de romper: la lista alfabética
- * siempre se puede mostrar, y el service normaliza lo que llega igual.
- */
 function readSort(value) {
   return ROOM_SORTS.some((c) => c.value === value) ? value : DEFAULT_ROOM_SORT
 }
