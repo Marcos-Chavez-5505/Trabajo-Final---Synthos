@@ -1,4 +1,5 @@
 const followService = require("../services/follow.service");
+const notificationService = require("../services/notification.service");
 const { httpError } = require("../utils/errors");
 
 function parseId(raw) {
@@ -40,6 +41,12 @@ async function follow(req, res, next) {
 				message: "Ya seguís a este usuario.",
 			});
 		}
+
+		await notificationService.notifyUser(req.app.get("io"), {
+			idUser: followedId,
+			idActor: followerId,
+			type: "follow",
+		});
 
 		return res.status(200).json({
 			status: "success",

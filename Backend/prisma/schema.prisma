@@ -28,6 +28,8 @@ model User {
   invitationsSent     PlaylistInvitation[] @relation("InvitationSender")
   invitationsReceived PlaylistInvitation[] @relation("InvitationReceiver")
   roomMemberships     RoomMember[]
+  notificationsReceived Notification[] @relation("NotificationReceiver")
+  notificationsSent     Notification[] @relation("NotificationActor")
 
   @@map("user")
 }
@@ -75,6 +77,7 @@ model Song {
   songGenres    SongGenre[]
   songMoods     SongMood[]
   lyrics        Lyrics?
+  notifications Notification[]
 
   @@index([idAlbum])
   @@map("song")
@@ -139,6 +142,7 @@ model Playlist {
   songs        PlaylistSong[]
   invitations  PlaylistInvitation[]
   rooms        Room[]
+  notifications Notification[]
 
   @@map("playlist")
 }
@@ -324,6 +328,34 @@ model KaraokeLine {
   @@unique([idLyrics, position])
   @@index([idLyrics, timestampMs])
   @@map("karaoke_line")
+}
+
+
+model Notification {
+  id         Int              @id @default(autoincrement())
+  idUser     Int              @map("id_user")
+  idActor    Int              @map("id_actor")
+  type       NotificationType
+  idSong     Int?             @map("id_song")
+  idPlaylist Int?             @map("id_playlist")
+  isRead     Boolean          @default(false) @map("is_read")
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+
+  user     User     @relation("NotificationReceiver", fields: [idUser], references: [id], onDelete: Cascade)
+  actor    User     @relation("NotificationActor", fields: [idActor], references: [id], onDelete: Cascade)
+  song     Song?    @relation(fields: [idSong], references: [id], onDelete: SetNull)
+  playlist Playlist? @relation(fields: [idPlaylist], references: [id], onDelete: SetNull)
+
+  @@index([idUser, isRead, createdAt])
+  @@map("notification")
+}
+
+enum NotificationType {
+  follow
+  recommendation
+  playlist_invitation
+
+  @@map("notification_type")
 }
 
 enum PlaylistType {

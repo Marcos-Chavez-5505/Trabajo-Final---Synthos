@@ -1,40 +1,32 @@
-import { useState } from "react";
-import NotificationRow from "./NotificationRow.jsx";
-import { mockNotifications } from "./notificationsMock.js";
-import notificationIcon from "../../assets/notification.svg";
+import { useNotifications } from '@synthos/shared'
+import NotificationRow from './NotificationRow.jsx'
+import notificationIcon from '../../assets/notification.svg'
 
 /**
- * `/notificaciones`: bandeja de novedades de la persona.
+ * `/notificaciones`: bandeja de novedades conectada al backend.
  *
- * Por ahora usa `notificationsMock` porque el backend todavía no expone el
- * recurso. Los estados de leída y "marcar todas" son locales: cuando exista el
- * service se reemplazan por las mutaciones de la API y el socket.
- *
- * El layout es una columna de ancho máximo (`max-w-3xl`) con padding
- * responsive, así la misma pantalla se lee bien en desktop y en mobile.
+ * Usa `GET /api/notifications`, `PATCH /api/notifications/:id/read`,
+ * `PATCH /api/notifications/read-all` y escucha los eventos `notification:new`,
+ * `notification:read`, `notification:read-all` por el socket existente.
  */
 export default function Notifications() {
-	const [notifications, setNotifications] = useState(mockNotifications);
+	const { notifications, unreadCount, loading, markAsRead, markAllAsRead } =
+		useNotifications()
 
-	const unreadCount = notifications.filter(
-		(notification) => !notification.isRead,
-	).length;
-
-	const markAsRead = (id) => {
-		setNotifications((previous) =>
-			previous.map((notification) =>
-				notification.id === id
-					? { ...notification, isRead: true }
-					: notification,
-			),
-		);
-	};
-
-	const markAllAsRead = () => {
-		setNotifications((previous) =>
-			previous.map((notification) => ({ ...notification, isRead: true })),
-		);
-	};
+	if (loading && notifications.length === 0) {
+		return (
+			<section className="px-4 py-4 sm:px-6 md:px-10">
+				<div className="flex flex-wrap items-end justify-between gap-4">
+					<div>
+						<h1 className="Header3">Notificaciones</h1>
+						<p className="text-muted-foreground TextRegluar mt-1">
+							Cargando notificaciones...
+						</p>
+					</div>
+				</div>
+			</section>
+		)
+	}
 
 	return (
 		<section className="px-4 py-4 sm:px-6 md:px-10">
@@ -43,8 +35,12 @@ export default function Notifications() {
 					<h1 className="Header3">Notificaciones</h1>
 					<p className="text-muted-foreground TextRegluar mt-1">
 						{unreadCount > 0
-							? `Tenés ${unreadCount} ${unreadCount === 1 ? "notificación nueva" : "notificaciones nuevas"}.`
-							: "Estás al día. Acá van a aparecer las novedades de tu cuenta."}
+							? `Tenés ${unreadCount} ${
+									unreadCount === 1
+										? 'notificación nueva'
+										: 'notificaciones nuevas'
+								}.`
+							: 'Estás al día. Acá van a aparecer las novedades de tu cuenta.'}
 					</p>
 				</div>
 
@@ -73,7 +69,7 @@ export default function Notifications() {
 				</ul>
 			)}
 		</section>
-	);
+	)
 }
 
 function EmptyState() {
@@ -91,5 +87,5 @@ function EmptyState() {
 				playlist, va a aparecer acá.
 			</p>
 		</div>
-	);
+	)
 }

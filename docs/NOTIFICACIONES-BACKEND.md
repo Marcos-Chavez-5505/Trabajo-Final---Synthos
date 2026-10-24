@@ -1,10 +1,9 @@
 # Notificaciones — guía de backend y tiempo real
 
-> **Estado:** el frontend ya tiene la pantalla `/notificaciones`, con datos de
-> ejemplo en `Frontend/src/features/notifications/notificationsMock.js`. Este
-> documento es la guía para implementar el backend sin tocar la UI: cuando los
-> endpoints y el socket existan, se reemplaza el mock por el service y los
-> handlers reales.
+> **Estado:** backend y frontend conectados. El frontend usa
+> `shared/src/services/notificationsService.js` + `shared/src/features/notifications/useNotifications.js`
+> para listar/marcar y escucha `notification:new`, `notification:read` y
+> `notification:read-all` por el socket existente. Ya no usa `notificationsMock.js`.
 
 ## 1. Qué se notifica y cuándo
 
@@ -191,16 +190,16 @@ Separación recomendada:
 
 ```text
 Backend/src/
-├── controller/notification.controller.js   # HTTP, ownership y status codes
-├── services/notification.service.js        # Prisma, DTO y paginación
-├── routes/notification.routes.js           # GET /, PATCH /:id/read, PATCH /read-all
-└── utils/notificationEmitter.js            # io.to(`user:${id}`).emit(...)
+├── controller/notification.controller.js   # HTTP, ownership, status codes y eventos de lectura
+├── services/notification.service.js        # Prisma, DTO, paginación y emisión del socket
+└── routes/notification.routes.js           # GET /, PATCH /:id/read, PATCH /read-all
 ```
 
 Funciones del service:
 
 ```js
 createNotification({ idUser, idActor, type, idSong, idPlaylist })
+notifyUser(io, { idUser, idActor, type, idSong, idPlaylist })
 listNotifications(idUser, { page, pageSize })
 markAsRead(idUser, notificationId)
 markAllAsRead(idUser)
@@ -243,7 +242,7 @@ if (result.alreadyFollowing) {
   return res.status(200).json({ status: "success", message: "Ya seguís a este usuario." });
 }
 
-await tryNotify(req.app.get("io"), {
+await notificationService.notifyUser(req.app.get("io"), {
   idUser: followedId,
   idActor: followerId,
   type: "follow",
@@ -255,7 +254,7 @@ await tryNotify(req.app.get("io"), {
 Después de `createRecommendation()`:
 
 ```js
-await tryNotify(req.app.get("io"), {
+await notificationService.notifyUser(req.app.get("io"), {
   idUser: targetId,
   idActor: authorId,
   type: "recommendation",
@@ -266,19 +265,22 @@ await tryNotify(req.app.get("io"), {
 ### Invitación — `playlist.controller.js`
 
 Después de `playlistService.createInvitation()` y de descartar
-`alreadyMember`:
+`alreadyMember`. El service devuelve `shouldNotify` para no volver a avisar
+cuando la invitación ya estaba pendiente:
 
 ```js
-await tryNotify(req.app.get("io"), {
-  idUser: receiverId,
-  idActor: userId,
-  type: "playlist_invitation",
-  idPlaylist: id,
-});
+if (invitation.shouldNotify) {
+  await notificationService.notifyUser(req.app.get("io"), {
+    idUser: receiverId,
+    idActor: userId,
+    type: "playlist_invitation",
+    idPlaylist: id,
+  });
+}
 ```
 
-`tryNotify` puede vivir en `notification.service.js` y hacer el `try/catch` +
-`emit` en un solo lugar, para no repetir lógica en los tres controllers.
+`notifyUser` vive en `notification.service.js` y hace el `try/catch` + `emit`
+en un solo lugar, para no repetir lógica en los tres controllers.
 
 ## 7. WebSocket: el mismo socket que ya existe
 

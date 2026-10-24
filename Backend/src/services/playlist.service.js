@@ -274,6 +274,16 @@ async function createInvitation(playlistId, senderId, receiverId) {
 
 		if (alreadyMember) return { alreadyMember: true };
 
+		const existingInvitation = await tx.playlistInvitation.findUnique({
+			where: {
+				idPlaylist_idReceiver: {
+					idPlaylist: playlistId,
+					idReceiver: receiverId,
+				},
+			},
+			select: { status: true },
+		});
+
 		let converted = false;
 
 		if (playlist.type === "personal") {
@@ -305,7 +315,11 @@ async function createInvitation(playlistId, senderId, receiverId) {
 			include: INVITATION_INCLUDE,
 		});
 
-		return { invitation, converted };
+		return {
+			invitation,
+			converted,
+			shouldNotify: existingInvitation?.status !== "pendiente",
+		};
 	});
 }
 
