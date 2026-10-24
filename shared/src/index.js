@@ -36,6 +36,7 @@ export * from './utils/sidebarMotion.js'
 
 // feature hooks
 export { default as usePopularSongs } from './features/popular/usePopularSongs.js'
+export { default as useHomeSongs } from './features/home/useHomeSongs.js'
 export { default as useAlbums } from './features/albums/useAlbums.js'
 export { default as useLogin } from './features/auth/useLogin.js'
 export { default as useRegister } from './features/auth/useRegister.js'
