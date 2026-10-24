@@ -2,12 +2,14 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { Disc3, Flame, Home, ListMusic, Mic2, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useUnreadNotificationsCount } from '@synthos/shared'
 import MisPlaylists from '../../features/playlists/MisPlaylists.jsx'
 import CollabPlaylists from '../../features/playlists/CollabPlaylists.jsx'
 import MyRooms from '../../features/rooms/MyRooms.jsx'
 import ProfileSummary from '../../features/social/ProfileSummary.jsx'
 import roomIcon from '../../assets/join_music_room.svg'
 import moodIcon from '../../assets/microphone.svg'
+import notificationIcon from '../../assets/notification.svg'
 import logoSynthos from '../../assets/logo_synthos.svg'
 import {
   Sidebar as SidebarRoot,
@@ -33,6 +35,7 @@ const NAV_ITEMS = [
   // anotada en docs/PENDIENTES.md §2.
   { label: 'Salas', to: '/salas', src: roomIcon },
   { label: 'Ánimo', to: '/animo', src: moodIcon },
+  { label: 'Notificaciones', to: '/notificaciones', src: notificationIcon },
   { label: 'Perfil', to: '/perfil', icon: User },
 ]
 
@@ -49,6 +52,7 @@ function isActivePath(pathname, to) {
 
 function MenuItem({ item, isActive }) {
   const Icon = item.icon
+  const unreadCount = item.to === '/notificaciones' ? useUnreadNotificationsCount() : 0
 
   // `item.icon` es un componente de lucide-react (deuda pendiente en
   // docs/PENDIENTES.md §2); `item.src` es un SVG del set propio, que va como URL. Los
@@ -65,17 +69,26 @@ function MenuItem({ item, isActive }) {
             : ''
         }
       >
-        {item.src ? (
-          <img
-            src={item.src}
-            alt=""
-            aria-hidden="true"
-            className={`size-4 shrink-0${isActive ? ' invert' : ''}`}
-          />
-        ) : (
-          <Icon />
-        )}
-        <SidebarLabel>{item.label}</SidebarLabel>
+        <div className="relative flex size-4 shrink-0 items-center justify-center">
+          {item.src ? (
+            <img
+              src={item.src}
+              alt=""
+              aria-hidden="true"
+              className={`size-4 shrink-0 block mx-auto${isActive ? ' invert' : ''}`}
+            />
+          ) : (
+            <Icon className="mx-auto" />
+          )}
+          {unreadCount > 0 && item.to === '/notificaciones' && (
+            <span className="Fucsia absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[9px] text-white">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </div>
+        <SidebarLabel className="flex items-center gap-2">
+          {item.label}
+        </SidebarLabel>
       </SidebarMenuButton>
     </SidebarMenuItem>
   )

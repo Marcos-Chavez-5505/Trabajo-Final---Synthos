@@ -112,6 +112,7 @@ La documentación del proyecto vive en `docs/` (raíz del repo). **No leer todos
 | ¿Cuál es el **contrato** de un endpoint (request/response/errores/`curl`)?                              | `docs/ESPECIFICACIONES-BACKEND.md` — **fuente canónica de contratos**: §1–5 canciones, §6 auth, §7 usuarios/follow, §8 favoritos, §9 playlists, §10 salas |
 | ¿Está implementado/verificado un requerimiento? ¿qué bloquea a qué? ¿qué sigue?                            | `docs/REQUERIMIENTOS-BACKEND.md` — casillas con evidencia de verificación, decisiones D1–D11, §11 orden de incorporación, §12 trazabilidad TS                      |
 | ¿Cómo se implementó o qué se decidió en un sprint pasado?                                                    | `docs/plan/sprint-1-plan.md`, `sprint-2-plan.md` — históricos autocontenidos (regla 9: no sobrescribir)                                                              |
+| ¿Cómo implementar notificaciones (modelo, REST, WebSocket) y llevarlas a mobile?                              | `docs/NOTIFICACIONES-BACKEND.md` — guía de backend con modelo Prisma, eventos y adaptación a mobile                                                                  |
 
 Precedencia en caso de conflicto: `AGENTS.md` (convenciones) → `ESPECIFICACIONES-BACKEND.md` (contratos) → el resto. Si un doc contradice el código, manda el código y actualizar el doc.
 

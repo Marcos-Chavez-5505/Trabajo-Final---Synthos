@@ -1,4 +1,5 @@
 const recommendationService = require("../services/recommendation.service");
+const notificationService = require("../services/notification.service");
 const { httpError } = require("../utils/errors");
 
 const MAX_TEXT_LENGTH = 280;
@@ -82,6 +83,13 @@ async function createRecommendation(req, res, next) {
 			idUser: targetId,
 			songId,
 			text: text.trim(),
+		});
+
+		await notificationService.notifyUser(req.app.get("io"), {
+			idUser: targetId,
+			idActor: authorId,
+			type: "recommendation",
+			idSong: songId,
 		});
 
 		return res.status(201).json({

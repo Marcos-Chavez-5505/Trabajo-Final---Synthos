@@ -1,4 +1,5 @@
 const playlistService = require("../services/playlist.service");
+const notificationService = require("../services/notification.service");
 const { httpError } = require("../utils/errors");
 
 function isFavoritesPlaylist(playlist) {
@@ -404,6 +405,15 @@ async function createInvitation(req, res, next) {
 				"Esa persona ya participa de la playlist.",
 				"PLAYLIST_ALREADY_MEMBER",
 			);
+		}
+
+		if (invitation.shouldNotify) {
+			await notificationService.notifyUser(req.app.get("io"), {
+				idUser: receiverId,
+				idActor: userId,
+				type: "playlist_invitation",
+				idPlaylist: id,
+			});
 		}
 
 		return res.status(201).json({
