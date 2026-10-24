@@ -100,40 +100,52 @@ export default function useNotifications({ pageSize = 20 } = {}) {
 		fetchNotifications()
 		connectSocket()
 
-		const socket = getSocket()
-		if (socket) {
-			const onNew = (notification) => {
-				if (!mounted.current) return
-				setNotifications((prev) => {
-					if (prev.some((n) => n.id === notification.id)) return prev
-					return [notification, ...prev]
-				})
-				setUnreadCount((prev) => prev + 1)
-			}
+		const onNew = (notification) => {
+			if (!mounted.current) return
+			setNotifications((prev) => {
+				if (prev.some((n) => n.id === notification.id)) return prev
+				return [notification, ...prev]
+			})
+			setUnreadCount((prev) => prev + 1)
+		}
 
-			const onRead = ({ unreadCount: count }) => {
-				if (!mounted.current) return
-				if (typeof count === 'number') setUnreadCount(count)
-			}
+		const onRead = ({ unreadCount: count }) => {
+			if (!mounted.current) return
+			if (typeof count === 'number') setUnreadCount(count)
+		}
 
-			const onReadAll = ({ unreadCount: count }) => {
-				if (!mounted.current) return
-				setNotifications((prev) =>
-					prev.map((notification) => ({ ...notification, isRead: true })),
-				)
-				if (typeof count === 'number') setUnreadCount(count)
-			}
+		const onReadAll = ({ unreadCount: count }) => {
+			if (!mounted.current) return
+			setNotifications((prev) =>
+				prev.map((notification) => ({ ...notification, isRead: true })),
+			)
+			if (typeof count === 'number') setUnreadCount(count)
+		}
 
+		const attachListeners = (socket) => {
+			if (!socket) return
+			socket.off('notification:new', onNew)
+			socket.off('notification:read', onRead)
+			socket.off('notification:read-all', onReadAll)
 			socket.on('notification:new', onNew)
 			socket.on('notification:read', onRead)
 			socket.on('notification:read-all', onReadAll)
+		}
 
-			return () => {
-				mounted.current = false
-				socket.off('notification:new', onNew)
-				socket.off('notification:read', onRead)
-				socket.off('notification:read-all', onReadAll)
-			}
+		attachListeners(getSocket())
+
+		const onConnect = () => {
+			attachListeners(getSocket())
+		}
+
+		const onDisconnect = () => {
+			// no-op
+		}
+
+		const socket = getSocket()
+		if (socket) {
+			socket.on('connect', onConnect)
+			socket.on('disconnect', onDisconnect)
 		}
 
 		// Poll para detectar login/logout (el token se setea desde AuthProvider)
@@ -143,12 +155,25 @@ export default function useNotifications({ pageSize = 20 } = {}) {
 				tokenRef.current = token
 				fetchNotifications()
 				connectSocket()
+				attachListeners(getSocket())
 			}
+			if (!getSocket()) {
+				connectSocket()
+			}
+			attachListeners(getSocket())
 		}, 1000)
 
 		return () => {
 			mounted.current = false
 			clearInterval(interval)
+			const s = getSocket()
+			if (s) {
+				s.off('connect', onConnect)
+				s.off('disconnect', onDisconnect)
+				s.off('notification:new', onNew)
+				s.off('notification:read', onRead)
+				s.off('notification:read-all', onReadAll)
+			}
 		}
 	}, [fetchNotifications])
 
