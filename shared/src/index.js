@@ -20,6 +20,8 @@ export { default as AuthProvider } from './context/AuthContext.jsx'
 export * from './context/playerContext.js'
 export { default as PlayerProvider } from './context/PlayerContext.jsx'
 export * from './context/recommendationContext.jsx'
+export * from './context/NotificationsContext.jsx'
+export { NotificationsProvider } from './context/NotificationsContext.jsx'
 
 // hooks
 export { default as useAuth } from './hooks/useAuth.js'

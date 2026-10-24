@@ -1,4 +1,4 @@
-import { useNotifications } from '@synthos/shared'
+import { useNotificationsContext } from '@synthos/shared'
 import NotificationRow from './NotificationRow.jsx'
 import notificationIcon from '../../assets/notification.svg'
 
@@ -11,7 +11,7 @@ import notificationIcon from '../../assets/notification.svg'
  */
 export default function Notifications() {
 	const { notifications, unreadCount, loading, markAsRead, markAllAsRead } =
-		useNotifications()
+		useNotificationsContext()
 
 	if (loading && notifications.length === 0) {
 		return (

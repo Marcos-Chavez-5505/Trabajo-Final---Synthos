@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { Disc3, Flame, Home, ListMusic, Mic2, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useUnreadNotificationsCount } from '@synthos/shared'
 import MisPlaylists from '../../features/playlists/MisPlaylists.jsx'
 import CollabPlaylists from '../../features/playlists/CollabPlaylists.jsx'
 import MyRooms from '../../features/rooms/MyRooms.jsx'
@@ -51,6 +52,7 @@ function isActivePath(pathname, to) {
 
 function MenuItem({ item, isActive }) {
   const Icon = item.icon
+  const unreadCount = item.to === '/notificaciones' ? useUnreadNotificationsCount() : 0
 
   // `item.icon` es un componente de lucide-react (deuda pendiente en
   // docs/PENDIENTES.md §2); `item.src` es un SVG del set propio, que va como URL. Los
@@ -67,17 +69,31 @@ function MenuItem({ item, isActive }) {
             : ''
         }
       >
-        {item.src ? (
-          <img
-            src={item.src}
-            alt=""
-            aria-hidden="true"
-            className={`size-4 shrink-0${isActive ? ' invert' : ''}`}
-          />
-        ) : (
-          <Icon />
-        )}
-        <SidebarLabel>{item.label}</SidebarLabel>
+        <div className="relative">
+          {item.src ? (
+            <img
+              src={item.src}
+              alt=""
+              aria-hidden="true"
+              className={`size-4 shrink-0${isActive ? ' invert' : ''}`}
+            />
+          ) : (
+            <Icon />
+          )}
+          {unreadCount > 0 && (
+            <span className="Fucsia absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[9px] text-white group-data-[collapsible=icon]:flex">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </div>
+        <SidebarLabel className="flex items-center gap-2">
+          {item.label}
+          {unreadCount > 0 && (
+            <span className="Fucsia ml-auto rounded-full px-1.5 py-0.5 text-[10px] text-white group-data-[collapsible=icon]:hidden">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </SidebarLabel>
       </SidebarMenuButton>
     </SidebarMenuItem>
   )

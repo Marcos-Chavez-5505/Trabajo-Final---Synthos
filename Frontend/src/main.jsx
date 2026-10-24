@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
-import { AuthProvider, PlayerProvider } from '@synthos/shared'
+import { AuthProvider, PlayerProvider, NotificationsProvider } from '@synthos/shared'
 import { configureApi } from '@synthos/shared'
 import { createHtmlAudioMotor } from './lib/audioMotor.js'
 
@@ -30,9 +30,11 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
       <PlayerProvider motor={audioMotor}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <NotificationsProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </NotificationsProvider>
       </PlayerProvider>
     </AuthProvider>
   </StrictMode>,
