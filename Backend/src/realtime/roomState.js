@@ -13,6 +13,7 @@ function getRoomState(roomId) {
 				voters: new Set(),
 				required: 0,
 			},
+			queueOrder: null,
 		});
 	}
 	return rooms.get(roomId);
@@ -49,6 +50,27 @@ function getSkipVotes(roomId) {
 	return getRoomState(roomId).skipVotes;
 }
 
+function syncQueueOrder(roomId, currentIds) {
+	const state = getRoomState(roomId);
+	if (!Array.isArray(state.queueOrder)) {
+		state.queueOrder = [...currentIds];
+		return state.queueOrder;
+	}
+	const currentSet = new Set(currentIds);
+	const kept = state.queueOrder.filter((id) => currentSet.has(id));
+	const keptSet = new Set(kept);
+	const appended = currentIds.filter((id) => !keptSet.has(id));
+	state.queueOrder = [...kept, ...appended];
+	return state.queueOrder;
+}
+
+function orderSongsByQueue(roomId, songs) {
+	const ids = songs.map((s) => s.idSong);
+	const order = syncQueueOrder(roomId, ids);
+	const byId = new Map(songs.map((s) => [s.idSong, s]));
+	return order.map((id) => byId.get(id)).filter(Boolean);
+}
+
 function deleteRoomState(roomId) {
 	rooms.delete(roomId);
 }
@@ -61,5 +83,7 @@ module.exports = {
 	addSkipVote,
 	hasVoted,
 	getSkipVotes,
+	syncQueueOrder,
+	orderSongsByQueue,
 	deleteRoomState,
 };

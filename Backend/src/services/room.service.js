@@ -1,4 +1,5 @@
 const prisma = require("../prisma/prismaClient");
+const roomState = require("../realtime/roomState");
 const bcrypt = require("bcrypt");
 const crypto = require("node:crypto");
 const { Prisma } = require("@prisma/client");
@@ -115,7 +116,7 @@ const ROOM_INCLUDE = {
 	playlistSource: {
 		include: {
 			songs: {
-				orderBy: { position: "asc" },
+				orderBy: [{ position: "asc" }, { idSong: "asc" }],
 				include: {
 					song: {
 						include: {
@@ -159,6 +160,13 @@ function safeRoom(room) {
 	if (!room) return room;
 
 	const { passwordHash, ...rest } = room;
+
+	if (rest.playlistSource && Array.isArray(rest.playlistSource.songs)) {
+		rest.playlistSource = {
+			...rest.playlistSource,
+			songs: roomState.orderSongsByQueue(rest.id, rest.playlistSource.songs),
+		};
+	}
 
 	return rest;
 }
@@ -251,7 +259,7 @@ async function joinRoom(userId, { code, password }) {
 			playlistSource: {
 				include: {
 					songs: {
-						orderBy: { position: "asc" },
+						orderBy: [{ position: "asc" }, { idSong: "asc" }],
 						include: {
 							song: {
 								include: {
@@ -520,7 +528,7 @@ async function getPlaylistSongsOfRoom(roomId) {
 			playlistSource: {
 				select: {
 					songs: {
-						orderBy: { position: "asc" },
+						orderBy: [{ position: "asc" }, { idSong: "asc" }],
 						select: { idSong: true },
 					},
 				},
@@ -528,7 +536,8 @@ async function getPlaylistSongsOfRoom(roomId) {
 		},
 	});
 	if (!room) return null;
-	return room.playlistSource.songs.map((s) => s.idSong);
+	const current = room.playlistSource.songs.map((s) => s.idSong);
+	return roomState.syncQueueOrder(roomId, current);
 }
 
 async function getRoomStatus(roomId) {
