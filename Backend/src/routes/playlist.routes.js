@@ -16,6 +16,7 @@ router.delete("/:id", playlistController.deletePlaylist);
 
 router.post("/:id/songs", playlistController.addSong);
 router.delete("/:id/songs/:songId", playlistController.removeSong);
+router.put("/:id/songs/order", playlistController.updatePlaylistSongsOrder);
 
 router.post("/:id/invitation", playlistController.createInvitation);
 router.get("/:id/invitations", playlistController.listPlaylistInvitations);
