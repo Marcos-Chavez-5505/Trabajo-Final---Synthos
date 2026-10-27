@@ -1,4 +1,4 @@
-﻿# Hoja de requerimientos — incorporación del backend
+# Hoja de requerimientos — incorporación del backend
 
 > Alcance: qué necesita el frontend para dejar los mocks y hablar contra la API real. No es un contrato
 > de endpoints ya implementado (eso está en `ESPECIFICACIONES-BACKEND.md`); es la lista de lo que falta,
@@ -191,7 +191,7 @@ que ya aplica el mock. Verificado por humo: crear, name vacío/>50 → 400, ajen
 | `GET` | `/api/playlists` | Las que creó el usuario del token **y** las colaborativas donde es miembro, con `creator`, `members` y `songs` ordenadas por posición. |
 | `POST` | `/api/playlists` | Body `{ name, description?, isPublic?, type }`, con `type` obligatorio (`personal` o `colab`, si no `400`). `idCreator` del token. `201` con la playlist creada; si es `colab`, también la fila de miembro con rol `creator`. |
 | `GET` | `/api/playlists/:id` | `404` si no es suya, no es miembro y no es pública (no `403`, para no filtrar existencia). |
-| `PUT` | `/api/playlists/:id` | Body `{ name?, description?, addSongs?, removeSongs?, reorder? }`. Dueño y no-favoritos; si no, `403`. |
+| `PUT` | `/api/playlists/:id` | Body `{ name?, description?, addSongs?, removeSongs? }`. Dueño y no-favoritos; si no, `403`. |
 | `DELETE` | `/api/playlists/:id` | Dueño y no-favoritos. Borrar la fuente de una sala tiene `onDelete: Restrict` en `Room`: `409` con mensaje claro, no un 500 de Prisma (sale del `errorHandler` al violar el `Restrict`; decisión **D20**: si la playlist se vacía o cambia, la sala sigue viva). |
 | `POST` | `/api/playlists/:id/songs` | Body `{ songId }`. En una `personal` solo el dueño; en una `colab` cualquier miembro. `409` si ya estaba. |
 | `DELETE` | `/api/playlists/:id/songs/:songId` | Misma regla de membresía. `404` si la canción no estaba. |

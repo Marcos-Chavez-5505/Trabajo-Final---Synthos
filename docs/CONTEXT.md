@@ -1,4 +1,4 @@
-﻿# CONTEXTO DE PROYECTO â€” SYNTHOS
+# CONTEXTO DE PROYECTO â€” SYNTHOS
 
 ## 1. QuÃ© es
 
@@ -114,7 +114,7 @@ DELETE /api/favorites/songs/:songId    â†’ authenticate (404 si no estaba)
 GET    /api/playlists                  â†’ authenticate â†’ { playlists } (las que creÃ³ y las colab donde es miembro)
 GET    /api/playlists/:id              â†’ authenticate (404 si no es suya, no es miembro y no es pÃºblica)
 POST   /api/playlists                  â†’ authenticate, { name (â‰¤50), description?, isPublic?, type? } â†’ 201 ("colab" o "personal"); `type` obligatorio (400 PLAYLIST_TYPE_INVALID)
-PUT    /api/playlists/:id              â†’ authenticate, dueÃ±o, NO favorites; body { name?, description?, addSongs?, removeSongs?, reorder? }
+PUT    /api/playlists/:id              â†’ authenticate, dueÃ±o, NO favorites; body { name?, description?, addSongs?, removeSongs? }
 DELETE /api/playlists/:id              â†’ authenticate, dueÃ±o, NO favorites
 POST   /api/playlists/:id/songs        â†’ authenticate â†’ 201 { song } (403 NOT_PLAYLIST_OWNER / NOT_PLAYLIST_MEMBER, 409 si ya estaba)
 DELETE /api/playlists/:id/songs/:songId â†’ authenticate â†’ 200 (404 si no estaba, 403 si no sos miembro)
@@ -330,3 +330,13 @@ npm run dev                 # localhost:5173, proxy /api â†’ :3000
 7. Ãconos solo de `src/assets/*.svg` importados como URL (Â§4.8).
 8. Literales de estilo solo en `tokens.css`.
 9. **Git**: sin push/ramas/tags/PRs sin autorizaciÃ³n. Commits locales permitidos. Ramas salen de `dev`, prefijo `feat/fix/docs/`, un cambio por rama, mensajes en espaÃ±ol al imperativo, stageo con rutas explÃ­citas (ojo: no subir el `package-lock.json` de la raÃ­z, es un artefacto vacÃ­o), verificar `lint` + `build` antes de pushear, el PR lo abre el usuario.
+
+## Reordenar canciones (feature implementada)
+
+- PUT /api/favorites/order — authenticate, body { songIds } → 200 { status, songIds, merged } (400 INVALID_SONG_IDS).
+- PUT /api/playlists/:id/songs/order — authenticate, body { songIds } → 200 { status, songIds, merged } (400 INVALID_SONG_IDS, 400 FAVORITES_MANAGED_ELSEWHERE, 403 NOT_PLAYLIST_OWNER / NOT_PLAYLIST_MEMBER, 404 PLAYLIST_NOT_FOUND).
+- PUT /api/playlists/:id **ya no acepta eorder** (cambio incompatible).
+- avorite gana position (migración 20261027160000_add_favorite_position); todas las lecturas ordenan por position, id_song.
+- Las salas congelan el orden de la cola en memoria (oomState.queueOrder): reordenar la playlist fuente no altera la cola.
+- Métricas en eorder_event (migración 20261027170000_add_reorder_event), registradas solo tras un 200.
+

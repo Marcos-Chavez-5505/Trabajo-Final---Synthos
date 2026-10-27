@@ -1,4 +1,4 @@
-﻿# Pendientes
+# Pendientes
 
 Backlog vivo: lo que **falta**. El estado actual del cÃ³digo estÃ¡ resumido en `CONTEXT.md` y la
 estructura del repo en `ESTRUCTURA.md`.
@@ -251,7 +251,7 @@ completo de las 14 pÃ¡ginas. Todas pasaron; el script se eliminÃ³ despuÃ©s
 numÃ©rico** respondÃ­a 500 (`P2023` sin mapear). Ahora `errorHandler.js` mapea `P2023 â†’ 400`.
 
 **Sigue sin cubrir:** `PATCH /users/me` (ya verificado a mano en TS-21), `PUT /playlists/:id` con
-`name`/`description`/`removeSongs`/`reorder`, `POST /auth/logout`, y la prueba visual en navegador
+`name`/`description`/`removeSongs`, `POST /auth/logout`, y la prueba visual en navegador
 (Â§1). La suite dejÃ³ un usuario de prueba (`verifdocs`) porque no hay endpoint para dar de baja
 usuarios; el resto de las escrituras se revirtieron.
 
@@ -480,3 +480,8 @@ catÃ¡logo paginado, permite buscar por nombre y abre el detalle con los Ã¡lb
   ranking de artistas, hace falta definir la mÃ©trica y probablemente un endpoint nuevo.
 - El avatar del artista cae al `blobatar` determinÃ­stico solo cuando falta `pictureUrl`; si Jamendo
   devuelve una URL rota, no hay fallback de imagen (mismo comportamiento que `UserRow`).
+
+## 13. Reordenar canciones (completado 2026-10-27)
+
+Implementado segun docs/features/reordenar-canciones.md y docs/plan/sprint-3-reordenar-canciones-plan.md. Endpoints PUT /api/favorites/order y PUT /api/playlists/:id/songs/order, migraciones 20261027160000_add_favorite_position y 20261027170000_add_reorder_event, hook useReorderSongs en shared/, drag con pointer events en PlaylistDetail.jsx. El campo legacy eorder de PUT /api/playlists/:id se retiro.
+
