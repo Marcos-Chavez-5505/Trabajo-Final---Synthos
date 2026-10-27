@@ -140,6 +140,32 @@ export async function removeSongFromPlaylist(ownerId, playlistId, songId) {
   return getPlaylistById(ownerId, playlistId)
 }
 
+export async function updatePlaylistSongsOrder(ownerId, playlistId, songIds, { keepalive } = {}) {
+	requireOwner(ownerId)
+
+	const body = { songIds }
+	const useKeepalive = Boolean(keepalive) && JSON.stringify(body).length < 60000
+
+	const data = await put(`/playlists/${playlistId}/songs/order`, body, { keepalive: useKeepalive })
+
+	notifyPlaylistsChanged()
+
+	return { songIds: data.songIds ?? [], merged: Boolean(data.merged) }
+}
+
+export async function updateFavoritesOrder(ownerId, songIds, { keepalive } = {}) {
+	requireOwner(ownerId)
+
+	const body = { songIds }
+	const useKeepalive = Boolean(keepalive) && JSON.stringify(body).length < 60000
+
+	const data = await put('/favorites/order', body, { keepalive: useKeepalive })
+
+	notifyPlaylistsChanged()
+
+	return { songIds: data.songIds ?? [], merged: Boolean(data.merged) }
+}
+
 export async function removePlaylistMember(ownerId, playlistId, memberId) {
   requireOwner(ownerId)
 

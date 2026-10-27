@@ -52,7 +52,8 @@ function isActivePath(pathname, to) {
 
 function MenuItem({ item, isActive }) {
   const Icon = item.icon
-  const unreadCount = item.to === '/notificaciones' ? useUnreadNotificationsCount() : 0
+  const allUnreadCount = useUnreadNotificationsCount()
+  const unreadCount = item.to === '/notificaciones' ? allUnreadCount : 0
 
   // `item.icon` es un componente de lucide-react (deuda pendiente en
   // docs/PENDIENTES.md §2); `item.src` es un SVG del set propio, que va como URL. Los

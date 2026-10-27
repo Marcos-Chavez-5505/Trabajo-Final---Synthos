@@ -120,7 +120,7 @@ function buildUrl(path, params) {
  * @returns {Promise<any>} El JSON de la respuesta. Un 204 devuelve `null`.
  * @throws {ApiError} Si la respuesta no es 2xx.
  */
-async function request(method, path, { body, params, signal } = {}) {
+async function request(method, path, { body, params, signal, keepalive } = {}) {
   const hasBody = body !== undefined
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
 
@@ -133,6 +133,7 @@ async function request(method, path, { body, params, signal } = {}) {
     },
     body: hasBody ? (isFormData ? body : JSON.stringify(body)) : undefined,
     signal,
+    keepalive: !!keepalive,
   })
 
   if (response.status === 401 && authToken) {
@@ -157,28 +158,28 @@ async function request(method, path, { body, params, signal } = {}) {
 }
 
 /** GET contra la API. */
-export function get(path, { params, signal } = {}) {
-  return request('GET', path, { params, signal })
+export function get(path, { params, signal, keepalive } = {}) {
+  return request('GET', path, { params, signal, keepalive })
 }
 
 /** POST contra la API. `body` es opcional (ej. logout no manda nada). */
-export function post(path, body, { params, signal } = {}) {
-  return request('POST', path, { body, params, signal })
+export function post(path, body, { params, signal, keepalive } = {}) {
+  return request('POST', path, { body, params, signal, keepalive })
 }
 
 /** PATCH contra la API. */
-export function patch(path, body, { params, signal } = {}) {
-  return request('PATCH', path, { body, params, signal })
+export function patch(path, body, { params, signal, keepalive } = {}) {
+  return request('PATCH', path, { body, params, signal, keepalive })
 }
 
 /** PUT contra la API. */
-export function put(path, body, { params, signal } = {}) {
-  return request('PUT', path, { body, params, signal })
+export function put(path, body, { params, signal, keepalive } = {}) {
+  return request('PUT', path, { body, params, signal, keepalive })
 }
 
 /** DELETE contra la API. */
-export function del(path, { params, signal } = {}) {
-  return request('DELETE', path, { params, signal })
+export function del(path, { params, signal, keepalive } = {}) {
+  return request('DELETE', path, { params, signal, keepalive })
 }
 
 /**
