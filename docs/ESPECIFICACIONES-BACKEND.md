@@ -428,11 +428,26 @@ curl -X PATCH localhost:3000/api/users/me \
 | `GET /songs/ids` | — | `{ status, songIds: number[] }` — es lo que consume el hook de favoritos |
 | `POST /songs` | body: `songId` (o `idSong`) | 201 `{ status, favorite: { song, markedDate } }`. 400 id inválido, 404 canción inexistente, 409 ya está en favoritos |
 | `DELETE /songs/:songId` | — | 200 `{ status, message }`. 404 si no estaba en favoritos |
+| `PUT /order` | body: `songIds: number[]` | 200 `{ status, songIds, merged }`. 400 `INVALID_SONG_IDS` si no es un array de enteros positivos sin repetir. Los ids que no son favoritos del usuario se **ignoran**, no son error |
 
 **Cómo funcionan los favoritos:** no son un estado aparte, sino una playlist con
 `type: "favorites"`, que se crea sola (`"Favoritos"`, privada) al agregar el primer favorito. Las
 canciones marcadas viven en la tabla `favorite`; `GET /` y `GET /:id` la sintetizan para que el
 Frontend la trate como una playlist más. No se puede editar ni borrar (403).
+
+**Orden de los favoritos (feature "Reordenar canciones"):** la tabla `favorite` tiene `position`.
+Todas las lecturas de favoritos —`GET /`, `GET /songs/ids`, y las dos ramas de favoritos de
+`playlist.service.js`— ordenan por `position, id_song`, nunca por `marked_date`.
+
+- `PUT /order` reescribe las posiciones del usuario autenticado como `0..n-1`; solo toca sus propias
+  filas.
+- Entre reordenamientos, las posiciones pueden quedar con **huecos o negativas**: solo importa el
+  orden relativo. El siguiente `PUT /order` las normaliza.
+- Un favorito nuevo entra **primero**: `POST /songs` le asigna `MIN(position) - 1` del usuario, sin
+  reescribir las demás filas. Si el usuario no tenía favoritos, arranca en `0`.
+- `merged: true` cuando la lista cambió entre que el cliente leyó y envió el orden (alguien agregó o
+  quitó un favorito desde otro dispositivo). Las canciones que no venían en `songIds` y siguen siendo
+  favoritas se colocan **al principio**, coherente con el alta.
 
 ---
 
@@ -443,10 +458,11 @@ Frontend la trate como una playlist más. No se puede editar ni borrar (403).
 | `GET /` | — | `{ status, playlists[] }` — las que creó **y** las colaborativas donde es miembro, con `creator`, `members` y `songs` ordenadas por posición |
 | `GET /:id` | — | `{ status, playlist }`. **404 si no es del creador, no es miembro y no es pública** |
 | `POST /` | body: `name` (obligatorio, ≤50), `description`, `isPublic`, `type` (`colab` o `personal`, **obligatorio**) | 201 `{ status, playlist }` con `creator` y `type`. 400 `PLAYLIST_TYPE_INVALID` |
-| `PUT /:id` | body: `name?`, `description?`, `addSongs?`, `removeSongs?`, `reorder?` | 200 `{ status, playlist }`. 403 si no es el dueño o si es la de favoritos, 404 si no existe |
+| `PUT /:id` | body: `name?`, `description?`, `addSongs?`, `removeSongs?` | 200 `{ status, playlist }`. 403 si no es el dueño o si es la de favoritos, 404 si no existe. **`reorder` ya no se acepta** (ver 9.2) |
 | `DELETE /:id` | — | 200 `{ status, message }`. 403 si no es el dueño o si es la de favoritos |
 | `POST /:id/songs` | body: `songId` | 201 `{ status, song }`. 403 `NOT_PLAYLIST_OWNER` (personal ajena) o `NOT_PLAYLIST_MEMBER` (colab sin membresía), 409 si ya estaba |
 | `DELETE /:id/songs/:songId` | — | 200 `{ status, message }`. 404 si no estaba, 403 si no sos miembro |
+| `PUT /:id/songs/order` | body: `songIds: number[]` | 200 `{ status, songIds, merged }`. 400 `INVALID_SONG_IDS`, 400 `FAVORITES_MANAGED_ELSEWHERE`, 403 `NOT_PLAYLIST_OWNER` / `NOT_PLAYLIST_MEMBER`, 404 `PLAYLIST_NOT_FOUND` (ver 9.2) |
 | `POST /:id/invitation` | body: `userId` | 201 `{ status, invitation, converted }`. 400 id inválido / `INVITATION_SELF` / `INVITATION_FAVORITES_LOCKED`, 404 si no existe la playlist o la persona (`INVITATION_USER_NOT_FOUND`), 403 si no es el creador, 409 `PLAYLIST_ALREADY_MEMBER`. `converted: true` si la playlist era `personal` y pasó a `colab` |
 | `GET /:id/invitations` | — | `{ status, invitations[] }`. Solo el creador (403 si no) |
 | `DELETE /:id/members/:userId` | — | 200 `{ status }`. Solo el creador, 404 si no era miembro, 400 `CANNOT_REMOVE_CREATOR` |
@@ -455,7 +471,8 @@ Frontend la trate como una playlist más. No se puede editar ni borrar (403).
 | `POST /invitations/:idPlaylist/reject` | — | 200 `{ status, invitation }`. 404 `INVITATION_NOT_FOUND` |
 
 Las canciones se agregan y quitan con `POST|DELETE /:id/songs`, que son las rutas que aplican los roles;
-`PUT /:id` sigue siendo del creador y ya no se usa para tocar canciones.
+`PUT /:id` sigue siendo del creador y ya no se usa para tocar canciones. El orden de la lista se cambia
+solo con `PUT /:id/songs/order`.
 
 ### 9.1 Playlists colaborativas e invitaciones (TS-12/TS-13, backend)
 
@@ -483,6 +500,54 @@ con `pendiente | aceptada | rechazada`).
 - `DELETE /:id/members/:userId` saca al participante y borra sus invitaciones.
 - La columna `Playlist.tokenInvitation` **ya no existe** (migración `drop_token_invitation`): el flujo por token y
   `FRONTEND_URL` se eliminaron por completo.
+
+### 9.2 Orden de canciones (feature "Reordenar canciones")
+
+```http
+PUT /api/playlists/:id/songs/order
+Authorization: Bearer <JWT>
+Content-Type: application/json
+
+{ "songIds": [12, 7, 33, 5] }
+```
+
+```json
+{ "status": "success", "songIds": [12, 7, 33, 5, 41], "merged": true }
+```
+
+**Validación.** `songIds` tiene que ser un array (puede estar vacío si la lista está vacía) de enteros
+positivos, sin repetidos. Un string numérico, un id `<= 0` o un duplicado devuelven
+`400 INVALID_SONG_IDS`. No se valida que los ids existan como canción: los que no están en la lista se
+ignoran.
+
+**Permisos (mismos que agregar/quitar canciones).** Playlist `personal`: solo el dueño
+(`403 NOT_PLAYLIST_OWNER`). Playlist `colab`: el dueño y cualquier miembro
+(`403 NOT_PLAYLIST_MEMBER`). Playlist `favorites`: `400 FAVORITES_MANAGED_ELSEWHERE`, porque el orden de
+favoritos va por `PUT /api/favorites/order`. Playlist inexistente: `404 PLAYLIST_NOT_FOUND`. El permiso
+se valida **dentro de la transacción**, no antes.
+
+**Fusión.** Los ids enviados que siguen en la lista se conservan en el orden enviado; los que ya no
+están se descartan en silencio; las canciones que están en la base y no venían en `songIds` se agregan
+**al final**, conservando su orden relativo. `merged: true` cuando hubo que agregar o descartar algo; un
+reordenamiento normal devuelve `false`. Nunca se rechaza el request por una alta o baja concurrente.
+
+**Transacción y bloqueo.** `SELECT ... FOR UPDATE` sobre la fila de `playlist`, bloqueo de las filas de
+`playlist_song` de esa lista, fusión y escritura en una sola sentencia en lote
+(`UPDATE playlist_song ... FROM unnest($1::int[], $2::int[])`). No se hace un `UPDATE` por fila. Al
+terminar se relee el orden real y se devuelve en `songIds`: si una alta o baja concurrente cambió el
+conjunto, la relectura lo refleja y `merged` pasa a `true`.
+
+**Lecturas.** Toda lectura de `playlist_song` ordena por `position, id_song`
+(`PLAYLIST_INCLUDE.songs`, `ROOM_INCLUDE.playlistSource.songs`, `joinRoom` y
+`getPlaylistSongsOfRoom`). `position` **no es único**: hay filas con posición repetida en playlists
+existentes y no se agrega `UNIQUE`; el desempate por `id_song` es lo que hace el orden determinista.
+Reordenar normaliza la lista a `0..n-1`; las listas que nunca se reordenen conservan sus duplicados.
+
+**Cambio incompatible: se retira `reorder` de `PUT /:id`.** El campo `reorder` era una segunda vía de
+escritura sobre `position` que se saltaba el bloqueo y la fusión, y podía reintroducir duplicados. Se
+elimina del controller y del service. Cualquier cliente que todavía lo mande **no recibe error**: el
+campo se ignora y la playlist se actualiza solo con `name`/`description`/`addSongs`/`removeSongs`. La
+única forma de cambiar el orden es `PUT /:id/songs/order`.
 
 ---
 
