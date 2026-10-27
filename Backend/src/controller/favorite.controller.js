@@ -1,5 +1,7 @@
 const favoriteService = require("../services/favorite.service");
 const { httpError } = require("../utils/errors");
+const { parseSongIds } = require("../utils/reorder");
+const reorderEventService = require("../services/reorderEvent.service");
 
 async function addFavorite(req, res, next) {
 	try {
@@ -101,9 +103,38 @@ async function getFavoriteSongIds(req, res, next) {
 	}
 }
 
+async function updateFavoritesOrder(req, res, next) {
+	try {
+		const userId = req.user.sub;
+		const songIds = parseSongIds(req.body?.songIds);
+
+		if (songIds === null) {
+			throw httpError(
+				400,
+				"Los ids de canciones son inválidos.",
+				"INVALID_SONG_IDS",
+			);
+		}
+
+		const result = await favoriteService.updateFavoritesOrder(userId, songIds);
+
+		res.status(200).json({
+			status: "success",
+			songIds: result.songIds,
+			merged: result.merged,
+		});
+
+		reorderEventService.record(userId, "favorites");
+		return;
+	} catch (error) {
+		next(error);
+	}
+}
+
 module.exports = {
 	addFavorite,
 	removeFavorite,
 	getFavorites,
 	getFavoriteSongIds,
+	updateFavoritesOrder,
 };

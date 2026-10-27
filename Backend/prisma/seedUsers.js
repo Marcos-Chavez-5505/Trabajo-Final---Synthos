@@ -472,11 +472,11 @@ async function main() {
 					take: FAVORITES_PER_USER,
 				});
 
-				for (const idSong of songIds) {
+				for (const [index, idSong] of songIds.entries()) {
 					await tx.favorite.upsert({
 						where: { idUser_idSong: { idUser, idSong } },
 						update: {},
-						create: { idUser, idSong },
+						create: { idUser, idSong, position: index },
 					});
 					stats.favorites++;
 				}
@@ -521,7 +521,7 @@ async function main() {
 					await tx.favorite.upsert({
 						where: { idUser_idSong: { idUser, idSong } },
 						update: { markedDate },
-						create: { idUser, idSong, markedDate },
+						create: { idUser, idSong, markedDate, position: 0 },
 					});
 					stats.favorites++;
 				}

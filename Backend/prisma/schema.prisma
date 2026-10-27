@@ -30,6 +30,7 @@ model User {
   roomMemberships     RoomMember[]
   notificationsReceived Notification[] @relation("NotificationReceiver")
   notificationsSent     Notification[] @relation("NotificationActor")
+  reorderEvents         ReorderEvent[]
 
   @@map("user")
 }
@@ -185,17 +186,20 @@ model PlaylistSong {
   song       Song     @relation(fields: [idSong], references: [id], onDelete: Cascade)
 
   @@id([idPlaylist, idSong])
+  @@index([idPlaylist, position])
   @@map("playlist_song")
 }
 
 model Favorite {
   idUser     Int      @map("id_user")
   idSong     Int      @map("id_song")
+  position   Int
   markedDate DateTime @default(now()) @map("marked_date") @db.Timestamp(6)
   song       Song     @relation(fields: [idSong], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [idUser], references: [id], onDelete: Cascade)
 
   @@id([idUser, idSong])
+  @@index([idUser, position])
   @@map("favorite")
 }
 
@@ -348,6 +352,18 @@ model Notification {
 
   @@index([idUser, isRead, createdAt])
   @@map("notification")
+}
+
+model ReorderEvent {
+  id        Int          @id @default(autoincrement())
+  idUser    Int          @map("id_user")
+  listType  PlaylistType @map("list_type")
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamp(6)
+  user      User         @relation(fields: [idUser], references: [id], onDelete: Cascade)
+
+  @@index([idUser, createdAt])
+  @@index([listType, createdAt])
+  @@map("reorder_event")
 }
 
 enum NotificationType {

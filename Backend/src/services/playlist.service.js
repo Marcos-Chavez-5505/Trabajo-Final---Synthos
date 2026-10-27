@@ -1,4 +1,5 @@
 const prisma = require("../prisma/prismaClient");
+const { mergeOrder } = require("../utils/reorder");
 
 const SONG_INCLUDE = {
 	songArtists: true,
@@ -20,7 +21,7 @@ const PLAYLIST_INCLUDE = {
 		},
 	},
 	songs: {
-		orderBy: { position: "asc" },
+		orderBy: [{ position: "asc" }, { idSong: "asc" }],
 		include: {
 			song: { include: SONG_INCLUDE },
 			user: { select: USER_PREVIEW },
@@ -70,14 +71,14 @@ async function getPlaylistById(id) {
 	if (playlist.type === "favorites") {
 		const favorites = await prisma.favorite.findMany({
 			where: { idUser: playlist.idCreator },
-			orderBy: { markedDate: "desc" },
+			orderBy: [{ position: "asc" }, { idSong: "asc" }],
 			include: { song: { include: SONG_INCLUDE } },
 		});
 
 		playlist.songs = favorites.map((f) => ({
 			idPlaylist: playlist.id,
 			idSong: f.idSong,
-			position: 0,
+			position: f.position,
 			addedDate: f.markedDate,
 			addedBy: null,
 			user: null,
@@ -106,7 +107,7 @@ async function getUserPlaylists(userId) {
 
 	const favorites = await prisma.favorite.findMany({
 		where: { idUser: userId },
-		orderBy: { markedDate: "desc" },
+		orderBy: [{ position: "asc" }, { idSong: "asc" }],
 		include: { song: { include: SONG_INCLUDE } },
 	});
 
@@ -118,7 +119,7 @@ async function getUserPlaylists(userId) {
 			songs: favorites.map((f) => ({
 				idPlaylist: playlist.id,
 				idSong: f.idSong,
-				position: 0,
+				position: f.position,
 				addedDate: f.markedDate,
 				addedBy: null,
 				user: null,
@@ -186,7 +187,7 @@ async function removeSongFromPlaylist(playlistId, songId) {
 	return { removed: true };
 }
 
-async function updatePlaylist(id, { name, description, addSongs, removeSongs, reorder }) {
+async function updatePlaylist(id, { name, description, addSongs, removeSongs }) {
 	return prisma.$transaction(async (tx) => {
 		const data = {};
 		if (name !== undefined) data.name = name;
@@ -222,15 +223,6 @@ async function updatePlaylist(id, { name, description, addSongs, removeSongs, re
 						position: maxPos + 1 + i,
 					})),
 					skipDuplicates: true,
-				});
-			}
-		}
-
-		if (Array.isArray(reorder) && reorder.length > 0) {
-			for (let i = 0; i < reorder.length; i++) {
-				await tx.playlistSong.updateMany({
-					where: { idPlaylist: id, idSong: reorder[i] },
-					data: { position: i + 1 },
 				});
 			}
 		}
@@ -394,6 +386,55 @@ async function removeMember(playlistId, userId) {
 	return { removed: true };
 }
 
+async function updatePlaylistSongsOrder(playlistId, incomingIds) {
+	const { parseSongIds } = require("../utils/reorder");
+	const validated = parseSongIds(incomingIds);
+	if (validated === null) {
+		const err = new Error("Los ids de canciones son inválidos.");
+		err.code = "INVALID_SONG_IDS";
+		err.httpStatus = 400;
+		throw err;
+	}
+
+	return prisma.$transaction(async (tx) => {
+		await tx.$queryRaw`
+			SELECT id FROM playlist WHERE id = ${playlistId} FOR UPDATE
+		`;
+
+		const rows = await tx.$queryRaw`
+			SELECT id_song FROM playlist_song
+			WHERE id_playlist = ${playlistId}
+			ORDER BY position ASC, id_song ASC
+			FOR UPDATE
+		`;
+
+		const current = rows.map((r) => r.id_song);
+		const { order, merged } = mergeOrder({
+			mode: "playlist",
+			current,
+			incoming: validated,
+		});
+
+		if (order.length > 0) {
+			const positions = order.map((_, i) => i);
+			await tx.$executeRaw`
+				UPDATE playlist_song AS ps
+				SET position = v.position
+				FROM unnest(${order}::int[], ${positions}::int[]) AS v(id_song, position)
+				WHERE ps.id_playlist = ${playlistId} AND ps.id_song = v.id_song
+			`;
+		}
+
+		const reRead = await tx.playlistSong.findMany({
+			where: { idPlaylist: playlistId },
+			orderBy: [{ position: "asc" }, { idSong: "asc" }],
+			select: { idSong: true },
+		});
+
+		return { songIds: reRead.map((r) => r.idSong), merged };
+	});
+}
+
 module.exports = {
 	createPlaylist,
 	getPlaylistById,
@@ -404,6 +445,7 @@ module.exports = {
 	addSongToPlaylist,
 	removeSongFromPlaylist,
 	findUserById,
+	updatePlaylistSongsOrder,
 	createInvitation,
 	listInvitationsByPlaylist,
 	listPendingInvitations,

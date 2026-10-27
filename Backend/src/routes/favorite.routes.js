@@ -8,5 +8,6 @@ router.get("/", favoriteController.getFavorites);
 router.get("/songs/ids", favoriteController.getFavoriteSongIds);
 router.post("/songs", favoriteController.addFavorite);
 router.delete("/songs/:songId", favoriteController.removeFavorite);
+router.put("/order", favoriteController.updateFavoritesOrder);
 
 module.exports = router;
