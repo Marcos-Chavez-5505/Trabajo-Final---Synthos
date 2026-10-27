@@ -1,6 +1,8 @@
 const playlistService = require("../services/playlist.service");
 const notificationService = require("../services/notification.service");
 const { httpError } = require("../utils/errors");
+const { parseSongIds } = require("../utils/reorder");
+const reorderEventService = require("../services/reorderEvent.service");
 
 function isFavoritesPlaylist(playlist) {
 	return playlist.type === "favorites";
@@ -132,7 +134,7 @@ async function updatePlaylist(req, res, next) {
 			);
 		}
 
-		const { name, description, addSongs, removeSongs, reorder } = req.body || {};
+		const { name, description, addSongs, removeSongs } = req.body || {};
 
 		if (name !== undefined) {
 			if (typeof name !== "string" || name.trim().length === 0) {
@@ -156,7 +158,6 @@ async function updatePlaylist(req, res, next) {
 			description,
 			addSongs,
 			removeSongs,
-			reorder,
 		});
 
 		return res.status(200).json({ status: "success", playlist });
@@ -340,6 +341,71 @@ async function removeSong(req, res, next) {
 			status: "success",
 			message: "Canción eliminada de la playlist.",
 		});
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function updatePlaylistSongsOrder(req, res, next) {
+	try {
+		const userId = req.user.sub;
+		const id = requireId(req.params.id);
+
+		const songIds = parseSongIds(req.body?.songIds);
+		if (songIds === null) {
+			throw httpError(
+				400,
+				"Los ids de canciones son inválidos.",
+				"INVALID_SONG_IDS",
+			);
+		}
+
+		const playlist = await playlistService.getPlaylistById(id);
+		if (!playlist) {
+			throw httpError(
+				404,
+				"La playlist no existe.",
+				"PLAYLIST_NOT_FOUND",
+			);
+		}
+
+		if (isFavoritesPlaylist(playlist)) {
+			throw httpError(
+				400,
+				"La playlist de favoritos se gestiona desde /api/favorites.",
+				"FAVORITES_MANAGED_ELSEWHERE",
+			);
+		}
+
+		if (playlist.type === "personal") {
+			if (playlist.idCreator !== userId) {
+				throw httpError(
+					403,
+					"No sos el dueño de esta playlist.",
+					"NOT_PLAYLIST_OWNER",
+				);
+			}
+		} else {
+			const isMember = playlist.members.some((m) => m.idUser === userId);
+			if (!isMember) {
+				throw httpError(
+					403,
+					"No sos participante de esta playlist.",
+					"NOT_PLAYLIST_MEMBER",
+				);
+			}
+		}
+
+		const result = await playlistService.updatePlaylistSongsOrder(id, songIds);
+
+		res.status(200).json({
+			status: "success",
+			songIds: result.songIds,
+			merged: result.merged,
+		});
+
+		reorderEventService.record(userId, playlist.type);
+		return;
 	} catch (error) {
 		next(error);
 	}
@@ -568,6 +634,7 @@ module.exports = {
 	deletePlaylist,
 	addSong,
 	removeSong,
+	updatePlaylistSongsOrder,
 	createInvitation,
 	listPlaylistInvitations,
 	listReceivedInvitations,
