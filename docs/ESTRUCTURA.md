@@ -1,4 +1,4 @@
-﻿# Estructura del repositorio
+# Estructura del repositorio
 
 Documento de onboarding: **dÃ³nde estÃ¡ cada cosa y quÃ© responsabilidad tiene**. Refleja la rama `dev`.
 No reemplaza a los demÃ¡s documentos del proyecto (ver [Â§7](#7-otros-documentos)).
@@ -281,8 +281,8 @@ Todo bajo `/api` (`Backend/src/app.js`). El contrato completo â€”requests, 
 | Usuarios y follow | `GET /users/search`, `GET\|PATCH /users/me`, `GET /users/:id`, `GET /users/:id/followers\|following`, `POST\|DELETE /users/:id/follow` | `me`, follow | Â§7 |
 | Canciones | `GET /songs`, `GET /songs/search`, `GET /songs/recommendations`, `GET /songs/popular`, `GET /songs/:id` | â€” | Â§1â€“Â§5 |
 | Ãlbumes y artistas | `GET /albums/:id`, `GET /artists`, `GET /artists/:id` | â€” | Â§2.4â€“Â§2.5 |
-| Favoritos | `GET /favorites`, `GET /favorites/songs/ids`, `POST /favorites/songs`, `DELETE /favorites/songs/:songId` | todas | Â§8 |
-| Playlists | `GET /playlists`, `GET\|PUT\|DELETE /playlists/:id`, `POST /playlists` | todas | Â§9 |
+| Favoritos | `GET /favorites`, `GET /favorites/songs/ids`, `POST /favorites/songs`, `DELETE /favorites/songs/:songId`, `PUT /favorites/order` | todas | Â§8 |
+| Playlists | `GET /playlists`, `GET\|PUT\|DELETE /playlists/:id`, `POST /playlists`, `POST\|DELETE /playlists/:id/songs`, `PUT /playlists/:id/songs/order` | todas | Â§9 |
 | Salas | `GET /rooms?sort=` | â€” | Â§10 |
 
 El resto es pÃºblico. Errores: siempre `{ status: "error", message, code? }` (ver Â§6).
