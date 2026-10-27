@@ -1,4 +1,4 @@
-import musicNoteIcon from '../../assets/music_note.svg'
+import hamburgerMenuIcon from '../../assets/hamburger_menu.svg'
 import fullHeartIcon from '../../assets/full_heart.svg'
 import AddToQueueButton from '../../components/player/AddToQueueButton.jsx'
 
@@ -19,6 +19,10 @@ export default function PlaylistSongRow({
   onPlay,
   onRemove,
   canRemove = true,
+  canReorder = false,
+  isDragging = false,
+  dragOffset = 0,
+  onDragHandlePointerDown,
 }) {
   const handleKeyDown = (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return
@@ -28,7 +32,22 @@ export default function PlaylistSongRow({
   }
 
   return (
-    <article className="SurfaceLight CardRadius flex items-center gap-3 px-3 py-2">
+    <article
+      className="SurfaceLight CardRadius flex items-center gap-3 px-3 py-2"
+      style={isDragging ? { transform: `translateY(${dragOffset}px)`, zIndex: 10, position: 'relative' } : undefined}
+    >
+      {canReorder && (
+        <button
+          type="button"
+          onPointerDown={onDragHandlePointerDown}
+          aria-label={`Mover ${song.title}`}
+          title="Arrastrar para reordenar"
+          className="shrink-0 cursor-grab touch-none rounded px-1 py-1"
+        >
+          <img src={hamburgerMenuIcon} alt="" aria-hidden="true" className="h-4 w-4" />
+        </button>
+      )}
+
       <span className="text-muted-foreground TextMedium w-5 shrink-0 text-right">
         {index + 1}
       </span>
