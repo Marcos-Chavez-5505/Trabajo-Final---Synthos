@@ -7,22 +7,9 @@ import {
 	View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { AuthProvider, configureApi, useAuth } from "@synthos/shared";
-import * as SecureStore from "expo-secure-store";
+import { AuthProvider, useAuth } from "@synthos/shared";
 
 import { LOGIN_STYLES } from "./Login.styles";
-
-// Adaptador de storage para React Native: expo-secure-store (contrato async).
-const secureStorage = {
-	getItem: (key) => SecureStore.getItemAsync(key),
-	setItem: (key, value) => SecureStore.setItemAsync(key, value),
-	removeItem: (key) => SecureStore.deleteItemAsync(key),
-};
-
-configureApi({
-	baseUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api",
-	storage: secureStorage,
-});
 
 function LoginScreen() {
 	const { login, user, loading, logout } = useAuth();
