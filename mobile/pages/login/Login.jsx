@@ -7,24 +7,13 @@ import {
 	View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { AuthProvider, configureApi, useAuth } from "@synthos/shared";
-import * as SecureStore from "expo-secure-store";
+import { useAuth } from "@synthos/shared";
+import { useNavigation } from "@react-navigation/native";
 
 import { LOGIN_STYLES } from "./Login.styles";
 
-// Adaptador de storage para React Native: expo-secure-store (contrato async).
-const secureStorage = {
-	getItem: (key) => SecureStore.getItemAsync(key),
-	setItem: (key, value) => SecureStore.setItemAsync(key, value),
-	removeItem: (key) => SecureStore.deleteItemAsync(key),
-};
-
-configureApi({
-	baseUrl: process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api",
-	storage: secureStorage,
-});
-
 function LoginScreen() {
+	const navigation = useNavigation();
 	const { login, user, loading, logout } = useAuth();
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -133,7 +122,9 @@ function LoginScreen() {
 
 				<View style={LOGIN_STYLES.linkContainer}>
 					<Text style={LOGIN_STYLES.linkText}>¿No tenés cuenta?</Text>
-					<Text style={LOGIN_STYLES.linkAction}>Creá una</Text>
+					<Pressable onPress={() => navigation.navigate("Register")}>
+						<Text style={LOGIN_STYLES.linkAction}>Creá una</Text>
+					</Pressable>
 				</View>
 			</View>
 
@@ -142,10 +133,4 @@ function LoginScreen() {
 	);
 }
 
-export default function App() {
-	return (
-		<AuthProvider>
-			<LoginScreen />
-		</AuthProvider>
-	);
-}
+export default LoginScreen;
