@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { AuthProvider, useAuth } from "@synthos/shared";
+import { useAuth } from "@synthos/shared";
+import { useNavigation } from "@react-navigation/native";
 
 import { REGISTER_STYLES } from "./Register.styles";
 
 function RegisterScreen() {
+	const navigation = useNavigation();
 	const { register } = useAuth();
 	const [formData, setFormData] = useState({
 		username: "",
@@ -143,7 +145,9 @@ function RegisterScreen() {
 
 				<View style={REGISTER_STYLES.linkContainer}>
 					<Text style={REGISTER_STYLES.linkText}>¿Ya tenés cuenta?</Text>
-					<Text style={REGISTER_STYLES.linkAction}>Iniciá sesión</Text>
+					<Pressable onPress={() => navigation.navigate("Login")}>
+						<Text style={REGISTER_STYLES.linkAction}>Iniciá sesión</Text>
+					</Pressable>
 				</View>
 			</View>
 
@@ -152,10 +156,4 @@ function RegisterScreen() {
 	);
 }
 
-export default function App() {
-	return (
-		<AuthProvider>
-			<RegisterScreen />
-		</AuthProvider>
-	);
-}
+export default RegisterScreen;

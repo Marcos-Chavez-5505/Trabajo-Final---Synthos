@@ -7,11 +7,13 @@ import {
 	View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { AuthProvider, useAuth } from "@synthos/shared";
+import { useAuth } from "@synthos/shared";
+import { useNavigation } from "@react-navigation/native";
 
 import { LOGIN_STYLES } from "./Login.styles";
 
 function LoginScreen() {
+	const navigation = useNavigation();
 	const { login, user, loading, logout } = useAuth();
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -120,7 +122,9 @@ function LoginScreen() {
 
 				<View style={LOGIN_STYLES.linkContainer}>
 					<Text style={LOGIN_STYLES.linkText}>¿No tenés cuenta?</Text>
-					<Text style={LOGIN_STYLES.linkAction}>Creá una</Text>
+					<Pressable onPress={() => navigation.navigate("Register")}>
+						<Text style={LOGIN_STYLES.linkAction}>Creá una</Text>
+					</Pressable>
 				</View>
 			</View>
 
@@ -129,10 +133,4 @@ function LoginScreen() {
 	);
 }
 
-export default function App() {
-	return (
-		<AuthProvider>
-			<LoginScreen />
-		</AuthProvider>
-	);
-}
+export default LoginScreen;
