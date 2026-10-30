@@ -4,6 +4,7 @@ import { blobatarUri } from "blobatar/uri";
 import { SvgXml } from "react-native-svg";
 import { AVATAR_STYLES } from "./Avatar.styles";
 
+//* Si no hay foto subida y no puede utilizar un blobatar, utiliza las iniciales de su nombre
 function getInitials(name = "") {
 	if (!name) return "?";
 	const parts = name.trim().split(/\s+/);
