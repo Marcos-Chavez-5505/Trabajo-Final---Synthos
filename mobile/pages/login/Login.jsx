@@ -9,6 +9,11 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { useAuth } from "@synthos/shared";
 import { useNavigation } from "@react-navigation/native";
+import {
+	Avatar,
+	AvatarFallback,
+	AvatarImage,
+} from "../../components/ui/Avatar/Avatar";
 
 import { LOGIN_STYLES } from "./Login.styles";
 
@@ -47,7 +52,14 @@ function LoginScreen() {
 		return (
 			<View style={LOGIN_STYLES.loggedContainer}>
 				<View style={LOGIN_STYLES.loggedCard}>
-					<Text style={LOGIN_STYLES.loggedTitle}>Hola, {user.username}</Text>
+					<Avatar size={64}>
+						<AvatarImage uri={user?.avatarUrl} name={user?.username} />
+						<AvatarFallback name={user?.username} />
+					</Avatar>
+
+					<Text style={[LOGIN_STYLES.loggedTitle, { marginTop: 16 }]}>
+						Hola, {user.username}
+					</Text>
 					<Text style={LOGIN_STYLES.loggedSubtitle}>
 						Sesión iniciada correctamente.
 					</Text>
