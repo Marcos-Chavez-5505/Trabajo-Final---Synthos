@@ -1,0 +1,95 @@
+import { StyleSheet } from "react-native";
+import { colors, fontSize, fontWeight, lineHeight, radius } from "../../../theme";
+
+export const MEDIA_CARD_STYLES = StyleSheet.create({
+	container: {
+		width: 180,
+		borderRadius: radius.sm,
+		overflow: "hidden",
+		backgroundColor: colors.surfaceLight,
+	},
+	coverContainer: {
+		width: "100%",
+		aspectRatio: 3 / 4,
+		backgroundColor: colors.border,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	coverImage: {
+		width: "100%",
+		height: "100%",
+	},
+	coverFallback: {
+		width: 32,
+		height: 32,
+		tintColor: colors.textPrimary,
+		opacity: 0.6,
+	},
+	overlay: {
+		position: "absolute",
+		left: 0,
+		right: 0,
+		bottom: 0,
+		backgroundColor: colors.border,
+		paddingHorizontal: 12,
+		paddingVertical: 10,
+		opacity: 0.92,
+	},
+	label: {
+		color: colors.textPrimary,
+		opacity: 0.7,
+		fontSize: fontSize.xs - 2,
+		lineHeight: 14,
+		fontWeight: fontWeight.regular,
+		textTransform: "uppercase",
+		marginBottom: 2,
+	},
+	title: {
+		color: colors.textPrimary,
+		fontSize: fontSize.md,
+		lineHeight: lineHeight.md,
+		fontWeight: fontWeight.regular,
+	},
+	artist: {
+		color: colors.textPrimary,
+		opacity: 0.7,
+		fontSize: fontSize.xs,
+		lineHeight: lineHeight.xs,
+		fontWeight: fontWeight.regular,
+	},
+	buttonsContainer: {
+		position: "absolute",
+		right: 10,
+		bottom: 58,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+	},
+	queueButton: {
+		width: 36,
+		height: 36,
+		borderRadius: 18,
+		backgroundColor: colors.border,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	queueIcon: {
+		width: 16,
+		height: 16,
+		tintColor: colors.textPrimary,
+	},
+	playButton: {
+		width: 36,
+		height: 36,
+		borderRadius: 18,
+		backgroundColor: colors.primary,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	playIcon: {
+		width: 16,
+		height: 16,
+		tintColor: colors.textPrimary,
+		marginLeft: 2,
+	},
+});

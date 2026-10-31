@@ -1,6 +1,6 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { AuthProvider } from "@synthos/shared";
+import { AuthProvider } from "@synthos/shared/src/context/AuthContext";
 import Landing from "./pages/langing/Landing";
 import Login from "./pages/login/Login";
 import Register from "./pages/register/Register";
