@@ -26,6 +26,8 @@
   --ds-light-muted: #b0a4b5;
   --ds-fucsia: #ef2f62;
   --ds-placeholder: #b0a4b5;
+  --ds-warning: #f59e0b;
+  --ds-danger-bg: rgba(213, 22, 57, 0.16);
 
   /* Tipografía */
   --ds-font: Roboto, sans-serif;
@@ -54,11 +56,36 @@
   --ds-font-logo: 'SynthosLogo', var(--ds-font);
 
   /* Elevación */
-  --ds-elevation-1: 0px 4px 8px 2px var(--ds-wall);
+  --ds-elevation-1: 0px var(--ds-elevation-1-y) var(--ds-elevation-1-blur) 2px var(--ds-wall);
+  --ds-elevation-1-y: 4px;
+  --ds-elevation-1-blur: 8px;
+  --ds-elevation-1-opacity: 0.6;
+  --ds-elevation-1-android: 8;
+
+  /* Espaciado */
+  --ds-space-xs: 4px;
+  --ds-space-sm: 8px;
+  --ds-space-md: 12px;
+  --ds-space-lg: 16px;
+  --ds-space-xl: 24px;
+  --ds-space-xxl: 32px;
+
+  /* Bordes y opacidad */
+  --ds-radius-sm: 6px;
+  --ds-radius-md: 8px;
+  --ds-radius-lg: 12px;
+  --ds-border-width-sm: 1px;
+  --ds-opacity-subtle: 0.8;
+  --ds-opacity-muted: 0.7;
+  --ds-opacity-disabled: 0.6;
 
   /* Componentes */
   --ds-radius-card: 6px;
+  --ds-radius-full: 9999px;
   --ds-size-media-card: 180px;
   --ds-size-mini-media-card: 150px;
   --ds-size-media-card-play: 36px;
+  --ds-height-button: 40px;
+  --ds-width-card-max: 448px;
+  --ds-size-avatar: 32px;
 }

@@ -1,11 +1,11 @@
 import { StyleSheet } from "react-native";
-import { colors, fontSize, fontWeight } from "../../../theme";
+import { colors, text, fontWeight, radius, sizes } from "../../../theme";
 
 export const AVATAR_STYLES = StyleSheet.create({
 	container: {
-		width: 32,
-		height: 32,
-		borderRadius: 9999,
+		width: sizes.avatar,
+		height: sizes.avatar,
+		borderRadius: radius.full,
 		overflow: "hidden",
 		backgroundColor: colors.surfaceLight,
 		alignItems: "center",
@@ -36,8 +36,8 @@ export const AVATAR_STYLES = StyleSheet.create({
 		zIndex: 1,
 	},
 	fallbackText: {
+		...text.medium,
 		color: colors.textPrimary,
-		fontSize: fontSize.xs,
 		fontWeight: fontWeight.medium,
 		textTransform: "uppercase",
 	},

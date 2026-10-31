@@ -133,7 +133,6 @@
     width: var(--ds-size-media-card-play);
     height: var(--ds-size-media-card-play);
   }
-}
 
   /* Color para texto fucsia */
   .TextFucsia {
@@ -145,7 +144,6 @@
     opacity: 1;
   }
 
-@layer components {
   /* Alert Dialog (ReUI adaptado al design system de Synthos).
      Reemplaza las clases Tailwind/shadcn del original por clases propias
      que usan los tokens de tokens.css. Base UI aporta la accesibilidad y
@@ -191,11 +189,6 @@
   }
   .AlertDialogContent[data-starting-style],
   .AlertDialogContent[data-ending-style] {
-    transform: translate(-50%, -50%) scale(0.95);
-    opacity: 0;
-  }
-  .AlertDialogContent[data-starting-style],
-  .AlertDialogContent[data-ending-style] {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.96);
   }
@@ -234,17 +227,16 @@
     justify-content: center;
     width: 40px;
     height: 40px;
-    border-radius: 9999px;
+    border-radius: var(--ds-radius-full);
     flex-shrink: 0;
   }
   .AlertDialogMediaDestructive {
     background: color-mix(in srgb, var(--ds-red) 15%, transparent);
     color: var(--ds-red);
   }
-  /* Amber no tiene token equivalente en el design system; se usa literal. */
   .AlertDialogMediaWarning {
-    background: color-mix(in srgb, #f59e0b 15%, transparent);
-    color: #f59e0b;
+    background: color-mix(in srgb, var(--ds-warning) 15%, transparent);
+    color: var(--ds-warning);
   }
 
   .AlertDialogTitle {

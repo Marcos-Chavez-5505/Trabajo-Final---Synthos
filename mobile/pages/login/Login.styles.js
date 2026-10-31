@@ -1,181 +1,42 @@
 import { StyleSheet } from "react-native";
-import {
-	colors,
-	spacing,
-	fontSize,
-	lineHeight,
-	fontWeight,
-	fontFamily,
-	radius,
-	borderWidth,
-	opacity,
-	sizes,
-	shadows,
-} from "../../theme";
+import { colors, spacing } from "../../theme";
+import { AUTH_STYLES, AUTH_COLORS } from "../auth/Auth.styles";
 
-export const LOGIN_STYLES = StyleSheet.create({
-	main: {
-		flex: 1,
-		backgroundColor: colors.background,
-		alignItems: "center",
-		justifyContent: "center",
-		paddingHorizontal: spacing.lg,
-	},
-	card: {
-		width: "100%",
-		maxWidth: sizes.cardMaxWidth,
-		backgroundColor: colors.surfaceLight,
-		borderRadius: radius.lg,
-		padding: spacing.xxl,
-		...shadows.elevation1,
-	},
-	header: {
-		fontFamily: fontFamily.base,
-		fontSize: fontSize.xl,
-		lineHeight: lineHeight.xl,
-		fontWeight: fontWeight.bold,
-		color: colors.textPrimary,
-	},
-	subtitle: {
-		fontFamily: fontFamily.base,
-		fontSize: fontSize.xs,
-		lineHeight: lineHeight.xs,
-		fontWeight: fontWeight.regular,
-		color: colors.textPrimary,
-		opacity: opacity.muted,
-		marginTop: spacing.xs,
-	},
-	form: {
-		marginTop: spacing.xl,
-	},
-	field: {
-		marginBottom: spacing.lg,
-	},
-	labelText: {
-		fontFamily: fontFamily.base,
-		fontSize: fontSize.xs,
-		lineHeight: lineHeight.xs,
-		fontWeight: fontWeight.regular,
-		color: colors.textPrimary,
-		opacity: opacity.subtle,
-	},
-	input: {
-		marginTop: spacing.xs,
-		width: "100%",
-		borderWidth: borderWidth.sm,
-		borderColor: colors.border,
-		borderRadius: radius.md,
-		paddingHorizontal: spacing.md,
-		paddingVertical: spacing.sm + 2, // mantiene el padding vertical original
-		color: colors.textPrimary,
-		backgroundColor: "transparent",
-		fontFamily: fontFamily.base,
-		fontSize: fontSize.md,
-		lineHeight: lineHeight.md,
-		fontWeight: fontWeight.regular,
-	},
-	inputPlaceholder: {
-		color: colors.placeholder,
-	},
-	errorContainer: {
-		backgroundColor: colors.dangerBg,
-		borderRadius: radius.sm,
-		paddingHorizontal: spacing.md,
-		paddingVertical: spacing.sm,
-		marginBottom: spacing.lg,
-	},
-	errorText: {
-		fontFamily: fontFamily.base,
-		fontSize: fontSize.xs,
-		lineHeight: lineHeight.xs,
-		fontWeight: fontWeight.regular,
-		color: colors.danger,
-	},
-	button: {
-		height: sizes.buttonHeight,
-		backgroundColor: colors.primary,
-		borderRadius: radius.md,
-		alignItems: "center",
-		justifyContent: "center",
-		width: "100%",
-	},
-	buttonDisabled: {
-		opacity: opacity.disabled,
-	},
-	buttonText: {
-		fontFamily: fontFamily.base,
-		fontSize: fontSize.md,
-		lineHeight: lineHeight.md,
-		fontWeight: fontWeight.medium,
-		color: colors.textPrimary,
-	},
-	linkContainer: {
-		marginTop: spacing.xl,
-		alignItems: "center",
-		justifyContent: "center",
-		flexDirection: "row",
-	},
-	linkText: {
-		fontFamily: fontFamily.base,
-		fontSize: fontSize.xs,
-		lineHeight: lineHeight.xs,
-		fontWeight: fontWeight.regular,
-		color: colors.textPrimary,
-		opacity: opacity.muted,
-	},
-	linkAction: {
-		fontFamily: fontFamily.base,
-		fontSize: fontSize.xs,
-		lineHeight: lineHeight.xs,
-		fontWeight: fontWeight.regular,
-		color: colors.textPrimary,
-		textDecorationLine: "underline",
-		marginLeft: spacing.xs,
-	},
-	loadingContainer: {
-		flex: 1,
-		backgroundColor: colors.background,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	loggedContainer: {
-		flex: 1,
-		backgroundColor: colors.background,
-		alignItems: "center",
-		justifyContent: "center",
-		paddingHorizontal: spacing.lg,
-	},
-	loggedCard: {
-		width: "100%",
-		maxWidth: sizes.cardMaxWidth,
-		backgroundColor: colors.surfaceLight,
-		borderRadius: radius.lg,
-		padding: spacing.xxl,
-		alignItems: "center",
-		...shadows.elevation1,
-	},
-	loggedTitle: {
-		fontFamily: fontFamily.base,
-		fontSize: fontSize.xl,
-		lineHeight: lineHeight.xl,
-		fontWeight: fontWeight.bold,
-		color: colors.textPrimary,
-		textAlign: "center",
-	},
-	loggedSubtitle: {
-		fontFamily: fontFamily.base,
-		fontSize: fontSize.xs,
-		lineHeight: lineHeight.xs,
-		fontWeight: fontWeight.regular,
-		color: colors.textPrimary,
-		opacity: opacity.muted,
-		marginTop: spacing.xs,
-		textAlign: "center",
-	},
-	logoutButton: {
-		marginTop: spacing.xl,
-		backgroundColor: colors.border,
-	},
-	indicatorColor: colors.textPrimary,
-	placeholderTextColor: colors.placeholder,
-});
+// Mantiene la misma API que antes (LOGIN_STYLES.xxx), pero reutiliza los
+// estilos comunes de Auth.styles.js. Solo se define lo exclusivo de Login.
+export const LOGIN_STYLES = {
+	...AUTH_STYLES,
+	...StyleSheet.create({
+		inputPlaceholder: {
+			color: colors.placeholder,
+		},
+		loadingContainer: {
+			flex: 1,
+			backgroundColor: colors.wall,
+			alignItems: "center",
+			justifyContent: "center",
+		},
+		// Estado "ya logueado": variantes centradas de main/card/header/subtitle.
+		loggedContainer: {
+			...AUTH_STYLES.main,
+		},
+		loggedCard: {
+			...AUTH_STYLES.card,
+			alignItems: "center",
+		},
+		loggedTitle: {
+			...AUTH_STYLES.header,
+			textAlign: "center",
+		},
+		loggedSubtitle: {
+			...AUTH_STYLES.subtitle,
+			textAlign: "center",
+		},
+		logoutButton: {
+			marginTop: spacing.xl,
+			backgroundColor: colors.border,
+		},
+	}),
+	// No son estilos: se exponen fuera de StyleSheet.create.
+	...AUTH_COLORS,
+};

@@ -1,15 +1,8 @@
 import { StyleSheet } from "react-native";
-import {
-	colors,
-	spacing,
-	fontSize,
-	lineHeight,
-	fontWeight,
-	radius,
-	sizes,
-	shadows,
-} from "../../theme";
+import { colors, spacing, text, radius } from "../../theme";
 
+// Los presets de `text` equivalen a las clases de la web (Header1, Header3,
+// TextLarge, TextRegluar, TextTiny).
 export const LANDING_STYLES = StyleSheet.create({
 	// Contenedor principal (web: Surface)
 	main: {
@@ -30,10 +23,8 @@ export const LANDING_STYLES = StyleSheet.create({
 		paddingVertical: spacing.md,
 	},
 	logo: {
+		...text.header3,
 		color: colors.textPrimary,
-		fontSize: fontSize.header3,      // Header3 en la web
-		fontWeight: fontWeight.bold,
-		lineHeight: lineHeight.header3,
 	},
 
 	// Hero
@@ -43,16 +34,12 @@ export const LANDING_STYLES = StyleSheet.create({
 		paddingBottom: spacing.xxl,
 	},
 	heroTitle: {
+		...text.header1,
 		color: colors.textPrimary,
-		fontSize: fontSize.header1,      // Header1 en la web (56px)
-		lineHeight: lineHeight.header1,  // 64px
-		fontWeight: fontWeight.bold,
 	},
 	heroText: {
+		...text.large,
 		color: colors.textMuted,
-		fontSize: fontSize.large,        // TextLarge en la web (18px)
-		lineHeight: lineHeight.large,    // 24px
-		fontWeight: fontWeight.regular,
 		marginTop: spacing.md,
 	},
 
@@ -75,65 +62,53 @@ export const LANDING_STYLES = StyleSheet.create({
 		borderRadius: radius.lg,
 	},
 	buttonText: {
+		...text.regular,
 		color: colors.textPrimary,
-		fontSize: fontSize.regular,      // TextRegluar en la web
-		lineHeight: lineHeight.regular,
-		fontWeight: fontWeight.regular,
 	},
 
 	// Sección "Cómo funciona" (web: Wall)
 	section: {
-		backgroundColor: colors.wall,    // Wall en la web
+		backgroundColor: colors.wall,
 		paddingHorizontal: spacing.lg,
 		paddingVertical: spacing.xl,
 	},
 	sectionTitle: {
+		...text.header3,
 		color: colors.textPrimary,
-		fontSize: fontSize.header3,      // Header3 en la web
-		lineHeight: lineHeight.header3,
-		fontWeight: fontWeight.bold,
 		marginBottom: spacing.lg,
 	},
 	stepItem: {
 		marginBottom: spacing.lg,
 	},
 	stepNumber: {
+		...text.header3,
 		color: colors.textPrimary,
-		fontSize: fontSize.header3,      // Header3 en la web
-		lineHeight: lineHeight.header3,
-		fontWeight: fontWeight.bold,
 	},
 	stepTitle: {
+		...text.large,
 		color: colors.textPrimary,
-		fontSize: fontSize.large,        // TextLarge en la web
-		lineHeight: lineHeight.large,
-		fontWeight: fontWeight.regular,
 		marginTop: spacing.xs,
 	},
 	stepText: {
+		...text.regular,
 		color: colors.textMuted,
-		fontSize: fontSize.regular,      // TextRegluar en la web
-		lineHeight: lineHeight.regular,
 		marginTop: spacing.xs,
 	},
 
 	// Sección "Features"
 	featureCard: {
-		backgroundColor: colors.surfaceLight,  // SurfaceLight en la web
+		backgroundColor: colors.surfaceLight, // SurfaceLight en la web
 		borderRadius: radius.lg,
 		padding: spacing.lg,
 		marginBottom: spacing.md,
 	},
 	featureTitle: {
+		...text.large,
 		color: colors.textPrimary,
-		fontSize: fontSize.large,        // TextLarge en la web
-		lineHeight: lineHeight.large,
-		fontWeight: fontWeight.regular,
 	},
 	featureText: {
+		...text.regular,
 		color: colors.textMuted,
-		fontSize: fontSize.regular,      // TextRegluar en la web
-		lineHeight: lineHeight.regular,
 		marginTop: spacing.sm,
 	},
 
@@ -144,8 +119,7 @@ export const LANDING_STYLES = StyleSheet.create({
 		alignItems: "center",
 	},
 	footerText: {
+		...text.tiny,
 		color: colors.textMuted,
-		fontSize: fontSize.tiny,         // TextTiny en la web
-		lineHeight: lineHeight.tiny,
 	},
 });
