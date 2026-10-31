@@ -59,40 +59,26 @@
   }
 
 
-
-  /* Añadidos recientemente */
-
   /* Para que el usuario no pueda arrastrar las imágenes */
   img, svg {
     -webkit-user-select: none; /* Safari */
-    -ms-user-select: none;     /* IE 10 and IE 11 */
-    user-select: none;         /* Standard syntax */
-    -webkit-user-drag: none;   /* For older WebKit browsers */
+    user-select: none;
+    -webkit-user-drag: none;
     user-drag: none;
   }
 
-  /* Barra scroll */
-  /* html {
-    scrollbar-gutter: stable;
-  } */
+  /* Barra de scroll */
   html::-webkit-scrollbar-track {
     background: transparent;
   }
   html::-webkit-scrollbar-thumb {
-    border-radius: 6px;
-    background-color: var(--ds-plaster);
-  }
-  html::-webkit-scrollbar-thumb:hover {
+    border-radius: var(--ds-radius-card);
     background-color: var(--ds-plaster);
   }
   @supports (scrollbar-color: gray black) {
     html {
       scrollbar-width: thin;
-      scrollbar-color: transparent transparent;
-    }
-    html {
       scrollbar-color: var(--ds-plaster) transparent;
-      /* background: var(--color-s-bg); */
     }
   }
 }

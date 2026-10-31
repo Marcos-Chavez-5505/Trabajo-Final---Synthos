@@ -1,9 +1,9 @@
 // Fuente de verdad de los design tokens (compartida por web y mobile).
 //
-// Cada secci??n agrupa tokens con su comentario original. El script
+// Cada sección agrupa tokens con su comentario original. El script
 // `shared/scripts/generate-tokens.mjs` genera `frontend/src/styles/tokens.css`
-// a partir de `tokenSections`, y el resultado debe ser id??ntico al archivo
-// actual (criterio de aceptaci??n de la Fase 5).
+// a partir de `tokenSections`, y el resultado debe ser idéntico al archivo
+// actual (criterio de aceptación de la Fase 5).
 
 export const tokenSections = [
   {
@@ -25,6 +25,8 @@ export const tokenSections = [
       ['--ds-light-muted', '#b0a4b5'],
       ['--ds-fucsia', '#ef2f62'],
       ['--ds-placeholder', '#b0a4b5'],
+      ['--ds-warning', '#f59e0b'],
+      ['--ds-danger-bg', 'rgba(213, 22, 57, 0.16)'],
     ],
   },
   {
@@ -59,23 +61,57 @@ export const tokenSections = [
   {
     comment: 'Elevación',
     tokens: [
-      ['--ds-elevation-1', '0px 4px 8px 2px var(--ds-wall)'],
+      ['--ds-elevation-1', '0px var(--ds-elevation-1-y) var(--ds-elevation-1-blur) 2px var(--ds-wall)'],
+      // Partes que React Native necesita por separado (no soporta box-shadow ni spread)
+      ['--ds-elevation-1-y', '4px'],
+      ['--ds-elevation-1-blur', '8px'],
+      ['--ds-elevation-1-opacity', '0.6'],
+      ['--ds-elevation-1-android', '8'],
+    ],
+  },
+  {
+    comment: 'Espaciado',
+    tokens: [
+      ['--ds-space-xs', '4px'],
+      ['--ds-space-sm', '8px'],
+      ['--ds-space-md', '12px'],
+      ['--ds-space-lg', '16px'],
+      ['--ds-space-xl', '24px'],
+      ['--ds-space-xxl', '32px'],
+    ],
+  },
+  {
+    comment: 'Bordes y opacidad',
+    tokens: [
+      ['--ds-radius-sm', '6px'],
+      ['--ds-radius-md', '8px'],
+      ['--ds-radius-lg', '12px'],
+      ['--ds-border-width-sm', '1px'],
+      ['--ds-opacity-subtle', '0.8'],
+      ['--ds-opacity-muted', '0.7'],
+      ['--ds-opacity-disabled', '0.6'],
     ],
   },
   {
     comment: 'Componentes',
     tokens: [
       ['--ds-radius-card', '6px'],
+      ['--ds-radius-full', '9999px'],
       ['--ds-size-media-card', '180px'],
       ['--ds-size-mini-media-card', '150px'],
       ['--ds-size-media-card-play', '36px'],
+      ['--ds-height-button', '40px'],
+      ['--ds-width-card-max', '448px'],
+      ['--ds-size-avatar', '32px'],
     ],
   },
 ]
 
 export function getToken(name) {
   for (const section of tokenSections) {
-    for (const [token, value] of section.tokens) {
+    for (const entry of section.tokens) {
+      if (entry === null) continue // separador de línea en blanco
+      const [token, value] = entry
       if (token === name) return value
     }
   }
