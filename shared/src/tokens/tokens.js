@@ -103,6 +103,9 @@ export const tokenSections = [
       ['--ds-height-button', '40px'],
       ['--ds-width-card-max', '448px'],
       ['--ds-size-avatar', '32px'],
+      ['--ds-width-nav-indicator', '64px'],
+      ['--ds-height-nav-indicator', '32px'],
+      ['--ds-size-nav-icon', '24px'],
     ],
   },
 ]
