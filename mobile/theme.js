@@ -1,41 +1,56 @@
 // Design tokens para React Native (puro). Solo valores atómicos.
-// No contiene objetos de estilos compuestos ni lógica.
+// Traducidos desde Frontend/src/styles/tokens.css
 
-// Colores agrupados por rol
 export const colors = {
-	background: "#605468", // Wall
+	// Colores base
+	red: "#d51639",
+	salmon: "#c34b61",
+	lighter: "#f4f0f9",
+	pink: "#eb84a5",
+	light: "#c6bed3",
+	shadow: "#453a4a",
+	plaster: "#8e7288",
+	volume: "#373038",
+	wall: "#605468",
 	surface: "#1e1e1e",
 	surfaceLight: "#2a2a2c",
-	textPrimary: "#f4f0f9", // Lighter
-	textMuted: "#b0a4b5", // LightMuted
-	border: "#373038", // Volume
-	primary: "#ef2f62", // Fucsia
-	danger: "#d51639", // Red
-	dangerBg: "rgba(213, 22, 57, 0.16)",
+	lighterMuted: "#f9e5ff",
+	lightMuted: "#b0a4b5",
+	fucsia: "#ef2f62",
 	placeholder: "#b0a4b5",
+
+	// Alias semánticos (para mantener compatibilidad con lo que ya existe)
+	background: "#605468",
+	textPrimary: "#f4f0f9",
+	textMuted: "#b0a4b5",
+	border: "#373038",
+	primary: "#ef2f62",
+	danger: "#d51639",
+	dangerBg: "rgba(213, 22, 57, 0.16)",
 };
 
-// Escala de espaciados (múltiplos coherentes)
-export const spacing = {
-	xs: 4,
-	sm: 8,
-	md: 12,
-	lg: 16,
-	xl: 24,
-	xxl: 32,
-};
-
-// Tipografía
 export const fontSize = {
-	xs: 12, // TextMedium
-	md: 16, // TextRegular / Button
-	xl: 24, // Header3
+	tiny: 10,
+	medium: 12,
+	regular: 16,
+	button: 16,
+	large: 18,
+	header4: 18,
+	header3: 24,
+	header2: 36,
+	header1: 56,
 };
 
 export const lineHeight = {
-	xs: 18,
-	md: 24,
-	xl: 40,
+	tiny: 14,
+	medium: 18,
+	regular: 24,
+	button: 24,
+	large: 24,
+	header4: 24,
+	header3: 40,
+	header2: 48,
+	header1: 64,
 };
 
 export const fontWeight = {
@@ -48,8 +63,17 @@ export const fontFamily = {
 	base: "Roboto",
 };
 
-// Bordes
+export const spacing = {
+	xs: 4,
+	sm: 8,
+	md: 12,
+	lg: 16,
+	xl: 24,
+	xxl: 32,
+};
+
 export const radius = {
+	card: 6,
 	sm: 6,
 	md: 8,
 	lg: 12,
@@ -59,23 +83,22 @@ export const borderWidth = {
 	sm: 1,
 };
 
-// Opacidades semánticas
 export const opacity = {
 	subtle: 0.8,
 	muted: 0.7,
 	disabled: 0.6,
 };
 
-// Tamaños atómicos
 export const sizes = {
 	buttonHeight: 40,
-	cardMaxWidth: 448,
+	mediaCard: 180,
+	miniMediaCard: 150,
+	mediaCardPlay: 36,
 };
 
-// Sombras / Elevación (valores atómicos)
 export const shadows = {
 	elevation1: {
-		shadowColor: colors.background,
+		shadowColor: "#605468",
 		shadowOffset: { width: 0, height: 4 },
 		shadowOpacity: 0.6,
 		shadowRadius: 8,
