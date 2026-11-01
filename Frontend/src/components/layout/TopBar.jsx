@@ -1,7 +1,10 @@
 import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
+import { useUnreadNotificationsCount } from '@synthos/shared'
 import { SidebarTrigger } from '../ui/sidebar.tsx'
 import searchIcon from '../../assets/search.svg'
+import cameraAiIcon from '../../assets/camera_ai.svg'
+import notificationIcon from '../../assets/notification.svg'
 
 /**
  * Input de búsqueda global. Escribe en la URL de /buscar (?q=) para que la
@@ -13,6 +16,7 @@ import searchIcon from '../../assets/search.svg'
 export default function TopBar() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const unreadCount = useUnreadNotificationsCount()
 
   // El input es controlled desde la URL: si ?q= cambia (por ejemplo al navegar
   // atrás) el input se entera sin duplicar estado.
@@ -51,19 +55,50 @@ export default function TopBar() {
         <button type="button" className="rounded-full Volume px-2 py-1 Button">→</button>
       </div>
 
-      <form onSubmit={submit} role="search" className="w-72">
-        <div className="Volume flex items-center gap-2 rounded-full px-4 py-2">
-          <img src={searchIcon} alt="" aria-hidden="true" className="h-4 w-4 shrink-0" />
-          <input
-            type="search"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder="Buscar canciones o personas"
-            aria-label="Buscar canciones o personas"
-            className="text-foreground TextRegluar placeholder-muted-foreground/60 w-full bg-transparent outline-none"
-          />
-        </div>
-      </form>
+      <div className="flex items-center gap-2">
+        <form onSubmit={submit} role="search" className="w-72">
+          <div className="Volume flex items-center gap-2 rounded-full px-4 py-2">
+            <img src={searchIcon} alt="" aria-hidden="true" className="h-4 w-4 shrink-0" />
+            <input
+              type="search"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder="Buscar canciones o personas"
+              aria-label="Buscar canciones o personas"
+              className="text-foreground TextRegluar placeholder-muted-foreground/60 w-full bg-transparent outline-none"
+            />
+          </div>
+        </form>
+
+        {/* Acceso directo a la detección de ánimo (misma pantalla que el ítem
+            "Ánimo" del sidebar). Comparte el fondo de la barra de búsqueda
+            (`Volume`) y usa el SVG del set propio como URL (regla 10). */}
+        <NavLink
+          to="/animo"
+          aria-label="Recomendaciones por estado de ánimo"
+          title="Recomendaciones por estado de ánimo"
+          className="Volume flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <img src={cameraAiIcon} alt="" aria-hidden="true" className="h-5 w-5" />
+        </NavLink>
+      </div>
+
+      {/* Notificaciones: antes vivía en el sidebar; ahora es la acción del
+          extremo derecho del header. Mismo tratamiento visual que el botón de
+          ánimo y badge con el mismo criterio que BottomNav. */}
+      <NavLink
+        to="/notificaciones"
+        aria-label={unreadCount > 0 ? `Notificaciones, ${unreadCount} sin leer` : 'Notificaciones'}
+        title="Notificaciones"
+        className="Volume relative ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        <img src={notificationIcon} alt="" aria-hidden="true" className="h-5 w-5" />
+        {unreadCount > 0 && (
+          <span className="Fucsia absolute -right-1 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full px-0.5 text-[9px] text-white">
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
+      </NavLink>
     </header>
   )
 }

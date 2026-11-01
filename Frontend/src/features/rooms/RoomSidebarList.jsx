@@ -5,7 +5,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '../../components/ui/sidebar.tsx'
-import roomIcon from '../../assets/join_music_room.svg'
+import roomIcon from '../../assets/headphones.svg'
 
 /**
  * Filas de sala para el grupo "Mis Salas" del Sidebar: presentacional, recibe la
@@ -38,7 +38,12 @@ export default function RoomSidebarList({ rooms }) {
                   : ''
               }
             >
-              <img src={roomIcon} alt="" aria-hidden="true" className="h-4 w-4" />
+              <img
+                src={roomIcon}
+                alt=""
+                aria-hidden="true"
+                className={`h-4 w-4${isActive ? ' invert' : ''}`}
+              />
               <SidebarLabel>{room.name}</SidebarLabel>
             </SidebarMenuButton>
           </SidebarMenuItem>

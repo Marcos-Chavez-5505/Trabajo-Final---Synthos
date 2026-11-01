@@ -1,4 +1,4 @@
-import roomIcon from '../../assets/join_music_room.svg'
+import roomIcon from '../../assets/headphones.svg'
 
 /**
  * Tarjeta de una sala en la grilla de `/salas`.
