@@ -18,7 +18,7 @@ import {
 import { useDebounce, useRoomsList } from '@synthos/shared'
 import RoomCard from '../../components/cards/RoomCard.jsx'
 import JoinRoomDialog from './JoinRoomDialog.jsx'
-import roomIcon from '../../assets/join_music_room.svg'
+import roomIcon from '../../assets/headphones.svg'
 import searchIcon from '../../assets/search.svg'
 import threeDotsIcon from '../../assets/three_dots.svg'
 import { mapApiError } from '@synthos/shared'
