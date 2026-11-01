@@ -24,6 +24,11 @@ const VARIANTS = {
  *
  * `inert` (React 19) además saca los enlaces del árbol de tabulación mientras
  * la sección está cerrada: con `height: 0` seguirían enfocables.
+ *
+ * `shrink-0` es obligatorio: `overflow-hidden` hace que el mínimo automático del
+ * ítem flex sea 0, así que sin él, en un viewport bajo, el grupo se comprimía
+ * hasta recortar su contenido en vez de desbordar `SidebarContent` (el que
+ * scrollea). Al no encogerse, mantiene su alto y aparece el scroll.
  */
 export default function SidebarAnimatedGroup({ hasItems, children }) {
   return (
@@ -35,7 +40,7 @@ export default function SidebarAnimatedGroup({ hasItems, children }) {
       aria-hidden={!hasItems}
       inert={!hasItems}
       data-slot="sidebar-animated-group"
-      className="overflow-hidden"
+      className="shrink-0 overflow-hidden"
     >
       {children}
     </motion.div>
