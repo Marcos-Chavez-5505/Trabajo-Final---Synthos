@@ -36,7 +36,9 @@ function LoginScreen() {
 		setSubmitting(false);
 		if (!result.success) {
 			setError(result.message);
+			return;
 		}
+		navigation.replace("Main");
 	};
 
 	if (loading) {

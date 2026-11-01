@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { Animated, Easing, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { sizes } from "../../../theme";
-import { BOTTOM_NAV_STYLES as styles, NAV_COLORS } from "./BottomNav.styles";
+import { BOTTOM_NAV_STYLES as styles, NAV_COLORS } from "./Bottomnav.styles";
 
 // Animación (equivale a CustomNavigationBarItem del prototipo):
 //  - entrada del indicador: fade + scale con resorte (rebote)
