@@ -14,7 +14,6 @@ export default function MediaCard({
 	onPlay,
 	onAddToQueue,
 }) {
-	console.log(`musicNoteIcon cargada: ${typeof musicNoteIcon !== "undefined"}`);
 	return (
 		<Pressable onPress={onPlay} style={MEDIA_CARD_STYLES.container}>
 			<View style={MEDIA_CARD_STYLES.coverContainer}>
