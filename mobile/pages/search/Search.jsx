@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, fontSize, fontWeight } from "../../theme";
+import { colors, fontSize, fontWeight, spacing, radius } from "../../theme";
 import SearchSongs from "./SearchSongs";
 import SearchAlbums from "./SearchAlbums";
 import SearchPeople from "./SearchPeople";
@@ -18,11 +18,11 @@ export default function SearchScreen() {
 
 	return (
 		<SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-			<View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 12 }}>
-				<Text style={{ color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: fontWeight.bold, marginBottom: 12 }}>
+			<View style={{ flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+				<Text style={{ color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: fontWeight.bold, marginBottom: spacing.md }}>
 					Buscar
 				</Text>
-				<View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.surfaceLight, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10 }}>
+				<View style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.surfaceLight, borderRadius: radius.full, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }}>
 					<TextInput
 						value={text}
 						onChangeText={setText}
@@ -32,7 +32,7 @@ export default function SearchScreen() {
 						placeholderTextColor="rgba(244,240,249,0.5)"
 						style={{ flex: 1, color: colors.textPrimary, fontSize: fontSize.sm }}
 					/>
-					<Pressable onPress={submit} style={{ paddingLeft: 8 }}>
+					<Pressable onPress={submit} style={{ paddingLeft: spacing.sm }}>
 						<Text style={{ color: colors.textPrimary }}>Buscar</Text>
 					</Pressable>
 				</View>

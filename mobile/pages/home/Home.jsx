@@ -1,10 +1,13 @@
-import { ScrollView, Text, View, Pressable, TextInput } from "react-native";
+import { ScrollView, Text, View, Pressable } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { useAuth, useHomeSongs } from "@synthos/shared";
 import MediaCard from "../../components/cards/MediaCard/MediaCard";
-import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/Avatar/Avatar";
-import { colors } from "../../theme";
+import {
+	Avatar,
+	AvatarFallback,
+	AvatarImage,
+} from "../../components/ui/Avatar/Avatar";
 import { HOME_STYLES } from "./Home.styles";
 
 export default function HomeScreen() {
@@ -18,13 +21,6 @@ export default function HomeScreen() {
 				<View style={HOME_STYLES.header}>
 					<Text style={HOME_STYLES.greeting}>Hola, {user?.username}</Text>
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-						<Pressable
-							onPress={() => navigation.navigate("Search")}
-							style={{ flexDirection: "row", alignItems: "center", backgroundColor: colors.surfaceLight, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8, gap: 8 }}
-						>
-							<Text style={{ color: colors.textPrimary, opacity: 0.6 }}>🔍</Text>
-							<Text style={{ color: colors.textPrimary, opacity: 0.6 }}>Buscar...</Text>
-						</Pressable>
 						<Pressable onPress={() => navigation.navigate("Profile")}>
 							<Avatar size={48}>
 								<AvatarImage uri={user?.avatarUrl} name={user?.username} />
