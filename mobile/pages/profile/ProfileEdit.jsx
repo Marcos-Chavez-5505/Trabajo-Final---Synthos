@@ -1,17 +1,26 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+	ActivityIndicator,
+	Pressable,
+	ScrollView,
+	Text,
+	TextInput,
+	View,
+} from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-import * as SecureStore from "expo-secure-store";
 import { useAuth } from "@synthos/shared";
-import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/Avatar/Avatar";
+import {
+	Avatar,
+	AvatarFallback,
+	AvatarImage,
+} from "../../components/ui/Avatar/Avatar";
 import { PROFILE_EDIT_STYLES as styles } from "./ProfileEdit.styles";
-import { File } from "expo-file-system";
 
 export default function ProfileEditScreen() {
 	const navigation = useNavigation();
-	const { user, updateProfile } = useAuth();
+	const { user, updateProfile, uploadProfilePicture } = useAuth();
 
 	const [username, setUsername] = useState(user?.username ?? "");
 	const [bio, setBio] = useState(user?.bio ?? "");
@@ -40,31 +49,18 @@ export default function ProfileEditScreen() {
 		setError("");
 		setSaving(true);
 		try {
-			await updateProfile({ username, biography: bio });
+            await updateProfile({ username, bio });
 
 			if (pendingUri) {
-				const filename = pendingUri.split("/").pop() || "profile.jpg";
-                const formData = new FormData();
-                formData.append("picture", new File(pendingUri, filename));
+				const filename = pendingUri.split("/").pop() || "picture.jpg";
+				const match = /\.(\w+)$/.exec(filename);
+				const type = match ? `image/${match[1]}` : "image/jpeg";
 
-                const sessionRaw = await SecureStore.getItemAsync("synthos_auth");
-                const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-                const token = session?.token;
-
-                const API_URL = process.env.EXPO_PUBLIC_API_URL;
-
-                const res = await fetch(`${API_URL}/users/me/picture`, {
-                    method: "POST",
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                    body: formData,
-                });
-
-                if (!res.ok) {
-                    const data = await res.json();
-                    throw new Error(data?.message || "Error al subir la foto.");
-                }
+				await uploadProfilePicture({
+					uri: pendingUri,
+					name: filename,
+					type: type,
+				});
 			}
 			navigation.goBack();
 		} catch (err) {
