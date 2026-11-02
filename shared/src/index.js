@@ -63,7 +63,7 @@ export { default as useArtistDetail } from './features/artists/useArtistDetail.j
 export { default as usePlaylistList } from './features/playlists/usePlaylistList.js'
 export { default as useSongPlaylists } from './features/playlists/useSongPlaylists.js'
 export { default as useReorderSongs } from './features/playlists/useReorderSongs.js'
-export { REORDER_DEBOUNCE_MS, DRAG_SCALE, NEIGHBOR_SEPARATION, DRAG_SPRING, DRAG_SETTLE_SPRING } from './features/playlists/reorderConfig.js'
+export { REORDER_DEBOUNCE_MS, DRAG_SCALE, DRAG_SCALE_X, NEIGHBOR_SEPARATION, DRAG_SPRING, DRAG_SETTLE_SPRING } from './features/playlists/reorderConfig.js'
 export { default as useMyRooms } from './features/rooms/useMyRooms.js'
 export { default as useRoomPlayback } from './features/rooms/useRoomPlayback.js'
 export { default as useFollow } from './features/social/useFollow.js'
