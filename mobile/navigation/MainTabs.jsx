@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import BottomTabBar from "./BottomTabBar";
 import PlaceholderScreen from "./PlaceholderScreen";
 import HomeScreen from "../pages/home/Home";
+import SearchScreen from "../pages/search/Search";
 import ExpandedPlayer from "../components/player/ExpandedPlayer/ExpandedPlayer";
 import { HomeIcon, LibraryIcon, SearchIcon, PlaceholderIcon } from "../components/icons";
 
@@ -29,7 +30,7 @@ export default function MainTabs() {
 				/>
 				<Tab.Screen
 					name="Search"
-					component={PlaceholderScreen}
+					component={SearchScreen}
 					options={{ tabBarLabel: "Buscar", tabBarIcon: SearchIcon }}
 				/>
 				<Tab.Screen

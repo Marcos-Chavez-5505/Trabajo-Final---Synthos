@@ -3,7 +3,11 @@ import { useNavigation } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { useAuth, useHomeSongs } from "@synthos/shared";
 import MediaCard from "../../components/cards/MediaCard/MediaCard";
-import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/Avatar/Avatar";
+import {
+	Avatar,
+	AvatarFallback,
+	AvatarImage,
+} from "../../components/ui/Avatar/Avatar";
 import { HOME_STYLES } from "./Home.styles";
 
 export default function HomeScreen() {
@@ -16,12 +20,14 @@ export default function HomeScreen() {
 			<ScrollView showsVerticalScrollIndicator={false}>
 				<View style={HOME_STYLES.header}>
 					<Text style={HOME_STYLES.greeting}>Hola, {user?.username}</Text>
-					<Pressable onPress={() => navigation.navigate("Profile")}>
-						<Avatar size={48}>
-							<AvatarImage uri={user?.avatarUrl} name={user?.username} />
-							<AvatarFallback name={user?.username} />
-						</Avatar>
-					</Pressable>
+					<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+						<Pressable onPress={() => navigation.navigate("Profile")}>
+							<Avatar size={48}>
+								<AvatarImage uri={user?.avatarUrl} name={user?.username} />
+								<AvatarFallback name={user?.username} />
+							</Avatar>
+						</Pressable>
+					</View>
 				</View>
 
 				<Text style={HOME_STYLES.sectionTitle}>Novedades</Text>
