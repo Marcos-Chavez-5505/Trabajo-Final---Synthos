@@ -33,7 +33,7 @@ export default function PlaylistSongRow({
 
   return (
     <article
-      className="SurfaceLight CardRadius flex items-center gap-3 px-3 py-2"
+      className="SurfaceLight CardRadius flex items-center gap-3 px-3 py-2 my-0.5"
       style={isDragging ? { transform: `translateY(${dragOffset}px)`, zIndex: 10, position: 'relative' } : undefined}
     >
       {canReorder && (
