@@ -53,4 +53,11 @@ export const HOME_STYLES = StyleSheet.create({
 		fontSize: fontSize.regular,
 		fontWeight: fontWeight.medium,
 	},
+
+    header: {
+	flexDirection: "row",
+	alignItems: "center",
+	justifyContent: "space-between",
+	marginBottom: spacing.lg,
+},
 });
