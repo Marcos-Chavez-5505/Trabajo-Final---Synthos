@@ -44,6 +44,26 @@ export const colors = {
 	dangerBg: str("--ds-danger-bg"),
 };
 
+// ── Barra de navegación del sistema (Android) ──────────────────────────────
+// `expo-navigation-bar` nombra el estilo por el color del CONTENIDO, no por el
+// del fondo: 'light' = íconos claros (se leen sobre fondo oscuro), 'dark' =
+// íconos oscuros. Se deriva del mismo token que pinta la barra para que el par
+// fondo/íconos no se pueda desincronizar y no haga falta fijar colores.
+const relativeLuminance = (hex) => {
+	const [r, g, b] = hex
+		.replace("#", "")
+		.match(/.{2}/g)
+		.map((channel) => {
+			const value = parseInt(channel, 16) / 255;
+			return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+		});
+
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+export const navigationBarStyle =
+	relativeLuminance(colors.surfaceLight) < 0.5 ? "light" : "dark";
+
 // ── Tipografía ─────────────────────────────────────────────────────────────
 // clave mobile -> sufijo del token (el token web se llama "regluar", con typo)
 const TYPE_SCALE = {

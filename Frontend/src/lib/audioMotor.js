@@ -3,9 +3,13 @@
  * interfaz compartida `load / play / pause / seek / onTimeUpdate / onEnded /
  * onLoadedMetadata / getCurrentTime / getDuration / setMuted / hasSource`.
  *
+ * `load(src, song?)` recibe la canción como segundo argumento opcional: las
+ * plataformas que necesitan metadata (mobile, para el lock screen) la usan;
+ * este adaptador la ignora y solo toma la URL.
+ *
  * `PlayerContext` (compartido en el futuro) solo habla con esta interfaz, así
- * que en mobile se puede reemplazar por un adaptador sobre
- * `react-native-track-player` sin tocar la lógica de la cola.
+ * que en mobile se puede reemplazar por un adaptador sobre `expo-audio` sin
+ * tocar la lógica de la cola.
  */
 export function createHtmlAudioMotor(element) {
   if (!element) return null

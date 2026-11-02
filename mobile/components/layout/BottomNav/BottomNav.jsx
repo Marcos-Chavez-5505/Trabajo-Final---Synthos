@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, Pressable, Text, View } from "react-native";
+import { Animated, Easing, Platform, Pressable, Text, View } from "react-native";
+import { NavigationBar } from "expo-navigation-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { sizes } from "../../../theme";
+import { navigationBarStyle, sizes } from "../../../theme";
 import { BOTTOM_NAV_STYLES as styles, NAV_COLORS } from "./Bottomnav.styles";
 
 // Animación (equivale a CustomNavigationBarItem del prototipo):
@@ -75,6 +76,16 @@ function NavItem({ item, selected, onPress }) {
  */
 export default function BottomNav({ items, selectedKey, onSelect }) {
 	const insets = useSafeAreaInsets();
+
+	// Android: los íconos de la barra del sistema se dibujan sobre el fondo de
+	// esta barra, así que el estilo sale del mismo token que la pinta.
+	// `setBackgroundColorAsync` no sirve: con edge-to-edge el sistema ignora el
+	// color y el área la pinta la app con `paddingBottom: insets.bottom`.
+	useEffect(() => {
+		if (Platform.OS !== "android") return;
+
+		NavigationBar.setStyle(navigationBarStyle);
+	}, []);
 
 	return (
 		<View

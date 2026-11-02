@@ -1,7 +1,7 @@
 import playIcon from '../../assets/play.svg'
 import pauseIcon from '../../assets/pause.svg'
 import nextIcon from '../../assets/next_track.svg'
-import { usePlayer } from '@synthos/shared'
+import { usePlayer, usePlayerTime } from '@synthos/shared'
 import FavoriteButton from '../../features/playlists/FavoriteButton.jsx'
 import { ControlButton } from '../player/PlayerControls.jsx'
 import ProgressBar from '../player/ProgressBar.jsx'
@@ -20,12 +20,11 @@ export default function MiniPlayerBar() {
     isIdle,
     roomMode,
     playBlocked,
-    currentTime,
-    duration,
     togglePlay,
     next,
     seek,
   } = usePlayer()
+  const { currentTime, duration } = usePlayerTime()
 
   return (
     <div className="fixed inset-x-0 bottom-14 z-10 rounded-t-2xl SurfaceLight Elevation1 md:hidden">

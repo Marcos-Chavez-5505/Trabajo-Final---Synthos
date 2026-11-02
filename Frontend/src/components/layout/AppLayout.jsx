@@ -1,4 +1,4 @@
-import { usePlayer } from '@synthos/shared'
+import { usePlayer, usePlayerTime } from '@synthos/shared'
 import Sidebar from './Sidebar.jsx'
 import TopBar from './TopBar.jsx'
 import PlayerBar from '../player/PlayerBar.jsx'
@@ -26,8 +26,8 @@ function getDefaultSidebarOpen() {
  * (ver `docs/PENDIENTES.md` §8).
  */
 export default function AppLayout({ children }) {
-  const { song, isPlaying, currentTime, duration, seek, isExpanded, expandedOrigin, collapse } =
-    usePlayer()
+  const { song, isPlaying, seek, isExpanded, expandedOrigin, collapse } = usePlayer()
+  const { currentTime, duration } = usePlayerTime()
 
   // Overlay de reproducción expandida: se monta UNA vez en el layout raíz y lee
   // el estado global (PlayerContext), así sobrevive a la navegación. Los
