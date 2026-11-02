@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider, PlayerProvider, useAuth } from "@synthos/shared";
 import Landing from "./pages/landing/Landing";
 import Login from "./pages/login/Login";
@@ -8,6 +10,7 @@ import Register from "./pages/register/Register";
 import MainTabs from "./navigation/MainTabs";
 import ProfileScreen from "./pages/profile/ProfileView";
 import { initApi } from "./config/api";
+import { createAudioMotor } from "./lib/audioMotor";
 import ProfileEditScreen from "./pages/profile/ProfileEdit";
 
 initApi();
@@ -51,11 +54,17 @@ function RootNavigator() {
 }
 
 export default function App() {
+	// El motor de audio se inyecta por configuración: shared/ no conoce
+	// expo-audio ni la plataforma (AGENTS.md, regla 14).
+	const motor = useMemo(() => createAudioMotor(), []);
+
 	return (
-		<AuthProvider>
-			<PlayerProvider>
-				<RootNavigator />
-			</PlayerProvider>
-		</AuthProvider>
+		<SafeAreaProvider>
+			<AuthProvider>
+				<PlayerProvider motor={motor}>
+					<RootNavigator />
+				</PlayerProvider>
+			</AuthProvider>
+		</SafeAreaProvider>
 	);
 }

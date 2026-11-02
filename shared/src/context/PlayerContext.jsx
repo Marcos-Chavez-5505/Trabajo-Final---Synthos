@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PlayerContext } from './playerContext.js'
+import { PlayerTimeContext } from './playerTimeContext.js'
 import useAuth from '../hooks/useAuth.js'
 // El motor de audio se inyecta por prop (web: createHtmlAudioMotor). shared/
 // no importa nada de las apps (regla permanente).
@@ -75,13 +76,15 @@ export default function PlayerProvider({ children, motor: injectedMotor }) {
     setCurrentTime(0)
   }, [song])
 
-  // Cargar el track.
+  // Cargar el track. El motor recibe la canción completa como segundo argumento
+  // opcional: las plataformas que lo necesitan (mobile) usan su metadata para el
+  // lock screen; el motor web lo ignora.
   useEffect(() => {
     const motor = motorRef.current
 
     if (!motor || !song) return
 
-    motor.load(song.audioUrl)
+    motor.load(song.audioUrl, song)
     setDuration(song.duration ?? 0)
 
     const start = pendingSeekRef.current
@@ -439,8 +442,6 @@ export default function PlayerProvider({ children, motor: injectedMotor }) {
     queue,
     index,
     isPlaying,
-    currentTime,
-    duration,
     shuffle,
     repeat,
     roomMode,
@@ -479,8 +480,6 @@ export default function PlayerProvider({ children, motor: injectedMotor }) {
     queue,
     index,
     isPlaying,
-    currentTime,
-    duration,
     shuffle,
     repeat,
     roomMode,
@@ -511,9 +510,15 @@ export default function PlayerProvider({ children, motor: injectedMotor }) {
     collapse,
   ])
 
+  // El tiempo vive en su propio contexto: `value` no cambia en cada tick y los
+  // consumidores de `usePlayer()` no se re-renderizan por la reproducción.
+  const timeValue = useMemo(() => ({ currentTime, duration }), [currentTime, duration])
+
   return (
     <PlayerContext.Provider value={value}>
-      {children}
+      <PlayerTimeContext.Provider value={timeValue}>
+        {children}
+      </PlayerTimeContext.Provider>
     </PlayerContext.Provider>
   )
 }

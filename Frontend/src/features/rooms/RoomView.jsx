@@ -18,6 +18,7 @@ import {
 } from '@synthos/shared'
 import { useAuth } from '@synthos/shared'
 import { usePlayer } from '@synthos/shared'
+import { usePlayerTime } from '@synthos/shared'
 import { useRoomPlayback } from '@synthos/shared'
 import Avatar from '../../components/ui/Avatar.jsx'
 import ProgressBar from '../../components/player/ProgressBar.jsx'
@@ -508,7 +509,8 @@ function RoomPlayer({
   rating,
   onRate,
 }) {
-  const { song, currentTime, duration, seek, isMuted, toggleMute } = usePlayer()
+  const { song, seek, isMuted, toggleMute } = usePlayer()
+  const { currentTime, duration } = usePlayerTime()
 
   return (
     <div className="mt-6 max-w-2xl rounded-lg p-6 SurfaceLight Elevation1">

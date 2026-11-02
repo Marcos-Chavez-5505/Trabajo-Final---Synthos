@@ -1,4 +1,7 @@
+import { View } from "react-native";
+import { colors } from "../theme";
 import BottomNav from "../components/layout/BottomNav/BottomNav";
+import MiniPlayerBar from "../components/layout/MiniPlayerBar/MiniPlayerBar";
 
 // Adaptador entre @react-navigation/bottom-tabs y BottomNav.
 // No conoce nombres de rutas: cada pantalla declara su etiqueta e ícono en sus
@@ -33,10 +36,16 @@ export default function BottomTabBar({ state, descriptors, navigation }) {
 	};
 
 	return (
-		<BottomNav
-			items={items}
-			selectedKey={state.routes[state.index].key}
-			onSelect={onSelect}
-		/>
+		// El mini reproductor flota sobre la navegación inferior. El wrapper pinta
+		// el fondo de la app: sin esto, las esquinas redondeadas y los márgenes del
+		// mini dejaban ver el fondo claro por defecto del contenedor de navegación.
+		<View style={{ backgroundColor: colors.surface }}>
+			<MiniPlayerBar />
+			<BottomNav
+				items={items}
+				selectedKey={state.routes[state.index].key}
+				onSelect={onSelect}
+			/>
+		</View>
 	);
 }

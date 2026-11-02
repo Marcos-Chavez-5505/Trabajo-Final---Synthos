@@ -1,7 +1,7 @@
 import musicNoteIcon from '../../assets/music_note.svg'
 import expandIcon from '../../assets/expand.svg'
 import collapseIcon from '../../assets/collapse.svg'
-import { usePlayer } from '@synthos/shared'
+import { usePlayer, usePlayerTime } from '@synthos/shared'
 import AddToPlaylistPanel from '../../features/playlists/AddToPlaylistPanel.jsx'
 import FavoriteButton from '../../features/playlists/FavoriteButton.jsx'
 import PlayerControls from './PlayerControls.jsx'
@@ -39,7 +39,8 @@ function SongCover({ song }) {
  * canción.
  */
 export default function PlayerBar() {
-  const { song, currentTime, duration, seek, isIdle, isExpanded, expand, roomMode } = usePlayer()
+  const { song, seek, isIdle, isExpanded, expand, roomMode } = usePlayer()
+  const { currentTime, duration } = usePlayerTime()
 
   return (
     <footer className="Volume relative shrink-0 border-t border-sidebar-border">
