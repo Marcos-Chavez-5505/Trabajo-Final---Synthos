@@ -12,6 +12,8 @@ import ProfileScreen from "./pages/profile/ProfileView";
 import { initApi } from "./config/api";
 import { createAudioMotor } from "./lib/audioMotor";
 import ProfileEditScreen from "./pages/profile/ProfileEdit";
+import CreateRoomScreen from "./pages/rooms/CreateRoom";
+import RoomDetailScreen from "./pages/rooms/RoomDetail";
 
 initApi();
 
@@ -48,6 +50,8 @@ function RootNavigator() {
 				<Stack.Screen name="Main" component={MainTabs} />
 				<Stack.Screen name="Profile" component={ProfileScreen} />
                 <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+                <Stack.Screen name="CreateRoom" component={CreateRoomScreen} />
+                <Stack.Screen name="RoomDetail" component={RoomDetailScreen} />
 			</Stack.Navigator>
 		</NavigationContainer>
 	);

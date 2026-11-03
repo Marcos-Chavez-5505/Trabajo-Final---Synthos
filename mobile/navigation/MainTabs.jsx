@@ -6,6 +6,7 @@ import HomeScreen from "../pages/home/Home";
 import SearchScreen from "../pages/search/Search";
 import ExpandedPlayer from "../components/player/ExpandedPlayer/ExpandedPlayer";
 import { HeadphonesIcon, HomeIcon, PlaylistIcon, SearchIcon } from "../components/icons";
+import RoomsScreen from "../pages/rooms/Rooms";
 
 const Tab = createBottomTabNavigator();
 
@@ -24,10 +25,10 @@ export default function MainTabs() {
 					options={{ tabBarLabel: "Inicio", tabBarIcon: HomeIcon }}
 				/>
 				<Tab.Screen
-					name="Rooms"
-					component={PlaceholderScreen}
-					options={{ tabBarLabel: "Salas", tabBarIcon: HeadphonesIcon }}
-				/>
+                    name="Rooms"
+                    component={RoomsScreen}
+                    options={{ tabBarLabel: "Salas", tabBarIcon: HeadphonesIcon }}
+                />
 				<Tab.Screen
 					name="Search"
 					component={SearchScreen}
