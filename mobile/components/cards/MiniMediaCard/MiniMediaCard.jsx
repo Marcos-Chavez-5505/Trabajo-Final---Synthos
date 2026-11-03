@@ -34,7 +34,13 @@ export default function MiniMediaCard({
 
 			{onAddToQueue ? (
 				<View style={styles.queueButtonWrapper}>
-					<QueueActionButton onAdd={onAddToQueue} size={16} buttonSize={32} />
+					<QueueActionButton
+						onAdd={onAddToQueue}
+						label={`Añadir ${title} a la cola`}
+						size={16}
+						buttonSize={32}
+						style={styles.queueButton}
+					/>
 				</View>
 			) : null}
 

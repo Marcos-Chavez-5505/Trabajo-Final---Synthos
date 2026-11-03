@@ -135,6 +135,36 @@ export const PlaylistIcon = makeSvgIcon(
 	"0 0 26 26",
 );
 
+// Cola (assets web add_to_queue.svg y check.svg).
+export const AddToQueueIcon = makeSvgIcon(
+	[
+		{
+			d: "M20.5 24V20.5M20.5 20.5V17M20.5 20.5H17M20.5 20.5H24",
+			stroke: true,
+			strokeWidth: 2,
+		},
+		{
+			d: "M4 11H21C21.6667 11 23 10.6 23 9V7C23 6.33333 22.6 5 21 5H4C3.33333 5 2 5.4 2 7V9C2 9.66667 2.4 11 4 11Z",
+			stroke: true,
+			strokeWidth: 2,
+		},
+		{ d: "M3 16L16 16", stroke: true, strokeWidth: 2 },
+		{ d: "M3 21L13 21", stroke: true, strokeWidth: 2 },
+	],
+	"0 0 26 26",
+);
+
+export const CheckIcon = makeSvgIcon(
+	[
+		{
+			d: "M4.33333 13.5833L10.1667 19.4167L21.6667 7.33334",
+			stroke: true,
+			strokeWidth: 2,
+		},
+	],
+	"0 0 26 26",
+);
+
 // TEMPORAL: círculo neutro para pestañas cuyo ícono aún no se importó.
 // Reemplazar por el SVG real y borrar este.
 export const PlaceholderIcon = makeIcon("M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z");

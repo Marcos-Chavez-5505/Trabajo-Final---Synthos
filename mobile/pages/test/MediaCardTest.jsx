@@ -7,7 +7,7 @@ import {
 } from "@synthos/shared";
 import ComponentTest from "./ComponentTest";
 import { colors, fontSize, fontWeight } from "../../theme";
-import MediaCard from "../../components/cards/mediaCard/mediaCard";
+import MediaCard from "../../components/cards/MediaCard/MediaCard";
 
 const dummyMotor = {
 	load: () => {},
