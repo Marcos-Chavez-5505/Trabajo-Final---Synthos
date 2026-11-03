@@ -5,6 +5,7 @@ import {
 	fontSize,
 	lineHeight,
 	fontWeight,
+	radius,
 } from "../../theme";
 
 export const HOME_STYLES = StyleSheet.create({
@@ -45,7 +46,7 @@ export const HOME_STYLES = StyleSheet.create({
 		backgroundColor: colors.surfaceLight,
 		paddingVertical: spacing.md,
 		paddingHorizontal: spacing.lg,
-		borderRadius: 8,
+		borderRadius: radius.md,
 		alignSelf: "flex-start",
 	},
 	profileButtonText: {
@@ -54,10 +55,20 @@ export const HOME_STYLES = StyleSheet.create({
 		fontWeight: fontWeight.medium,
 	},
 
-    header: {
-	flexDirection: "row",
-	alignItems: "center",
-	justifyContent: "space-between",
-	marginBottom: spacing.lg,
-},
+	header: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginBottom: spacing.lg,
+	},
+	pill: {
+		backgroundColor: colors.surfaceLight,
+		paddingVertical: spacing.xs,
+		paddingHorizontal: spacing.lg,
+		borderRadius: radius.full,
+	},
+	pillText: {
+		color: colors.textPrimary,
+		fontSize: fontSize.sm,
+		fontWeight: fontWeight.medium,
+	},
 });

@@ -14,6 +14,8 @@ import { createAudioMotor } from "./lib/audioMotor";
 import ProfileEditScreen from "./pages/profile/ProfileEdit";
 import CreateRoomScreen from "./pages/rooms/CreateRoom";
 import RoomDetailScreen from "./pages/rooms/RoomDetail";
+import AlbumsScreen from "./pages/albums/Albums";
+import ArtistsScreen from "./pages/artists/Artists";
 
 initApi();
 
@@ -49,9 +51,11 @@ function RootNavigator() {
 				<Stack.Screen name="Register" component={Register} />
 				<Stack.Screen name="Main" component={MainTabs} />
 				<Stack.Screen name="Profile" component={ProfileScreen} />
-                <Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
-                <Stack.Screen name="CreateRoom" component={CreateRoomScreen} />
-                <Stack.Screen name="RoomDetail" component={RoomDetailScreen} />
+				<Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
+				<Stack.Screen name="CreateRoom" component={CreateRoomScreen} />
+				<Stack.Screen name="RoomDetail" component={RoomDetailScreen} />
+				<Stack.Screen name="Albums" component={AlbumsScreen} />
+				<Stack.Screen name="Artists" component={ArtistsScreen} />
 			</Stack.Navigator>
 		</NavigationContainer>
 	);

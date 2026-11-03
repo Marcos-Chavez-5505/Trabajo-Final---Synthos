@@ -19,13 +19,24 @@ export default function HomeScreen() {
 		<View style={HOME_STYLES.container}>
 			<ScrollView showsVerticalScrollIndicator={false}>
 				<View style={HOME_STYLES.header}>
-					<Text style={HOME_STYLES.greeting}>Hola, {user?.username}</Text>
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
 						<Pressable onPress={() => navigation.navigate("Profile")}>
-							<Avatar size={48}>
+							<Avatar size={40}>
 								<AvatarImage uri={user?.avatarUrl} name={user?.username} />
 								<AvatarFallback name={user?.username} />
 							</Avatar>
+						</Pressable>
+						<Pressable
+							onPress={() => navigation.navigate("Albums")}
+							style={HOME_STYLES.pill}
+						>
+							<Text style={HOME_STYLES.pillText}>Álbumes</Text>
+						</Pressable>
+						<Pressable
+							onPress={() => navigation.navigate("Artists")}
+							style={HOME_STYLES.pill}
+						>
+							<Text style={HOME_STYLES.pillText}>Artistas</Text>
 						</Pressable>
 					</View>
 				</View>
