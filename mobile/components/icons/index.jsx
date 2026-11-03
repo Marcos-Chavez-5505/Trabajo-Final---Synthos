@@ -79,6 +79,9 @@ export const PlaylistIcon = fromCatalog("playlist");
 export const AddToQueueIcon = fromCatalog("add_to_queue");
 export const CheckIcon = fromCatalog("check");
 export const MusicNoteIcon = fromCatalog("music_note");
+export const NotificationIcon = fromCatalog("notification");
+export const BellIcon = fromCatalog("notification");
+export const CameraAIIcon = fromCatalog("camera_ai");
 
 // ── Pendiente de migrar al catálogo ────────────────────────────────────────
 // `LibraryIcon` quedó como placeholder de carátula (MiniPlayerBar,

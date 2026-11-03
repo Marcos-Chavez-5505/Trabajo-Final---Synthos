@@ -1,5 +1,5 @@
-import { del, get, post } from './api.js'
-import { toSong } from './songsService.js'
+import { del, get, post } from "./api.js";
+import { toSong } from "./songsService.js";
 
 // Salas contra `GET /api/rooms` y el resto de los endpoints de sala.
 //
@@ -14,7 +14,7 @@ import { toSong } from './songsService.js'
 // El Sidebar vive arriba de la ruta, así que "Mis Salas" no se remonta al unirse o
 // salir de una sala desde otra pantalla. Estas mutaciones avisan a quien está
 // subscripto para que vuelva a pedir la lista sin recargar la página.
-const listeners = new Set()
+const listeners = new Set();
 
 /**
  * Suscribe un callback a los cambios de salas del usuario.
@@ -23,9 +23,9 @@ const listeners = new Set()
  * @returns {() => void} Función para desuscribirse.
  */
 export function subscribeToRooms(listener) {
-  listeners.add(listener)
+	listeners.add(listener);
 
-  return () => listeners.delete(listener)
+	return () => listeners.delete(listener);
 }
 
 /**
@@ -42,7 +42,7 @@ export function subscribeToRooms(listener) {
  * @returns {void}
  */
 export function notifyRoomsChanged() {
-	listeners.forEach((listener) => listener())
+	listeners.forEach((listener) => listener());
 }
 
 /**
@@ -55,21 +55,21 @@ export function notifyRoomsChanged() {
  * separa las salas con calificación de las que todavía no tienen.
  */
 export const ROOM_SORTS = [
-  { value: 'name', label: 'Nombre' },
-  { value: 'rating', label: 'Mejor calificado' },
-]
+	{ value: "name", label: "Nombre" },
+	{ value: "rating", label: "Mejor calificado" },
+];
 
-export const DEFAULT_ROOM_SORT = 'name'
+export const DEFAULT_ROOM_SORT = "name";
 
 export const ROOM_ORDERS = [
-  { value: 'asc', label: 'Ascendente' },
-  { value: 'desc', label: 'Descendente' },
-]
+	{ value: "asc", label: "Ascendente" },
+	{ value: "desc", label: "Descendente" },
+];
 
-export const DEFAULT_ROOM_ORDER = 'asc'
+export const DEFAULT_ROOM_ORDER = "asc";
 
 // actions de `POST /api/rooms/:id/playback`
-const PLAYBACK_ACTIONS = ['play', 'pause', 'next', 'stop']
+const PLAYBACK_ACTIONS = ["play", "pause", "next", "stop"];
 
 /**
  * Busca salas públicas y activas por nombre de sala o por nombre del anfitrión.
@@ -81,17 +81,17 @@ const PLAYBACK_ACTIONS = ['play', 'pause', 'next', 'stop']
  * @param {{query?: string, sort?: string, order?: string, signal?: AbortSignal}} [options]
  * @returns {Promise<object[]>} Salas en el shape de la UI, en el orden pedido.
  */
-export async function searchRooms({ query = '', sort, order, signal } = {}) {
-  const data = await get('/rooms', {
-    params: {
-      query: String(query ?? '').trim(),
-      sort: normaliseSort(sort),
-      order: normaliseOrder(order),
-    },
-    signal,
-  })
+export async function searchRooms({ query = "", sort, order, signal } = {}) {
+	const data = await get("/rooms", {
+		params: {
+			query: String(query ?? "").trim(),
+			sort: normaliseSort(sort),
+			order: normaliseOrder(order),
+		},
+		signal,
+	});
 
-  return (data ?? []).map(toRoom)
+	return (data ?? []).map(toRoom);
 }
 
 /**
@@ -104,9 +104,9 @@ export async function searchRooms({ query = '', sort, order, signal } = {}) {
  * @returns {Promise<object[]>}
  */
 export async function listMyRooms({ signal } = {}) {
-  const data = await get('/rooms/mine', { signal })
+	const data = await get("/rooms/mine", { signal });
 
-  return (data ?? []).map(toRoom)
+	return (data ?? []).map(toRoom);
 }
 
 /**
@@ -119,18 +119,24 @@ export async function listMyRooms({ signal } = {}) {
  * @param {{name: string, description?: string, playlistId: number|string, isPrivate: boolean, password?: string}} data
  * @returns {Promise<object>} La sala recién creada, con miembros y canciones.
  */
-export async function createRoom({ name, description, playlistId, isPrivate, password }) {
-  const data = await post('/rooms', {
-    name,
-    description: description || '',
-    playlistId: Number(playlistId),
-    isPrivate: Boolean(isPrivate),
-    password: isPrivate ? password : '',
-  })
+export async function createRoom({
+	name,
+	description,
+	playlistId,
+	isPrivate,
+	password,
+}) {
+	const data = await post("/rooms", {
+		name,
+		description: description || "",
+		playlistId: Number(playlistId),
+		isPrivate: Boolean(isPrivate),
+		password: isPrivate ? password : "",
+	});
 
-  notifyRoomsChanged()
+	notifyRoomsChanged();
 
-  return toRoomDetail(data?.room)
+	return toRoomDetail(data?.room);
 }
 
 /**
@@ -141,14 +147,16 @@ export async function createRoom({ name, description, playlistId, isPrivate, pas
  * @returns {Promise<object>} La sala a la que se unió, con miembros y canciones.
  */
 export async function joinRoom(code, password) {
-  const data = await post('/rooms/join', {
-    code: String(code ?? '').trim().toUpperCase(),
-    password: password ?? '',
-  })
+	const data = await post("/rooms/join", {
+		code: String(code ?? "")
+			.trim()
+			.toUpperCase(),
+		password: password ?? "",
+	});
 
-  notifyRoomsChanged()
+	notifyRoomsChanged();
 
-  return toRoomDetail(data?.room)
+	return toRoomDetail(data?.room);
 }
 
 /**
@@ -158,16 +166,16 @@ export async function joinRoom(code, password) {
  * @returns {Promise<boolean>} `false` si el backend dijo que no era miembro.
  */
 export async function leaveRoom(roomId) {
-  try {
-    await post(`/rooms/${roomId}/leave`)
-  } catch (cause) {
-    if (cause?.status === 404) return false
-    throw cause
-  }
+	try {
+		await post(`/rooms/${roomId}/leave`);
+	} catch (cause) {
+		if (cause?.status === 404) return false;
+		throw cause;
+	}
 
-  notifyRoomsChanged()
+	notifyRoomsChanged();
 
-  return true
+	return true;
 }
 
 /**
@@ -180,14 +188,14 @@ export async function leaveRoom(roomId) {
  * @returns {Promise<object|null>} `null` si la sala no existe.
  */
 export async function getRoomById(roomId) {
-  try {
-    const data = await get(`/rooms/${roomId}`)
+	try {
+		const data = await get(`/rooms/${roomId}`);
 
-    return toRoomDetail(data?.room)
-  } catch (cause) {
-    if (cause?.status === 404) return null
-    throw cause
-  }
+		return toRoomDetail(data?.room);
+	} catch (cause) {
+		if (cause?.status === 404) return null;
+		throw cause;
+	}
 }
 
 /**
@@ -197,11 +205,11 @@ export async function getRoomById(roomId) {
  * @returns {Promise<boolean>}
  */
 export async function closeRoom(roomId) {
-  await del(`/rooms/${roomId}`)
+	await del(`/rooms/${roomId}`);
 
-  notifyRoomsChanged()
+	notifyRoomsChanged();
 
-  return true
+	return true;
 }
 
 /**
@@ -212,9 +220,9 @@ export async function closeRoom(roomId) {
  * @returns {Promise<boolean>}
  */
 export async function kickMember(roomId, userId) {
-  await del(`/rooms/${roomId}/members/${userId}`)
+	await del(`/rooms/${roomId}/members/${userId}`);
 
-  return true
+	return true;
 }
 
 /**
@@ -228,12 +236,12 @@ export async function kickMember(roomId, userId) {
  * @returns {Promise<{playback: object, skipVotes: object}>}
  */
 export async function getPlayback(roomId) {
-  const data = await get(`/rooms/${roomId}/playback`)
+	const data = await get(`/rooms/${roomId}/playback`);
 
-  return {
-    playback: toPlayback(data?.playback),
-    skipVotes: toSkipVotes(data?.skipVotes),
-  }
+	return {
+		playback: toPlayback(data?.playback),
+		skipVotes: toSkipVotes(data?.skipVotes),
+	};
 }
 
 /**
@@ -247,13 +255,13 @@ export async function getPlayback(roomId) {
  * @returns {Promise<object>} El estado de reproducción ya actualizado.
  */
 export async function controlPlayback(roomId, action) {
-  if (!PLAYBACK_ACTIONS.includes(action)) {
-    throw new Error(`Acción de reproducción desconocida: ${action}`)
-  }
+	if (!PLAYBACK_ACTIONS.includes(action)) {
+		throw new Error(`Acción de reproducción desconocida: ${action}`);
+	}
 
-  const data = await post(`/rooms/${roomId}/playback`, { action })
+	const data = await post(`/rooms/${roomId}/playback`, { action });
 
-  return toPlayback(data?.playback)
+	return toPlayback(data?.playback);
 }
 
 /**
@@ -264,12 +272,12 @@ export async function controlPlayback(roomId, action) {
  *   cuando este voto alcanzó la mayoría y la canción ya avanzó.
  */
 export async function voteSkip(roomId) {
-  const data = await post(`/rooms/${roomId}/skip-votes`)
+	const data = await post(`/rooms/${roomId}/skip-votes`);
 
-  return {
-    skipVotes: toSkipVotes(data?.skipVotes),
-    approved: Boolean(data?.approved),
-  }
+	return {
+		skipVotes: toSkipVotes(data?.skipVotes),
+		approved: Boolean(data?.approved),
+	};
 }
 
 /**
@@ -280,14 +288,14 @@ export async function voteSkip(roomId) {
  * @returns {Promise<boolean>} `false` si el backend rechazó la calificación.
  */
 export async function rateHost(roomId, rating) {
-  try {
-    await post(`/rooms/${roomId}/rating`, { rating: Number(rating) })
-  } catch (cause) {
-    if (cause?.status === 403 || cause?.status === 409) return false
-    throw cause
-  }
+	try {
+		await post(`/rooms/${roomId}/rating`, { rating: Number(rating) });
+	} catch (cause) {
+		if (cause?.status === 403 || cause?.status === 409) return false;
+		throw cause;
+	}
 
-  return true
+	return true;
 }
 
 /**
@@ -298,15 +306,19 @@ export async function rateHost(roomId, rating) {
  * caer al default en silencio.
  */
 function normaliseSort(sort) {
-  const value = String(sort ?? '').trim()
+	const value = String(sort ?? "").trim();
 
-  return ROOM_SORTS.some((c) => c.value === value) ? value : DEFAULT_ROOM_SORT
+	return ROOM_SORTS.some((c) => c.value === value) ? value : DEFAULT_ROOM_SORT;
 }
 
 function normaliseOrder(order) {
-  const value = String(order ?? '').trim().toLowerCase()
+	const value = String(order ?? "")
+		.trim()
+		.toLowerCase();
 
-  return ROOM_ORDERS.some((c) => c.value === value) ? value : DEFAULT_ROOM_ORDER
+	return ROOM_ORDERS.some((c) => c.value === value)
+		? value
+		: DEFAULT_ROOM_ORDER;
 }
 
 /**
@@ -322,26 +334,27 @@ function normaliseOrder(order) {
  * distinguir "Sin calificaciones" de una calificación real.
  */
 function toRoom(raw) {
-  if (!raw) return null
+	if (!raw) return null;
 
-  const avg = raw.avg_rating ?? raw.avgRating ?? raw.hostRating ?? null
-  const rating = avg === null ? null : Number(avg)
+	const avg = raw.avg_rating ?? raw.avgRating ?? raw.hostRating ?? null;
+	const rating = avg === null ? null : Number(avg);
 
-  return {
-    id: String(raw.id),
-    code: raw.code,
-    name: raw.name,
-    description: raw.description ?? '',
-    hostId: raw.host_id ?? raw.hostId ?? null,
-    hostUsername: raw.host_username ?? raw.hostUsername ?? null,
-    // `null` = sin calificaciones todavía; `0` =afarió y promedia cero.
-    hostRating: rating === 0 ? null : rating,
-    membersCount: Number(raw.members_count ?? raw.membersCount ?? 0),
-    songsCount: Number(raw.songs_count ?? raw.songsCount ?? 0),
-    isPrivate: Boolean(raw.is_private ?? raw.isPrivate),
-    maxCapacity: raw.max_capacity ?? raw.maxCapacity ?? null,
-    status: raw.status ?? 'activa',
-  }
+	return {
+		id: String(raw.id),
+		code: raw.code,
+		name: raw.name,
+		description: raw.description ?? "",
+		hostId: raw.host_id ?? raw.hostId ?? null,
+		hostUsername: raw.host_username ?? raw.hostUsername ?? null,
+		// `null` = sin calificaciones todavía; `0` =afarió y promedia cero.
+		hostRating: rating === 0 ? null : rating,
+		ratingsCount: Number(raw.ratings_count ?? raw.ratingsCount ?? 0),
+		membersCount: Number(raw.members_count ?? raw.membersCount ?? 0),
+		songsCount: Number(raw.songs_count ?? raw.songsCount ?? 0),
+		isPrivate: Boolean(raw.is_private ?? raw.isPrivate),
+		maxCapacity: raw.max_capacity ?? raw.maxCapacity ?? null,
+		status: raw.status ?? "activa",
+	};
 }
 
 /**
@@ -352,55 +365,56 @@ function toRoom(raw) {
  * responder), así que acá no hay nada que filtrar.
  */
 function toRoomDetail(raw) {
-  if (!raw) return null
+	if (!raw) return null;
 
-  const playlist = raw.playlistSource ?? raw.playlist_source ?? null
-  const avg = raw.hostAvgRating ?? raw.host_avg_rating ?? null
+	const playlist = raw.playlistSource ?? raw.playlist_source ?? null;
+	const avg = raw.hostAvgRating ?? raw.host_avg_rating ?? null;
 
-  return {
-    ...toRoom({
-      ...raw,
-      avg_rating: avg,
-      members_count: (raw.members ?? []).length,
-      songs_count: (playlist?.songs ?? []).length,
-    }),
-    members: (raw.members ?? []).map(toRoomMember),
-    songs: (playlist?.songs ?? []).map((row) => toSong(row.song)),
-    playlistName: playlist?.name ?? '',
-    // Si la persona que mira ya calificó al anfitrión de esta sala, así el botón
-    // se deshabilita incluso al recargar (no solo durante la sesión).
-    viewerHasRated: Boolean(raw.viewerHasRated ?? raw.viewer_has_rated),
-  }
+	return {
+		...toRoom({
+			...raw,
+			avg_rating: avg,
+			ratings_count: raw.hostRatingsCount ?? raw.host_ratings_count ?? 0,
+			members_count: (raw.members ?? []).length,
+			songs_count: (playlist?.songs ?? []).length,
+		}),
+		members: (raw.members ?? []).map(toRoomMember),
+		songs: (playlist?.songs ?? []).map((row) => toSong(row.song)),
+		playlistName: playlist?.name ?? "",
+		// Si la persona que mira ya calificó al anfitrión de esta sala, así el botón
+		// se deshabilita incluso al recargar (no solo durante la sesión).
+		viewerHasRated: Boolean(raw.viewerHasRated ?? raw.viewer_has_rated),
+	};
 }
 
 function toRoomMember(raw) {
-  return {
-    userId: String(raw.idUser ?? raw.id_user ?? raw.user?.id),
-    username: raw.user?.username ?? '',
-    avatarUrl: raw.user?.pictureUrl ?? null,
-    role: raw.role,
-  }
+	return {
+		userId: String(raw.idUser ?? raw.id_user ?? raw.user?.id),
+		username: raw.user?.username ?? "",
+		avatarUrl: raw.user?.pictureUrl ?? null,
+		role: raw.role,
+	};
 }
 
 function toPlayback(raw) {
-  return {
-    songId: raw?.songId ?? null,
-    // "playing" | "paused" | "stopped"
-    status: raw?.status ?? 'stopped',
-    positionMs: Number(raw?.positionMs ?? 0),
-    // Hora del servidor en el momento de esta respuesta. Es lo que permite medir
-    // el desvío entre el reloj de este dispositivo y el del servidor: sin eso,
-    // interpolar `positionMs` con `Date.now()` del cliente mezcla dos relojes y
-    // la posición sale corrida.
-    updatedAt: Number(raw?.updatedAt ?? 0),
-    serverTime: Number(raw?.serverTime ?? 0),
-  }
+	return {
+		songId: raw?.songId ?? null,
+		// "playing" | "paused" | "stopped"
+		status: raw?.status ?? "stopped",
+		positionMs: Number(raw?.positionMs ?? 0),
+		// Hora del servidor en el momento de esta respuesta. Es lo que permite medir
+		// el desvío entre el reloj de este dispositivo y el del servidor: sin eso,
+		// interpolar `positionMs` con `Date.now()` del cliente mezcla dos relojes y
+		// la posición sale corrida.
+		updatedAt: Number(raw?.updatedAt ?? 0),
+		serverTime: Number(raw?.serverTime ?? 0),
+	};
 }
 
 function toSkipVotes(raw) {
-  return {
-    voters: (raw?.voters ?? []).map(String),
-    required: Number(raw?.required ?? 0),
-    hasVoted: Boolean(raw?.hasVoted),
-  }
+	return {
+		voters: (raw?.voters ?? []).map(String),
+		required: Number(raw?.required ?? 0),
+		hasVoted: Boolean(raw?.hasVoted),
+	};
 }

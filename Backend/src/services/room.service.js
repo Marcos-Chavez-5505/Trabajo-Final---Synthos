@@ -60,6 +60,7 @@ function buildRoomListQuery({ query, sort, order, onlyMine, userId }) {
 			host_user.id AS host_id,
 			host_user.username AS host_username,
 			COALESCE(host_avg_rating.avg_rating, 0) AS avg_rating,
+			COALESCE(ratings_count.total, 0) AS ratings_count,
 			COALESCE(members_count.total, 0) AS members_count,
 			COALESCE(songs_count.total, 0) AS songs_count
 		FROM room
@@ -72,6 +73,11 @@ function buildRoomListQuery({ query, sort, order, onlyMine, userId }) {
 		) AS host_user ON true
 		LEFT JOIN host_avg_rating
 			ON host_avg_rating.id_host = host_user.id
+		LEFT JOIN LATERAL (
+			SELECT COUNT(DISTINCT hr.id_rater)::int AS total
+			FROM host_rating hr
+			WHERE hr.id_host = host_user.id
+		) AS ratings_count ON true
 		LEFT JOIN LATERAL (
 			SELECT COUNT(*)::int AS total
 			FROM room_member rm2
@@ -110,7 +116,6 @@ async function listMyRooms(userId, { query = "" } = {}) {
 		}),
 	);
 }
-
 
 const ROOM_INCLUDE = {
 	playlistSource: {
@@ -171,7 +176,10 @@ function safeRoom(room) {
 	return rest;
 }
 
-async function createRoom(hostId, { name, description, playlistId, isPrivate, password }) {
+async function createRoom(
+	hostId,
+	{ name, description, playlistId, isPrivate, password },
+) {
 	const playlist = await prisma.playlist.findUnique({
 		where: { id: playlistId },
 		include: {
@@ -222,33 +230,38 @@ async function createRoom(hostId, { name, description, playlistId, isPrivate, pa
 		throw err;
 	}
 
-	return prisma.$transaction(async (tx) => {
-		const room = await tx.room.create({
-			data: {
-				code,
-				name,
-				description: description ?? null,
-				idPlaylistSource: playlistId,
-				isPrivate: isPrivate ?? false,
-				passwordHash,
-				maxCapacity: 10,
-				status: "activa",
-			},
-		});
+	return prisma
+		.$transaction(async (tx) => {
+			const room = await tx.room.create({
+				data: {
+					code,
+					name,
+					description: description ?? null,
+					idPlaylistSource: playlistId,
+					isPrivate: isPrivate ?? false,
+					passwordHash,
+					maxCapacity: 10,
+					status: "activa",
+				},
+			});
 
-		await tx.roomMember.create({
-			data: { idRoom: room.id, idUser: hostId, role: "host" },
-		});
+			await tx.roomMember.create({
+				data: { idRoom: room.id, idUser: hostId, role: "host" },
+			});
 
-		return tx.room.findUnique({
-			where: { id: room.id },
-			include: ROOM_INCLUDE,
-		});
-	}).then((created) =>
-		// Sala recién creada: no tiene anfitrión con calificación todavía, y quien
-		// la acaba de abrir es el anfitrión, así que no viene de nada.
-		safeRoom({ ...created, hostAvgRating: 0, viewerHasRated: false }),
-	);
+			return tx.room.findUnique({
+				where: { id: room.id },
+				include: ROOM_INCLUDE,
+			});
+		})
+		.then(async (created) =>
+			safeRoom({
+				...created,
+				hostAvgRating: await getHostAvgRating(hostId),
+				hostRatingsCount: await getHostRatingsCount(hostId),
+				viewerHasRated: false,
+			}),
+		);
 }
 
 async function joinRoom(userId, { code, password }) {
@@ -424,7 +437,13 @@ async function getRoomByIdForMember(roomId, userId) {
 	// sesión, y al recargar volvería a ofrecerlo.
 	const ownRating = hostId
 		? await prisma.hostRating.findUnique({
-				where: { idRoom_idRater_idHost: { idRoom: roomId, idRater: userId, idHost: hostId } },
+				where: {
+					idRoom_idRater_idHost: {
+						idRoom: roomId,
+						idRater: userId,
+						idHost: hostId,
+					},
+				},
 				select: { rating: true },
 			})
 		: null;
@@ -433,6 +452,7 @@ async function getRoomByIdForMember(roomId, userId) {
 		room: {
 			...safeRoom(room),
 			hostAvgRating: hostId ? await getHostAvgRating(hostId) : 0,
+			hostRatingsCount: hostId ? await getHostRatingsCount(hostId) : 0,
 			viewerHasRated: Boolean(ownRating),
 			viewerRating: ownRating?.rating ?? null,
 		},
@@ -451,7 +471,9 @@ async function kickMember(hostId, roomId, targetUserId) {
 		throw err;
 	}
 
-	const host = room.members.find((m) => m.idUser === hostId && m.role === "host");
+	const host = room.members.find(
+		(m) => m.idUser === hostId && m.role === "host",
+	);
 	if (!host) {
 		const err = new Error("No sos el anfitrión de esta sala.");
 		err.status = 403;
@@ -490,7 +512,9 @@ async function closeRoom(hostId, roomId) {
 		throw err;
 	}
 
-	const host = room.members.find((m) => m.idUser === hostId && m.role === "host");
+	const host = room.members.find(
+		(m) => m.idUser === hostId && m.role === "host",
+	);
 	if (!host) {
 		const err = new Error("No sos el anfitrión de esta sala.");
 		err.status = 403;
@@ -640,6 +664,16 @@ async function getHostAvgRating(hostId) {
 	return rows.length ? Number(rows[0].avg_rating) : 0;
 }
 
+async function getHostRatingsCount(hostId) {
+	const rows = await prisma.$queryRaw`
+		SELECT COUNT(DISTINCT id_rater)::int AS total
+		FROM host_rating
+		WHERE id_host = ${hostId}
+	`;
+
+	return rows.length ? Number(rows[0].total) : 0;
+}
+
 module.exports = {
 	listRooms,
 	listMyRooms,
@@ -658,4 +692,5 @@ module.exports = {
 	getRoomStatus,
 	rateHost,
 	getHostAvgRating,
+	getHostRatingsCount,
 };

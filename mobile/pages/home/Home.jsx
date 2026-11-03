@@ -9,6 +9,8 @@ import {
 	AvatarImage,
 } from "../../components/ui/Avatar/Avatar";
 import { HOME_STYLES } from "./Home.styles";
+import { BellIcon, CameraAIIcon } from "../../components/icons";
+import { colors } from "../../theme";
 
 export default function HomeScreen() {
 	const navigation = useNavigation();
@@ -19,13 +21,67 @@ export default function HomeScreen() {
 		<View style={HOME_STYLES.container}>
 			<ScrollView showsVerticalScrollIndicator={false}>
 				<View style={HOME_STYLES.header}>
-					<Text style={HOME_STYLES.greeting}>Hola, {user?.username}</Text>
-					<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+					<View
+						style={{
+							flexDirection: "row",
+							alignItems: "center",
+							gap: 12,
+							flex: 1,
+							flexWrap: "wrap",
+						}}
+					>
 						<Pressable onPress={() => navigation.navigate("Profile")}>
-							<Avatar size={48}>
+							<Avatar size={40}>
 								<AvatarImage uri={user?.avatarUrl} name={user?.username} />
 								<AvatarFallback name={user?.username} />
 							</Avatar>
+						</Pressable>
+						<Pressable
+							onPress={() => navigation.navigate("Albums")}
+							style={HOME_STYLES.pill}
+						>
+							<Text style={HOME_STYLES.pillText}>Álbumes</Text>
+						</Pressable>
+						<Pressable
+							onPress={() => navigation.navigate("Artists")}
+							style={HOME_STYLES.pill}
+						>
+							<Text style={HOME_STYLES.pillText}>Artistas</Text>
+						</Pressable>
+					</View>
+					<View
+						style={{
+							flexDirection: "row",
+							alignItems: "center",
+							gap: 10,
+							marginLeft: 24,
+						}}
+					>
+						<Pressable
+							onPress={() => navigation.navigate("Notifications")}
+							style={{
+								width: 40,
+								height: 40,
+								borderRadius: 20,
+								backgroundColor: colors.border,
+								alignItems: "center",
+								justifyContent: "center",
+							}}
+						>
+							<BellIcon size={22} color={colors.textPrimary} />
+						</Pressable>
+						<Pressable
+							onPress={() => navigation.navigate("Mood")}
+							style={{
+								width: 40,
+								height: 40,
+								borderRadius: 20,
+								backgroundColor: colors.border,
+								alignItems: "center",
+								justifyContent: "center",
+							}}
+						>
+							<CameraAIIcon size={22} color={colors.textPrimary} />
 						</Pressable>
 					</View>
 				</View>
