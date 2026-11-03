@@ -16,6 +16,8 @@ import CreateRoomScreen from "./pages/rooms/CreateRoom";
 import RoomDetailScreen from "./pages/rooms/RoomDetail";
 import AlbumsScreen from "./pages/albums/Albums";
 import ArtistsScreen from "./pages/artists/Artists";
+import NotificationScreen from "./pages/notifications/Notifications";
+import MoodScreen from "./pages/mood/Mood";
 
 initApi();
 
@@ -40,7 +42,7 @@ function RootNavigator() {
 	}
 
 	return (
-        // Inicia directamente si la sesion sigue iniciada 
+		// Inicia directamente si la sesion sigue iniciada
 		<NavigationContainer>
 			<Stack.Navigator
 				initialRouteName={user ? "Main" : "Landing"}
@@ -56,6 +58,8 @@ function RootNavigator() {
 				<Stack.Screen name="RoomDetail" component={RoomDetailScreen} />
 				<Stack.Screen name="Albums" component={AlbumsScreen} />
 				<Stack.Screen name="Artists" component={ArtistsScreen} />
+				<Stack.Screen name="Notifications" component={NotificationScreen} />
+				<Stack.Screen name="Mood" component={MoodScreen} />
 			</Stack.Navigator>
 		</NavigationContainer>
 	);

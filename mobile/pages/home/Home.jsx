@@ -54,10 +54,11 @@ export default function HomeScreen() {
 							flexDirection: "row",
 							alignItems: "center",
 							gap: 10,
+							marginLeft: 24,
 						}}
 					>
 						<Pressable
-							onPress={() => {}}
+							onPress={() => navigation.navigate("Notifications")}
 							style={{
 								width: 40,
 								height: 40,
@@ -70,7 +71,7 @@ export default function HomeScreen() {
 							<BellIcon size={22} color={colors.textPrimary} />
 						</Pressable>
 						<Pressable
-							onPress={() => {}}
+							onPress={() => navigation.navigate("Mood")}
 							style={{
 								width: 40,
 								height: 40,
