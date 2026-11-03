@@ -54,6 +54,9 @@ export * from "./utils/sidebarMotion.js";
 // tokens
 export * from "./tokens/tokens.js";
 
+// icons
+export * from "./icons/icons.js";
+
 // feature hooks
 export { default as usePopularSongs } from "./features/popular/usePopularSongs.js";
 export { default as useHomeSongs } from "./features/home/useHomeSongs.js";

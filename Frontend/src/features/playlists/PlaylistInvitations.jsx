@@ -8,7 +8,7 @@ import {
   subscribeToPlaylists,
 } from '@synthos/shared'
 import Avatar from '../../components/ui/Avatar.jsx'
-import playlistIcon from '../../assets/playlist.svg'
+import playlistIcon from '@synthos/shared/assets/icons/playlist.svg'
 import { mapApiError } from '@synthos/shared'
 
 /**

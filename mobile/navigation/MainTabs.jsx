@@ -5,7 +5,7 @@ import PlaceholderScreen from "./PlaceholderScreen";
 import HomeScreen from "../pages/home/Home";
 import SearchScreen from "../pages/search/Search";
 import ExpandedPlayer from "../components/player/ExpandedPlayer/ExpandedPlayer";
-import { HomeIcon, LibraryIcon, SearchIcon, PlaceholderIcon } from "../components/icons";
+import { HeadphonesIcon, HomeIcon, PlaylistIcon, SearchIcon } from "../components/icons";
 
 const Tab = createBottomTabNavigator();
 
@@ -26,7 +26,7 @@ export default function MainTabs() {
 				<Tab.Screen
 					name="Rooms"
 					component={PlaceholderScreen}
-					options={{ tabBarLabel: "Salas", tabBarIcon: PlaceholderIcon }}
+					options={{ tabBarLabel: "Salas", tabBarIcon: HeadphonesIcon }}
 				/>
 				<Tab.Screen
 					name="Search"
@@ -36,7 +36,7 @@ export default function MainTabs() {
 				<Tab.Screen
 					name="Playlists"
 					component={PlaceholderScreen}
-					options={{ tabBarLabel: "Playlists", tabBarIcon: LibraryIcon }}
+					options={{ tabBarLabel: "Playlists", tabBarIcon: PlaylistIcon }}
 				/>
 			</Tab.Navigator>
 

@@ -2,7 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useArtistDetail, ALBUM_TYPE_LABELS } from '@synthos/shared'
 import Avatar from '../../components/ui/Avatar.jsx'
 import MiniMediaCard from '../../components/cards/MiniMediaCard.jsx'
-import albumIcon from '../../assets/album.svg'
+import albumIcon from '@synthos/shared/assets/icons/album.svg'
 
 /**
  * `/artistas/:id`: cabecera del artista y grilla de sus álbumes.

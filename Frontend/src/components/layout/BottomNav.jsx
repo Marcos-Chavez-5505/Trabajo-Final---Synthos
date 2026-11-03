@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useUnreadNotificationsCount } from '@synthos/shared'
-import notificationIcon from '../../assets/notification.svg'
+import notificationIcon from '@synthos/shared/assets/icons/notification.svg'
 
 const ITEMS = [
   { label: 'Home', to: '/home' },

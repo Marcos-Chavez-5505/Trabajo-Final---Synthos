@@ -6,6 +6,8 @@
   "main": "src/index.js",
   "scripts": {
     "generate:tokens": "node scripts/generate-tokens.mjs",
+    "generate:icons": "node scripts/generate-icons.mjs",
+    "check:icons": "node scripts/generate-icons.mjs --check",
     "lint": "eslint ."
   },
   "dependencies": {

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
-import previousIcon from '../../assets/previous_track.svg'
-import playIcon from '../../assets/play.svg'
-import pauseIcon from '../../assets/pause.svg'
-import nextIcon from '../../assets/next_track.svg'
+import previousIcon from '@synthos/shared/assets/icons/previous_track.svg'
+import playIcon from '@synthos/shared/assets/icons/play.svg'
+import pauseIcon from '@synthos/shared/assets/icons/pause.svg'
+import nextIcon from '@synthos/shared/assets/icons/next_track.svg'
 import { usePlayer } from '@synthos/shared'
 
 /* ======================================================

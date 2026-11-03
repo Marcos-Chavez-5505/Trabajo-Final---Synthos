@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
 import { useUnreadNotificationsCount } from '@synthos/shared'
 import { SidebarTrigger } from '../ui/sidebar.tsx'
-import searchIcon from '../../assets/search.svg'
-import cameraAiIcon from '../../assets/camera_ai.svg'
-import notificationIcon from '../../assets/notification.svg'
+import searchIcon from '@synthos/shared/assets/icons/search.svg'
+import cameraAiIcon from '@synthos/shared/assets/icons/camera_ai.svg'
+import notificationIcon from '@synthos/shared/assets/icons/notification.svg'
 
 /**
  * Input de búsqueda global. Escribe en la URL de /buscar (?q=) para que la

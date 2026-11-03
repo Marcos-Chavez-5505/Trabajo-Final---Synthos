@@ -1,5 +1,5 @@
-import playIcon from '../../assets/play.svg'
-import musicNoteIcon from '../../assets/music_note.svg'
+import playIcon from '@synthos/shared/assets/icons/play.svg'
+import musicNoteIcon from '@synthos/shared/assets/icons/music_note.svg'
 import QueueActionButton from '../player/QueueActionButton.jsx'
 
 /**

@@ -1,5 +1,5 @@
-import hamburgerMenuIcon from '../../assets/hamburger_menu.svg'
-import fullHeartIcon from '../../assets/full_heart.svg'
+import hamburgerMenuIcon from '@synthos/shared/assets/icons/hamburger_menu.svg'
+import fullHeartIcon from '@synthos/shared/assets/icons/full_heart.svg'
 import AddToQueueButton from '../../components/player/AddToQueueButton.jsx'
 
 /**

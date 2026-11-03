@@ -1,8 +1,8 @@
 import { Button } from './button'
 import { cn } from '@/lib/utils'
-import leftArrow from '@/assets/left_arrow.svg'
-import rightArrow from '@/assets/right_arrow.svg'
-import threeDots from '@/assets/three_dots.svg'
+import leftArrow from '@synthos/shared/assets/icons/left_arrow.svg'
+import rightArrow from '@synthos/shared/assets/icons/right_arrow.svg'
+import threeDots from '@synthos/shared/assets/icons/three_dots.svg'
 
 /**
  * Paginación adapted del registry de shadcn (style base-nova) al proyecto:

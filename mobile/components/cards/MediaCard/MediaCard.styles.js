@@ -20,9 +20,6 @@ export const MEDIA_CARD_STYLES = StyleSheet.create({
 		height: "100%",
 	},
 	coverFallback: {
-		width: 32,
-		height: 32,
-		tintColor: colors.textPrimary,
 		opacity: 0.6,
 	},
 	overlay: {
