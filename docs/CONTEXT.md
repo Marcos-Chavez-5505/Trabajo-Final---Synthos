@@ -171,7 +171,7 @@ Tablas mapeadas a snake_case (`@@map`, `@map`), claves compuestas como `@@id([a,
 
 ## 4. Frontend
 
-**Stack:** React **19**, Vite **8**, Tailwind **4** vÃ­a `@tailwindcss/vite` (sin tailwind.config: config en CSS), `react-router-dom` **7**, `@base-ui/react` (primitivas) + primitivas estilo **shadcn** (`components/ui/*.tsx`, style `base-nova`), `class-variance-authority`, `clsx`/`tailwind-merge` (`cn` en `lib/utils.ts`), `lucide-react` (deuda: ver Â§7), `oxlint` como linter. Mezcla de `.jsx` (app) y `.tsx/.ts` (ui de shadcn, hooks `use-mobile.ts`).
+**Stack:** React **19**, Vite **8**, Tailwind **4** vÃ­a `@tailwindcss/vite` (sin tailwind.config: config en CSS), `react-router-dom` **7**, `@base-ui/react` (primitivas) + primitivas estilo **shadcn** (`components/ui/*.tsx`, style `base-nova`), `class-variance-authority`, `clsx`/`tailwind-merge` (`cn` en `lib/utils.ts`), `oxlint` como linter. Mezcla de `.jsx` (app) y `.tsx/.ts` (ui de shadcn, hooks `use-mobile.ts`).
 
 **Scripts:** `npm run dev` | `build` | `lint` (oxlint) | `preview`. Alias `@ â†’ src`. Proxy Vite: `/api â†’ http://localhost:3000`.
 
@@ -278,7 +278,7 @@ Guards: `RequireAuth` (si `loading` â†’ `LoadingScreen`; si no hay user â�
 
 - Set propio en `src/assets/*.svg` (19 archivos los importan). Se importan **como URL** y se usan `<img src={...} alt="" aria-hidden className="h-5 w-5">`. **Nunca** el sufijo `?react` (rompe: el import queda `data:image/svg+xml` y al renderizarlo como componente revienta con `InvalidCharacterError`).
 - Los SVG traen `#F4F0F9` (= `--ds-lighter`) hardcodeado: **no se recolorean**. Estado activo â†’ jugar con fondo (`Fucsia`/`Volume`/`sidebar-primary`), no con el color del Ã­cono. Para recolorear un `<img>` de SVG existe el truco `invert` (lo usa `Sidebar`).
-- `lucide-react` sigue en uso en `Sidebar`, `MisPlaylists`, `ui/sidebar.tsx`, `ui/sheet.tsx` â†’ deuda declarada, migrar al set propio de a uno.
+- `lucide-react` ya no se usa: `ui/sidebar.tsx` dibuja `panel_left_open.svg` / `panel_left_close.svg` según el estado y `ui/sheet.tsx` dibuja `close.svg`, todo del set propio.
 - `<img>` con `alt` real solo para contenido (carÃ¡tulas, avatares).
 
 ## 5. Contrato de canciones

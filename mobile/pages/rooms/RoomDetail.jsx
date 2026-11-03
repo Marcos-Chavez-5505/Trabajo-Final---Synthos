@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
 import {
 	getRoomById,
 	getPlayback,
@@ -19,6 +18,7 @@ import {
 	subscribeToRoomEvent,
 } from "@synthos/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/Avatar/Avatar";
+import { HeadphonesIcon } from "../../components/icons";
 import { ROOM_DETAIL_STYLES as styles } from "./RoomDetail.styles";
 import { colors } from "../../theme";
 
@@ -219,7 +219,7 @@ export default function RoomDetailScreen({ route }) {
 				<View style={styles.header}>
 					<View style={styles.headerTop}>
 						<View style={styles.iconWrapper}>
-							<Ionicons name="headset" size={24} color={colors.textPrimary} />
+							<HeadphonesIcon size={24} color={colors.textPrimary} />
 						</View>
 						<View style={styles.headerText}>
 							<Text style={styles.roomName} numberOfLines={1}>

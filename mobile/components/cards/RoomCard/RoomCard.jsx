@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { ROOM_CARD_STYLES as styles } from "./RoomCard.styles";
 import { colors } from "../../../theme";
+import { HeadphonesIcon } from "../../icons";
 
 /**
  * Tarjeta de una sala en la grilla de `/salas`.
@@ -22,7 +22,7 @@ export default function RoomCard({ room, action }) {
 		<View style={styles.container}>
 			<View style={styles.header}>
 				<View style={styles.iconWrapper}>
-					<Ionicons name="headset" size={24} color={colors.textPrimary} />
+					<HeadphonesIcon size={24} color={colors.textPrimary} />
 				</View>
 
 				<View style={styles.headerText}>
