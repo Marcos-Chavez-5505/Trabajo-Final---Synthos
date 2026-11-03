@@ -1,12 +1,17 @@
 const roomService = require("../services/room.service");
-const { validateSortType, validateOrderType, getId } = require("../utils/validation");
+const {
+	validateSortType,
+	validateOrderType,
+	getId,
+} = require("../utils/validation");
 const roomState = require("../realtime/roomState");
 
 async function getSortedRoom(req, res, next) {
 	try {
 		const sort = validateSortType(req.query.sort || "name");
 		const order = validateOrderType(req.query.order || "asc");
-		const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
+		const query =
+			typeof req.query.query === "string" ? req.query.query.trim() : "";
 
 		const result = await roomService.listRooms({ query, sort, order });
 
@@ -19,7 +24,8 @@ async function getSortedRoom(req, res, next) {
 async function getMyRooms(req, res, next) {
 	try {
 		const userId = req.user.sub;
-		const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
+		const query =
+			typeof req.query.query === "string" ? req.query.query.trim() : "";
 
 		const result = await roomService.listMyRooms(userId, { query });
 
@@ -32,24 +38,32 @@ async function getMyRooms(req, res, next) {
 async function createRoom(req, res, next) {
 	try {
 		const userId = req.user.sub;
-		const { name, description, playlistId, isPrivate, password } = req.body || {};
+		const { name, description, playlistId, isPrivate, password } =
+			req.body || {};
 
 		if (typeof name !== "string" || name.trim().length === 0) {
-			return res.status(400).json({ status: "error", message: "El nombre es obligatorio." });
+			return res
+				.status(400)
+				.json({ status: "error", message: "El nombre es obligatorio." });
 		}
 
 		if (!Number.isInteger(playlistId) || playlistId <= 0) {
-			return res.status(400).json({ status: "error", message: "La playlist es obligatoria." });
+			return res
+				.status(400)
+				.json({ status: "error", message: "La playlist es obligatoria." });
 		}
 
 		if (typeof isPrivate !== "boolean") {
-			return res.status(400).json({ status: "error", message: "isPrivate debe ser boolean." });
+			return res
+				.status(400)
+				.json({ status: "error", message: "isPrivate debe ser boolean." });
 		}
 
 		if (isPrivate && (typeof password !== "string" || password.length < 4)) {
 			return res.status(400).json({
 				status: "error",
-				message: "Las salas privadas requieren contraseña (mínimo 4 caracteres).",
+				message:
+					"Las salas privadas requieren contraseña (mínimo 4 caracteres).",
 			});
 		}
 
@@ -70,7 +84,9 @@ async function createRoom(req, res, next) {
 		return res.status(201).json({ status: "success", room });
 	} catch (error) {
 		if (error.status) {
-			return res.status(error.status).json({ status: "error", message: error.message });
+			return res
+				.status(error.status)
+				.json({ status: "error", message: error.message });
 		}
 		next(error);
 	}
@@ -82,7 +98,9 @@ async function joinRoom(req, res, next) {
 		const { code, password } = req.body || {};
 
 		if (typeof code !== "string" || code.trim().length === 0) {
-			return res.status(400).json({ status: "error", message: "El código es obligatorio." });
+			return res
+				.status(400)
+				.json({ status: "error", message: "El código es obligatorio." });
 		}
 
 		const result = await roomService.joinRoom(userId, {
@@ -99,7 +117,9 @@ async function joinRoom(req, res, next) {
 		return res.status(status).json({ status: "success", room: result.room });
 	} catch (error) {
 		if (error.status) {
-			return res.status(error.status).json({ status: "error", message: error.message });
+			return res
+				.status(error.status)
+				.json({ status: "error", message: error.message });
 		}
 		next(error);
 	}
@@ -130,7 +150,9 @@ async function leaveRoom(req, res, next) {
 		return res.status(204).send();
 	} catch (error) {
 		if (error.status) {
-			return res.status(error.status).json({ status: "error", message: error.message });
+			return res
+				.status(error.status)
+				.json({ status: "error", message: error.message });
 		}
 		next(error);
 	}
@@ -148,11 +170,15 @@ async function getRoomById(req, res, next) {
 		const result = await roomService.getRoomByIdForMember(roomId, userId);
 
 		if (result.notFound) {
-			return res.status(404).json({ status: "error", message: "Sala no encontrada." });
+			return res
+				.status(404)
+				.json({ status: "error", message: "Sala no encontrada." });
 		}
 
 		if (result.forbidden) {
-			return res.status(403).json({ status: "error", message: "No sos miembro de esta sala." });
+			return res
+				.status(403)
+				.json({ status: "error", message: "No sos miembro de esta sala." });
 		}
 
 		const { passwordHash, ...roomSafe } = result.room;
@@ -160,7 +186,9 @@ async function getRoomById(req, res, next) {
 		return res.status(200).json({ status: "success", room: roomSafe });
 	} catch (error) {
 		if (error.status) {
-			return res.status(error.status).json({ status: "error", message: error.message });
+			return res
+				.status(error.status)
+				.json({ status: "error", message: error.message });
 		}
 		next(error);
 	}
@@ -172,7 +200,12 @@ async function kickMember(req, res, next) {
 		const roomId = Number(req.params.id);
 		const targetUserId = Number(req.params.userId);
 
-		if (!Number.isInteger(roomId) || roomId <= 0 || !Number.isInteger(targetUserId) || targetUserId <= 0) {
+		if (
+			!Number.isInteger(roomId) ||
+			roomId <= 0 ||
+			!Number.isInteger(targetUserId) ||
+			targetUserId <= 0
+		) {
 			return res.status(400).json({ status: "error", message: "Id inválido." });
 		}
 
@@ -188,7 +221,9 @@ async function kickMember(req, res, next) {
 		return res.status(204).send();
 	} catch (error) {
 		if (error.status) {
-			return res.status(error.status).json({ status: "error", message: error.message });
+			return res
+				.status(error.status)
+				.json({ status: "error", message: error.message });
 		}
 		next(error);
 	}
@@ -214,7 +249,9 @@ async function closeRoom(req, res, next) {
 		return res.status(204).send();
 	} catch (error) {
 		if (error.status) {
-			return res.status(error.status).json({ status: "error", message: error.message });
+			return res
+				.status(error.status)
+				.json({ status: "error", message: error.message });
 		}
 		next(error);
 	}
@@ -243,7 +280,9 @@ async function postPlayback(req, res, next) {
 
 		const room = await roomService.getRoomStatus(roomId);
 		if (!room) {
-			return res.status(404).json({ status: "error", message: "Sala no encontrada." });
+			return res
+				.status(404)
+				.json({ status: "error", message: "Sala no encontrada." });
 		}
 
 		const hostId = await roomService.getHostIdOfRoom(roomId);
@@ -256,7 +295,9 @@ async function postPlayback(req, res, next) {
 
 		const songs = await roomService.getPlaylistSongsOfRoom(roomId);
 		if (!songs || songs.length === 0) {
-			return res.status(400).json({ status: "error", message: "La sala no tiene canciones." });
+			return res
+				.status(400)
+				.json({ status: "error", message: "La sala no tiene canciones." });
 		}
 
 		const current = roomState.getRoomState(roomId).playback;
@@ -272,8 +313,13 @@ async function postPlayback(req, res, next) {
 			// `positionMs` es la posición congelada en el último `updatedAt`: mientras
 			// suena, la posición real es esa más lo que pasó desde entonces. Sin
 			// sumarlo, pausar reiniciaría la canción para todo el mundo.
-			const elapsed = current.status === "playing" ? Date.now() - current.updatedAt : 0;
-			next = { ...current, positionMs: current.positionMs + elapsed, status: "paused" };
+			const elapsed =
+				current.status === "playing" ? Date.now() - current.updatedAt : 0;
+			next = {
+				...current,
+				positionMs: current.positionMs + elapsed,
+				status: "paused",
+			};
 		} else if (action === "stop") {
 			next = { songId: null, status: "stopped", positionMs: 0 };
 		} else if (action === "next") {
@@ -308,7 +354,9 @@ async function postPlayback(req, res, next) {
 		return res.status(200).json({ status: "success", playback });
 	} catch (error) {
 		if (error.status) {
-			return res.status(error.status).json({ status: "error", message: error.message });
+			return res
+				.status(error.status)
+				.json({ status: "error", message: error.message });
 		}
 		next(error);
 	}
@@ -325,12 +373,16 @@ async function getPlayback(req, res, next) {
 
 		const room = await roomService.getRoomStatus(roomId);
 		if (!room) {
-			return res.status(404).json({ status: "error", message: "Sala no encontrada." });
+			return res
+				.status(404)
+				.json({ status: "error", message: "Sala no encontrada." });
 		}
 
 		const isMember = await roomService.isRoomMember(roomId, userId);
 		if (!isMember) {
-			return res.status(403).json({ status: "error", message: "No sos miembro de esta sala." });
+			return res
+				.status(403)
+				.json({ status: "error", message: "No sos miembro de esta sala." });
 		}
 
 		const state = roomState.getRoomState(roomId);
@@ -347,7 +399,9 @@ async function getPlayback(req, res, next) {
 		});
 	} catch (error) {
 		if (error.status) {
-			return res.status(error.status).json({ status: "error", message: error.message });
+			return res
+				.status(error.status)
+				.json({ status: "error", message: error.message });
 		}
 		next(error);
 	}
@@ -364,16 +418,22 @@ async function postSkipVote(req, res, next) {
 
 		const room = await roomService.getRoomStatus(roomId);
 		if (!room) {
-			return res.status(404).json({ status: "error", message: "Sala no encontrada." });
+			return res
+				.status(404)
+				.json({ status: "error", message: "Sala no encontrada." });
 		}
 
 		if (room.status === "cerrada") {
-			return res.status(400).json({ status: "error", message: "La sala está cerrada." });
+			return res
+				.status(400)
+				.json({ status: "error", message: "La sala está cerrada." });
 		}
 
 		const isMember = await roomService.isRoomMember(roomId, userId);
 		if (!isMember) {
-			return res.status(403).json({ status: "error", message: "No sos miembro de esta sala." });
+			return res
+				.status(403)
+				.json({ status: "error", message: "No sos miembro de esta sala." });
 		}
 
 		const hostId = await roomService.getHostIdOfRoom(roomId);
@@ -393,7 +453,9 @@ async function postSkipVote(req, res, next) {
 		}
 
 		if (roomState.hasVoted(roomId, userId)) {
-			return res.status(409).json({ status: "error", message: "Ya votaste para saltar." });
+			return res
+				.status(409)
+				.json({ status: "error", message: "Ya votaste para saltar." });
 		}
 
 		const noHosts = await roomService.getNonHostMemberIds(roomId);
@@ -417,12 +479,15 @@ async function postSkipVote(req, res, next) {
 
 			roomState.clearSkipVotes(roomId);
 
-if (io) {
-			const playback = { ...next, serverTime: Date.now() };
+			if (io) {
+				const playback = { ...next, serverTime: Date.now() };
 
-			io.to(`room:${roomId}`).emit("room:playback", playback);
-			io.to(`room:${roomId}`).emit("room:skip-votes", { voters: [], required: 0 });
-		}
+				io.to(`room:${roomId}`).emit("room:playback", playback);
+				io.to(`room:${roomId}`).emit("room:skip-votes", {
+					voters: [],
+					required: 0,
+				});
+			}
 		} else if (io) {
 			io.to(`room:${roomId}`).emit("room:skip-votes", {
 				voters: [...votes.voters],
@@ -441,7 +506,9 @@ if (io) {
 		});
 	} catch (error) {
 		if (error.status) {
-			return res.status(error.status).json({ status: "error", message: error.message });
+			return res
+				.status(error.status)
+				.json({ status: "error", message: error.message });
 		}
 		next(error);
 	}
@@ -459,11 +526,15 @@ async function rateHost(req, res, next) {
 		// mandarlo ya calculado: los clientes actualizan el cartel sin recargar.
 		const io = req.app.get("io");
 		if (io) {
-			const avgRating = await roomService.getHostAvgRating(created.idHost);
+			const [avgRating, ratingsCount] = await Promise.all([
+				roomService.getHostAvgRating(created.idHost),
+				roomService.getHostRatingsCount(created.idHost),
+			]);
 			io.to(`room:${roomId}`).emit("room:rating", {
 				roomId,
 				hostId: created.idHost,
 				avgRating,
+				ratingsCount,
 			});
 		}
 
