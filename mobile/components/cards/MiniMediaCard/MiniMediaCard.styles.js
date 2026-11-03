@@ -38,6 +38,9 @@ export const MINI_MEDIA_CARD_STYLES = StyleSheet.create({
 		right: 6,
 		top: 6,
 	},
+	queueButton: {
+		backgroundColor: colors.volume,
+	},
 	title: {
 		color: colors.textPrimary,
 		fontSize: fontSize.regular,

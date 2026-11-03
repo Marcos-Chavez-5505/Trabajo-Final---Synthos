@@ -66,17 +66,7 @@ export const MEDIA_CARD_STYLES = StyleSheet.create({
 		gap: 8,
 	},
 	queueButton: {
-		width: 36,
-		height: 36,
-		borderRadius: 18,
-		backgroundColor: colors.border,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	queueIcon: {
-		width: 16,
-		height: 16,
-		tintColor: colors.textPrimary,
+		backgroundColor: colors.volume,
 	},
 	playButton: {
 		width: 36,
