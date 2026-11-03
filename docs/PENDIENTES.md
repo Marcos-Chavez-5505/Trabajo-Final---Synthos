@@ -47,23 +47,17 @@ se ejercitan a mano.
 
 ---
 
-## 2. `lucide-react` sigue en uso en cuatro archivos
+## 2. `lucide-react` (completada)
 
-**Contexto:** la regla 10 de `AGENTS.md` pide Ã­conos solo desde `src/assets/*.svg` (set de diseÃ±o
-propio, importados como URL y usados con `<img>`), nunca de librerÃ­as. `lucide-react` todavÃ­a se
-importa en cuatro archivos:
+**Resuelto:** los dos componentes de shadcn ya usan el set propio. `ui/sidebar.tsx` usa
+`panel_left_open.svg` / `panel_left_close.svg` en el `SidebarTrigger` (el ícono sigue el estado
+de la sidebar) y `ui/sheet.tsx` usa `close.svg` (nuevo en `shared/assets/icons/`, agregado al
+catálogo con `npm run generate:icons -w shared`). La dependencia salió de `Frontend/package.json`
+y de los lockfiles.
 
-- `components/layout/Sidebar.jsx` â€” un import con los Ã­tems del nav: `Home`, `Flame`, `User`,
-  `ListMusic`, `Disc3`, `Mic2`.
-- `features/playlists/MisPlaylists.jsx` â€” `ListMusic`.
-- `components/ui/sidebar.tsx` (`PanelLeftIcon`) y `components/ui/sheet.tsx` (`XIcon`) â€”
-  componentes generados por shadcn.
-
-**QuÃ© hacer:** mapear cada Ã­tem del `Sidebar` y de `MisPlaylists` a su SVG del set y cambiar el
-render (hoy `<Icon />`, debe pasar a `<img src={...} alt="" aria-hidden="true" className="h-5 w-5" />`).
-Decidir quÃ© hacer con `ui/`: son componentes de shadcn y `npx shadcn add` los regenera con lucide,
-asÃ­ que o se dejan con la excepciÃ³n escrita en la regla 10 o se editan sabiendo que el CLI los puede
-pisar. Cuando no quede ningÃºn import, sacar `lucide-react` de `package.json`.
+**Queda:** `Frontend/components.json` conserva `"iconLibrary": "lucide"`. Es config del CLI de
+shadcn, no se importa en runtime; si se corre `npx shadcn add`, revisar que los componentes
+generados no reintroduzcan `lucide-react`.
 
 ---
 
@@ -448,9 +442,8 @@ tambiÃ©n se buscan desde la pestaÃ±a nueva de `/buscar`.
 
 - **El orden de las pistas es por `id`**: el esquema no tiene nÃºmero de track. Si alguna vez importa el
   orden real del disco, hace falta una columna de posiciÃ³n.
-- El Ã­cono de Albums en el Sidebar sigue siendo `Disc3` de lucide-react, aunque existe
-  `src/assets/album.svg`. Se deja asÃ­ para no mezclar el set; migrar los cinco Ã­conos juntos es lo que
-  cierra la deuda de `lucide-react` (Â§2).
+- El ícono de Albums en el Sidebar ya usa `shared/assets/album.svg`; ya no queda ningún import de
+  `lucide-react` (§2).
 - Sin E2E: verificado con `curl` contra la base real (104 Ã¡lbumes, 134 canciones), no en navegador.
 
 ---

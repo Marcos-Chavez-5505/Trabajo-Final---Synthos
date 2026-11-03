@@ -24,7 +24,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { PanelLeftIcon } from "lucide-react"
+import panelLeftOpenIcon from "@synthos/shared/assets/icons/panel_left_open.svg"
+import panelLeftCloseIcon from "@synthos/shared/assets/icons/panel_left_close.svg"
 import {
   motion,
   useSpring,
@@ -479,7 +480,7 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useSidebar()
+  const { state, toggleSidebar } = useSidebar()
 
   return (
     <Tooltip>
@@ -497,7 +498,12 @@ function SidebarTrigger({
             }}
             {...props}
           >
-            <PanelLeftIcon />
+            <img
+              src={state === "expanded" ? panelLeftCloseIcon : panelLeftOpenIcon}
+              alt=""
+              aria-hidden="true"
+              className="h-5 w-5"
+            />
             <span className="sr-only">Toggle Sidebar</span>
           </Button>
         }

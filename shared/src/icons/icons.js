@@ -60,6 +60,12 @@ export const icons = {
       { d: "M4.33333 13.5833L10.1667 19.4167L21.6667 7.33334", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
     ],
   },
+  "close": {
+    viewBox: "0 0 26 26",
+    paths: [
+      { d: "M19.5 6.5L6.5 19.5M6.5 6.5L19.5 19.5", stroke: true, strokeWidth: 2, strokeLinecap: "round" },
+    ],
+  },
   "collapse": {
     viewBox: "0 0 26 26",
     paths: [
@@ -206,6 +212,22 @@ export const icons = {
     paths: [
       { d: "M13 3.25C9.82436 3.25 7.25 5.82436 7.25 9V12C7.25 13.5 6.5 15.25 5.5 16.5C5.1 17.05 5.45 17.75 6.1 17.75H19.9C20.55 17.75 20.9 17.05 20.5 16.5C19.5 15.25 18.75 13.5 18.75 12V9C18.75 5.82436 16.1756 3.25 13 3.25Z", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
       { d: "M10.25 20.25C10.5 21.5 11.6 22.25 13 22.25C14.4 22.25 15.5 21.5 15.75 20.25", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+    ],
+  },
+  "panel_left_close": {
+    viewBox: "0 0 26 26",
+    paths: [
+      { d: "M6.58333 4.75H19.4167C20.4292 4.75 21.25 5.57081 21.25 6.58333V19.4167C21.25 20.4292 20.4292 21.25 19.4167 21.25H6.58333C5.57081 21.25 4.75 20.4292 4.75 19.4167V6.58333C4.75 5.57081 5.57081 4.75 6.58333 4.75Z", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+      { d: "M10.25 4.75V21.25", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+      { d: "M16.6667 15.75L13.9167 13L16.6667 10.25", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+    ],
+  },
+  "panel_left_open": {
+    viewBox: "0 0 26 26",
+    paths: [
+      { d: "M6.58333 4.75H19.4167C20.4292 4.75 21.25 5.57081 21.25 6.58333V19.4167C21.25 20.4292 20.4292 21.25 19.4167 21.25H6.58333C5.57081 21.25 4.75 20.4292 4.75 19.4167V6.58333C4.75 5.57081 5.57081 4.75 6.58333 4.75Z", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+      { d: "M10.25 4.75V21.25", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+      { d: "M14.8333 10.25L17.5833 13L14.8333 15.75", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
     ],
   },
   "pause": {

@@ -2,9 +2,9 @@ import { useState } from "react";
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
 import { useRoomsList, useDebounce, joinRoom, mapApiError } from "@synthos/shared";
 import RoomCard from "../../components/cards/RoomCard/RoomCard";
+import { HeadphonesIcon } from "../../components/icons";
 import { ROOMS_STYLES as styles } from "./Rooms.styles";
 import { colors } from "../../theme";
 
@@ -124,7 +124,7 @@ function JoinButton({ room, navigation }) {
 function EmptyState({ hasQuery }) {
 	return (
 		<View style={styles.emptyContainer}>
-			<Ionicons name="headset-outline" size={40} color={colors.textMuted} />
+			<HeadphonesIcon size={40} color={colors.textMuted} />
 			{hasQuery ? (
 				<>
 					<Text style={styles.emptyTitle}>No encontramos salas con ese criterio</Text>
