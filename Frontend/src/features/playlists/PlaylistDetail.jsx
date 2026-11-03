@@ -15,12 +15,12 @@ import {
   updatePlaylistSongsOrder,
   updateFavoritesOrder,
 } from '@synthos/shared'
-import { useReorderSongs, DRAG_SCALE, NEIGHBOR_SEPARATION, DRAG_SPRING, DRAG_SETTLE_SPRING } from '@synthos/shared'
-import musicNoteIcon from '../../assets/music_note.svg'
+import { useReorderSongs, DRAG_SCALE, DRAG_SCALE_X, NEIGHBOR_SEPARATION, DRAG_SPRING, DRAG_SETTLE_SPRING } from '@synthos/shared'
+import musicNoteIcon from '@synthos/shared/assets/icons/music_note.svg'
 import PlaylistSongRow from './PlaylistSongRow.jsx'
 import PlaylistEditForm from './PlaylistEditForm.jsx'
 import InviteUserDialog from './InviteUserDialog.jsx'
-import { motion, useMotionValue, useReducedMotion } from 'motion/react'
+import { motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
 import { animate } from 'framer-motion'
 
 const MemoPlaylistSongRow = memo(PlaylistSongRow)
@@ -150,6 +150,7 @@ export default function PlaylistDetail() {
   const dragX = useMotionValue(0)
   const dragY = useMotionValue(0)
   const dragScale = useMotionValue(1)
+  const dragScaleX = useTransform(dragScale, [1, DRAG_SCALE], [1, DRAG_SCALE_X], { clamp: false })
   const [isDragging, setIsDragging] = useState(false)
 
   const handleDragPointerDown = useCallback(
@@ -546,7 +547,7 @@ export default function PlaylistDetail() {
                   else rowRefs.current.delete(sid)
                 }}
                 data-row={sid}
-                style={isDragged ? { x: dragX, y: dragY, scale: dragScale, zIndex: 10, position: 'relative' } : undefined}
+                style={isDragged ? { y: dragY, scaleX: dragScaleX, scaleY: dragScale, zIndex: 10, position: 'relative' } : undefined}
               >
                 {song === null ? (
                   <UnavailableRow />
@@ -574,7 +575,7 @@ export default function PlaylistDetail() {
               </motion.li>
             )
           })}
-          <div ref={indicatorRef} style={{ display: 'none', position: 'absolute', left: 0, right: 0, height: 2, background: 'rgb(217 70 239)', borderRadius: 1, pointerEvents: 'none' }} />
+          <div ref={indicatorRef} style={{ display: 'none', position: 'absolute', left: 0, right: 0, height: 2, background: 'rgb(239, 47, 98)', borderRadius: 1, pointerEvents: 'none' }} />
         </ul>
       )}
 

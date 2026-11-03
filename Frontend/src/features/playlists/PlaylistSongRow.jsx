@@ -1,5 +1,5 @@
-import hamburgerMenuIcon from '../../assets/hamburger_menu.svg'
-import fullHeartIcon from '../../assets/full_heart.svg'
+import hamburgerMenuIcon from '@synthos/shared/assets/icons/hamburger_menu.svg'
+import fullHeartIcon from '@synthos/shared/assets/icons/full_heart.svg'
 import AddToQueueButton from '../../components/player/AddToQueueButton.jsx'
 
 /**
@@ -33,7 +33,7 @@ export default function PlaylistSongRow({
 
   return (
     <article
-      className="SurfaceLight CardRadius flex items-center gap-3 px-3 py-2"
+      className="SurfaceLight CardRadius flex items-center gap-3 px-3 py-2 my-0.5"
       style={isDragging ? { transform: `translateY(${dragOffset}px)`, zIndex: 10, position: 'relative' } : undefined}
     >
       {canReorder && (

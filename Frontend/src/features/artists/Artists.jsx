@@ -2,8 +2,8 @@ import { useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { buildPageRange, useArtists } from '@synthos/shared'
 import ArtistCard from '../../components/cards/ArtistCard.jsx'
-import microphoneIcon from '../../assets/microphone.svg'
-import searchIcon from '../../assets/search.svg'
+import microphoneIcon from '@synthos/shared/assets/icons/microphone.svg'
+import searchIcon from '@synthos/shared/assets/icons/search.svg'
 import {
   Pagination,
   PaginationContent,

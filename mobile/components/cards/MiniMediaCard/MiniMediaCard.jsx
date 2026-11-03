@@ -1,10 +1,8 @@
 import { Image, Pressable, Text, View } from "react-native";
 import QueueActionButton from "../../ui/QueueActionButton/QueueActionButton";
 import { MINI_MEDIA_CARD_STYLES as styles } from "./MiniMediaCard.styles";
-
-// Fallback: ícono de nota musical. Si `@synthos/shared/assets/music_note.svg`
-// funciona en tu proyecto (como en MediaCard), usá ese import.
-// import musicNoteIcon from "@synthos/shared/assets/music_note.svg";
+import { colors } from "../../../theme";
+import { MusicNoteIcon } from "../../icons";
 
 export default function MiniMediaCard({
 	title,
@@ -24,17 +22,21 @@ export default function MiniMediaCard({
 						resizeMode="cover"
 					/>
 				) : (
-					<Image
-						source={require("../../../../assets/music_note.png")}
-						style={styles.coverFallback}
-						resizeMode="contain"
-					/>
+					<View style={styles.coverFallback}>
+						<MusicNoteIcon size={32} color={colors.textPrimary} />
+					</View>
 				)}
 			</Pressable>
 
 			{onAddToQueue ? (
 				<View style={styles.queueButtonWrapper}>
-					<QueueActionButton onAdd={onAddToQueue} size={16} buttonSize={32} />
+					<QueueActionButton
+						onAdd={onAddToQueue}
+						label={`Añadir ${title} a la cola`}
+						size={16}
+						buttonSize={32}
+						style={styles.queueButton}
+					/>
 				</View>
 			) : null}
 

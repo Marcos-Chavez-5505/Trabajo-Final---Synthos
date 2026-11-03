@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import queueIcon from '../../assets/add_to_queue.svg'
-import checkIcon from '../../assets/check.svg'
+import queueIcon from '@synthos/shared/assets/icons/add_to_queue.svg'
+import checkIcon from '@synthos/shared/assets/icons/check.svg'
 
 // Cuánto queda el tilde de confirmación antes de volver al ícono de cola.
 const FEEDBACK_MS = 1600

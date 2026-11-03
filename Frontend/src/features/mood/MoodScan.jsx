@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import cameraIcon from '../../assets/microphone.svg'
+import cameraIcon from '@synthos/shared/assets/icons/microphone.svg'
 import { mapApiError, useMoodSongs } from '@synthos/shared'
 import { MOODS, MOOD_LABELS } from './moodDetection.js'
 import MoodPicker from './MoodPicker.jsx'

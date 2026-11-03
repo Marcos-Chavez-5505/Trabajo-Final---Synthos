@@ -1,4 +1,4 @@
-import roomIcon from '../../assets/headphones.svg'
+import roomIcon from '@synthos/shared/assets/icons/headphones.svg'
 
 /**
  * Tarjeta de una sala en la grilla de `/salas`.

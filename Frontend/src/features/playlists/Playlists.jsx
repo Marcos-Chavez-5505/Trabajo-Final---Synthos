@@ -1,6 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { usePlaylistList, usePlaylistsPage } from '@synthos/shared'
-import playlistIcon from '../../assets/playlist.svg'
+import playlistIcon from '@synthos/shared/assets/icons/playlist.svg'
 import PlaylistCreateForm from './PlaylistCreateForm.jsx'
 import PlaylistInvitations from './PlaylistInvitations.jsx'
 import PlaylistTile from './PlaylistTile.jsx'

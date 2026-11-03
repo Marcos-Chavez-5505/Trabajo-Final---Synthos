@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import Avatar from "../../components/ui/Avatar.jsx";
-import userIcon from "../../assets/user.svg";
-import musicNoteIcon from "../../assets/music_note.svg";
-import playlistIcon from "../../assets/playlist.svg";
+import userIcon from "@synthos/shared/assets/icons/user.svg";
+import musicNoteIcon from "@synthos/shared/assets/icons/music_note.svg";
+import playlistIcon from "@synthos/shared/assets/icons/playlist.svg";
 import { formatRelativeTime } from "./formatRelativeTime.js";
 
 const TYPE_META = {

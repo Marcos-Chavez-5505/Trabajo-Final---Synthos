@@ -6,8 +6,8 @@ import {
   removeSongFromPlaylist,
 } from '@synthos/shared'
 import { useSongPlaylists } from '@synthos/shared'
-import addToPlaylistIcon from '../../assets/add_to_playlist.svg'
-import playlistIcon from '../../assets/playlist.svg'
+import addToPlaylistIcon from '@synthos/shared/assets/icons/add_to_playlist.svg'
+import playlistIcon from '@synthos/shared/assets/icons/playlist.svg'
 import {
   DropdownMenu,
   DropdownMenuTrigger,

@@ -28,15 +28,15 @@ export const MINI_MEDIA_CARD_STYLES = StyleSheet.create({
 		height: "100%",
 	},
 	coverFallback: {
-		width: 32,
-		height: 32,
-		tintColor: colors.textPrimary,
 		opacity: 0.6,
 	},
 	queueButtonWrapper: {
 		position: "absolute",
 		right: 6,
 		top: 6,
+	},
+	queueButton: {
+		backgroundColor: colors.volume,
 	},
 	title: {
 		color: colors.textPrimary,

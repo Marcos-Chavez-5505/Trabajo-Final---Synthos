@@ -1,4 +1,4 @@
-import musicNoteIcon from '../../assets/music_note.svg'
+import musicNoteIcon from '@synthos/shared/assets/icons/music_note.svg'
 import { usePlayer } from '@synthos/shared'
 
 /**

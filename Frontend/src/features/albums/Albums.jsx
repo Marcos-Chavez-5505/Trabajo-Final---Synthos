@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { buildPageRange, useAlbums, ALBUM_TYPE_LABELS } from '@synthos/shared'
 import MiniMediaCard from '../../components/cards/MiniMediaCard.jsx'
-import albumIcon from '../../assets/album.svg'
+import albumIcon from '@synthos/shared/assets/icons/album.svg'
 import {
   Pagination,
   PaginationContent,
