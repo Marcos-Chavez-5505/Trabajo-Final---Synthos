@@ -1,4 +1,4 @@
-import logoSynthos from '../../assets/logo_synthos.svg'
+import logoSynthos from '@synthos/shared/assets/brand/logo_synthos.svg'
 
 export default function LoadingScreen() {
   return (

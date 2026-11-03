@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { ListMusic } from 'lucide-react'
+import listMusicIcon from '@synthos/shared/assets/icons/list_music.svg'
 import { SidebarLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '../../components/ui/sidebar.tsx'
 
 /**
@@ -29,7 +29,12 @@ export default function PlaylistSidebarList({ playlists }) {
                   : ''
               }
             >
-              <ListMusic />
+              <img
+                src={listMusicIcon}
+                alt=""
+                aria-hidden="true"
+                className={`size-4 shrink-0${isActive ? ' invert' : ''}`}
+              />
               <SidebarLabel>{playlist.name}</SidebarLabel>
             </SidebarMenuButton>
           </SidebarMenuItem>

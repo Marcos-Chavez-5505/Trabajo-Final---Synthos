@@ -2,7 +2,7 @@ import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 
 import { cn } from "@/lib/utils";
-import checkIcon from "@/assets/check.svg"
+import checkIcon from "@synthos/shared/assets/icons/check.svg"
 
 const itemClass =
   "relative flex w-full cursor-pointer select-none items-center gap-2.5 rounded-sm px-2 py-1.5 TextRegluar text-popover-foreground outline-hidden transition-colors data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-sidebar-accent data-highlighted:text-sidebar-accent-foreground [&_img]:size-4 [&_img]:shrink-0"

@@ -1,6 +1,6 @@
 import { useNotificationsContext } from '@synthos/shared'
 import NotificationRow from './NotificationRow.jsx'
-import notificationIcon from '../../assets/notification.svg'
+import notificationIcon from '@synthos/shared/assets/icons/notification.svg'
 
 /**
  * `/notificaciones`: bandeja de novedades conectada al backend.

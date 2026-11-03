@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import playlistIcon from '../../assets/playlist.svg'
+import playlistIcon from '@synthos/shared/assets/icons/playlist.svg'
 
 /**
  * Tarjeta de una playlist en la grilla de `/playlists`.

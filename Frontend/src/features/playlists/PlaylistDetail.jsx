@@ -16,7 +16,7 @@ import {
   updateFavoritesOrder,
 } from '@synthos/shared'
 import { useReorderSongs, DRAG_SCALE, DRAG_SCALE_X, NEIGHBOR_SEPARATION, DRAG_SPRING, DRAG_SETTLE_SPRING } from '@synthos/shared'
-import musicNoteIcon from '../../assets/music_note.svg'
+import musicNoteIcon from '@synthos/shared/assets/icons/music_note.svg'
 import PlaylistSongRow from './PlaylistSongRow.jsx'
 import PlaylistEditForm from './PlaylistEditForm.jsx'
 import InviteUserDialog from './InviteUserDialog.jsx'

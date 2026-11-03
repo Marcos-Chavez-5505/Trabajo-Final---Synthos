@@ -10,7 +10,7 @@ import QueueActionButton from './QueueActionButton.jsx'
  * `PlayerContext` y se deshabilita en modo sala, donde la cola la manda el
  * servidor.
  *
- * El ícono sale de `assets/` (regla 10) y el tamaño se ajusta con `iconClassName`
+ * El ícono sale de `shared/assets/icons/` (regla 10) y el tamaño se ajusta con `iconClassName`
  * para que sirva tanto en una fila de playlist como en una tarjeta.
  */
 export default function AddToQueueButton({

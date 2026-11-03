@@ -22,9 +22,9 @@ import {
 } from "../../components/ui/sidebar.tsx";
 import { useAuth } from '@synthos/shared';
 import { useFollow } from '@synthos/shared';
-import logoutIcon from "../../assets/logout.svg";
-import playlistIcon from "../../assets/playlist.svg";
-import userIcon from "../../assets/user.svg";
+import logoutIcon from "@synthos/shared/assets/icons/logout.svg";
+import playlistIcon from "@synthos/shared/assets/icons/playlist.svg";
+import userIcon from "@synthos/shared/assets/icons/user.svg";
 /**
  * Resumen del usuario de la sesión para el pie del Sidebar (TS-10).
  *

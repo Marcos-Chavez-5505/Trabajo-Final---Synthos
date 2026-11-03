@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { usePlayer } from '@synthos/shared'
 import { getAlbumById } from '@synthos/shared'
 import MiniMediaCard from '../../components/cards/MiniMediaCard.jsx'
-import albumIcon from '../../assets/album.svg'
+import albumIcon from '@synthos/shared/assets/icons/album.svg'
 import { mapApiError } from '@synthos/shared'
 
 const TYPE_LABELS = { single: 'Sencillo', ep: 'EP', album: 'Álbum' }

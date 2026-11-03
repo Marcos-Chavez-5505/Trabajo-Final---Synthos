@@ -1,6 +1,6 @@
 import { usePopularSongs } from '@synthos/shared'
 import MediaCard from '../../components/cards/MediaCard.jsx'
-import fullHeartIcon from '../../assets/full_heart.svg'
+import fullHeartIcon from '@synthos/shared/assets/icons/full_heart.svg'
 
 /**
  * `/populares`: ranking semanal de canciones por favoritos.

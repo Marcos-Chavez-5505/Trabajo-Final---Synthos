@@ -1,13 +1,18 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { motion } from 'motion/react'
-import { Disc3, Flame, Home, ListMusic, Mic2, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import MisPlaylists from '../../features/playlists/MisPlaylists.jsx'
 import CollabPlaylists from '../../features/playlists/CollabPlaylists.jsx'
 import MyRooms from '../../features/rooms/MyRooms.jsx'
 import ProfileSummary from '../../features/social/ProfileSummary.jsx'
-import roomIcon from '../../assets/headphones.svg'
-import logoSynthos from '../../assets/logo_synthos.svg'
+import albumIcon from '@synthos/shared/assets/icons/album.svg'
+import flameIcon from '@synthos/shared/assets/icons/flame.svg'
+import houseIcon from '@synthos/shared/assets/icons/house.svg'
+import listMusicIcon from '@synthos/shared/assets/icons/list_music.svg'
+import microphoneIcon from '@synthos/shared/assets/icons/microphone.svg'
+import userIcon from '@synthos/shared/assets/icons/user.svg'
+import roomIcon from '@synthos/shared/assets/icons/headphones.svg'
+import logoSynthos from '@synthos/shared/assets/brand/logo_synthos.svg'
 import {
   Sidebar as SidebarRoot,
   SidebarContent,
@@ -24,20 +29,16 @@ import {
 } from '../ui/sidebar.tsx'
 
 const NAV_ITEMS = [
-  { label: 'Home', to: '/home', icon: Home },
-  { label: 'Populares', to: '/populares', icon: Flame },
-  // TS-17: "Salas" entra con ícono del set propio (`headphones.svg`),
-  // importado como URL y renderizado con `<img>` según la regla 10 de AGENTS.md.
-  // El resto de los ítems sigue con lucide-react, que es la deuda que ya está
-  // anotada en docs/PENDIENTES.md §2.
+  { label: 'Home', to: '/home', src: houseIcon },
+  { label: 'Populares', to: '/populares', src: flameIcon },
   { label: 'Salas', to: '/salas', src: roomIcon },
-  { label: 'Perfil', to: '/perfil', icon: User },
+  { label: 'Perfil', to: '/perfil', src: userIcon },
 ]
 
 const COLECCION_ITEMS = [
-  { label: 'Playlists', to: '/playlists', icon: ListMusic },
-  { label: 'Albums', to: '/albums', icon: Disc3 },
-  { label: 'Artistas', to: '/artistas', icon: Mic2 },
+  { label: 'Playlists', to: '/playlists', src: listMusicIcon },
+  { label: 'Albums', to: '/albums', src: albumIcon },
+  { label: 'Artistas', to: '/artistas', src: microphoneIcon },
 ]
 
 function isActivePath(pathname, to) {
@@ -46,11 +47,6 @@ function isActivePath(pathname, to) {
 }
 
 function MenuItem({ item, isActive }) {
-  const Icon = item.icon
-
-  // `item.icon` es un componente de lucide-react (deuda pendiente en
-  // docs/PENDIENTES.md §2); `item.src` es un SVG del set propio, que va como URL. Los
-  // dos se dibujan acá para que la lista pueda ir migrando de a uno.
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
@@ -64,16 +60,12 @@ function MenuItem({ item, isActive }) {
         }
       >
         <div className="relative flex size-4 shrink-0 items-center justify-center">
-          {item.src ? (
-            <img
-              src={item.src}
-              alt=""
-              aria-hidden="true"
-              className={`size-4 shrink-0 block mx-auto${isActive ? ' invert' : ''}`}
-            />
-          ) : (
-            <Icon className="mx-auto" />
-          )}
+          <img
+            src={item.src}
+            alt=""
+            aria-hidden="true"
+            className={`size-4 shrink-0 block mx-auto${isActive ? ' invert' : ''}`}
+          />
         </div>
         <SidebarLabel className="flex items-center gap-2">
           {item.label}

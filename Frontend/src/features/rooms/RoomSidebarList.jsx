@@ -5,7 +5,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '../../components/ui/sidebar.tsx'
-import roomIcon from '../../assets/headphones.svg'
+import roomIcon from '@synthos/shared/assets/icons/headphones.svg'
 
 /**
  * Filas de sala para el grupo "Mis Salas" del Sidebar: presentacional, recibe la
