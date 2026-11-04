@@ -43,7 +43,7 @@ export default function TopBar() {
   }
 
   return (
-    <header className="flex items-center gap-4 px-3 py-4">
+    <header className="flex min-w-0 items-center gap-3 px-3 py-4">
       {/* Dispara toggleSidebar (mismo estado que Ctrl+B). Va en el header del
           área de contenido, fuera del sidebar, como en el layout de shadcn. */}
       <SidebarTrigger className="-ml-1" />
@@ -55,9 +55,9 @@ export default function TopBar() {
         <button type="button" className="rounded-full Volume px-2 py-1 Button">→</button>
       </div>
 
-      <div className="flex items-center gap-2">
-        <form onSubmit={submit} role="search" className="w-72">
-          <div className="Volume flex items-center gap-2 rounded-full px-4 py-2">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <form onSubmit={submit} role="search" className="w-full min-w-0 max-w-72">
+          <div className="Volume flex min-w-0 items-center gap-2 rounded-full px-4 py-2">
             <img src={searchIcon} alt="" aria-hidden="true" className="h-4 w-4 shrink-0" />
             <input
               type="search"
@@ -65,7 +65,7 @@ export default function TopBar() {
               onChange={(event) => setText(event.target.value)}
               placeholder="Buscar canciones o personas"
               aria-label="Buscar canciones o personas"
-              className="text-foreground TextRegluar placeholder-muted-foreground/60 w-full bg-transparent outline-none"
+              className="text-foreground TextRegluar placeholder-muted-foreground/60 w-full min-w-0 bg-transparent outline-none"
             />
           </div>
         </form>

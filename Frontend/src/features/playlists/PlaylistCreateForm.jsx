@@ -3,8 +3,8 @@ import { mapApiError } from '@synthos/shared'
 
 /**
  * Formulario de creación de playlist. Se usa suelto en `/playlists`; la edición
- * reusa los mismos campos desde `PlaylistEditForm` en el detalle, para que el
- * copy y la validación no se dupliquen.
+ * del detalle es inline, con los mismos campos, para que el copy y la
+ * validación no se dupliquen.
  *
  * Presentacional con la lógica del submit: el service lo llama quien lo usa
  * (AGENTS.md, regla 5).

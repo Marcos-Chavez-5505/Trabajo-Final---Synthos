@@ -15,7 +15,7 @@ import QueueActionButton from './QueueActionButton.jsx'
  */
 export default function AddToQueueButton({
   song,
-  className = 'Volume hover:opacity-80',
+  className = 'hover:opacity-80',
   iconClassName = 'h-5 w-5',
 }) {
   const { addToQueue, roomMode } = usePlayer()

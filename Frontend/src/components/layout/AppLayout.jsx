@@ -62,8 +62,18 @@ export default function AppLayout({ children }) {
       <div className="isolate flex min-h-0 min-w-0 flex-1">
         <Sidebar />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <TopBar />
-          <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
+          <main className="min-h-0 flex-1 overflow-y-auto">
+            {/* Sticky dentro del scroller: el contenido puede pasar por debajo
+                y el degradé tapa el corte de los fondos que sangran hacia
+                arriba (PlaylistDetail usa --cover-url para eso). */}
+            {/* El degradé se extiende 2rem por debajo del header con un
+                pseudo-elemento: así la parte oscura baja más sin empujar el
+                contenido (el header mantiene su altura). */}
+            <div className="before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:-z-10 before:h-[calc(100%+2rem)] before:bg-linear-to-b before:from-surface before:via-surface/90 before:to-transparent sticky top-0 z-20">
+              <TopBar />
+            </div>
+            {children}
+          </main>
           {/* Dentro de la columna de contenido: el sidebar-gap (shadcn) reserva el
               ancho con transition-[width], así que el reproductor se adapta a su
               lado derecho y se ensancha al contraerse el sidebar. */}

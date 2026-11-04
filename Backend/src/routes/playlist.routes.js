@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const playlistController = require("../controller/playlist.controller");
 const { authenticate } = require("../middlewares/auth.middleware");
+const { uploadPicture } = require("../middlewares/upload.middleware");
 
 router.use(authenticate);
 
@@ -13,6 +14,9 @@ router.post("/", playlistController.createPlaylist);
 router.get("/", playlistController.getUserPlaylists);
 router.put("/:id", playlistController.updatePlaylist);
 router.delete("/:id", playlistController.deletePlaylist);
+
+router.post("/:id/cover", uploadPicture, playlistController.uploadPlaylistCover);
+router.delete("/:id/cover", playlistController.removePlaylistCover);
 
 router.post("/:id/songs", playlistController.addSong);
 router.delete("/:id/songs/:songId", playlistController.removeSong);

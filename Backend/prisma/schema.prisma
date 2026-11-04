@@ -134,6 +134,7 @@ model Playlist {
   id           Int                  @id @default(autoincrement())
   name         String               @db.VarChar(150)
   description  String?
+  coverUrl     String?              @map("cover_url") @db.Text
   idCreator    Int                  @map("id_creator")
   type         PlaylistType
   isPublic     Boolean              @default(false) @map("is_public")

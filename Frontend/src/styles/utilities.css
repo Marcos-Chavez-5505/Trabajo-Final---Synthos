@@ -134,6 +134,62 @@
     height: var(--ds-size-media-card-play);
   }
 
+  /* Efectos de media: portada y banner de cabecera.
+     La imagen viaja como --cover-url. En la portada el blur va en el
+     pseudoelemento y la imagen nítida encima (el componente la pinta como
+     <img>): con isolation, un hijo z-index:-1 se dibuja sobre el fondo del
+     propio elemento, así que el fondo no puede ser la imagen nítida. */
+  .CoverGlow {
+    position: relative;
+    isolation: isolate;
+  }
+  .CoverGlow::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: var(--cover-url) center / cover no-repeat;
+    border-radius: inherit;
+    filter: blur(40px) saturate(1.8);
+    scale: 1.1;
+  }
+
+  .HeaderGlow {
+    position: relative;
+    isolation: isolate;
+  }
+  .HeaderGlow::before {
+    content: "";
+    position: absolute;
+    top: -96px;
+    right: 0;
+    bottom: -8px;
+    left: 0;
+    z-index: -1;
+    background: var(--cover-url) center / cover no-repeat;
+    filter: blur(120px) saturate(1.9);
+    opacity: 0.55;
+    /* El topbar sticky tapa el borde superior; el desvanecido evita que se
+       note dónde arranca el banner. */
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 10%,
+      var(--ds-lighter) 28%,
+      var(--ds-lighter) 55%,
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 10%,
+      var(--ds-lighter) 28%,
+      var(--ds-lighter) 55%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+
   /* Color para texto fucsia */
   .TextFucsia {
     color: var(--ds-fucsia);

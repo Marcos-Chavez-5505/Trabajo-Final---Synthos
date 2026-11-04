@@ -63,7 +63,7 @@ export default function AddToPlaylistPanel({ songId, className = '', tooltip = f
 
     try {
       if (contains(playlist)) {
-        await removeSongFromPlaylist(userId, playlist.id, songId)
+        await removeSongFromPlaylist(userId, playlist.id, songId, { isFavorites: false })
       } else {
         await addSongToPlaylist(userId, playlist.id, songId)
       }

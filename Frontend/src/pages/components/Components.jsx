@@ -3,6 +3,11 @@ import {
   AlertDialogExample5,
   AlertDialogExample9,
 } from "@/components/ui/alert-dialog-examples"
+import {
+  ToastExampleAdd,
+  ToastExamplePromise,
+  ToastExampleUpdate,
+} from "@/components/ui/toast-examples"
 
 export default function Components() {
   return (
@@ -16,6 +21,18 @@ export default function Components() {
         <AlertDialogExample1 />
         <AlertDialogExample5 />
         <AlertDialogExample9 />
+      </div>
+
+      <h2 className="Header4">Componentes — Toast</h2>
+      <p className="TextRegluar" style={{ color: "var(--ds-light-muted)" }}>
+        toast.add, toast.promise y toast.update contra la API real. Con
+        &quot;reducir movimiento&quot; activado en el sistema, los toasts aparecen
+        y desaparecen sin desplazarse.
+      </p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+        <ToastExampleAdd />
+        <ToastExamplePromise />
+        <ToastExampleUpdate />
       </div>
     </div>
   )
