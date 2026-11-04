@@ -1,5 +1,6 @@
 const prisma = require("../prisma/prismaClient");
 const { mergeOrder } = require("../utils/reorder");
+const { uploadPlaylistCover: uploadPlaylistCoverImage } = require("./image.service");
 
 const SONG_INCLUDE = {
 	songArtists: true,
@@ -234,6 +235,27 @@ async function updatePlaylist(id, { name, description, addSongs, removeSongs }) 
 	});
 }
 
+async function updatePlaylistCover(id, file) {
+	const coverUrl = await uploadPlaylistCoverImage(file.buffer, {
+		playlistId: id,
+		mimetype: file.mimetype,
+	});
+
+	return prisma.playlist.update({
+		where: { id },
+		data: { coverUrl },
+		include: PLAYLIST_INCLUDE,
+	});
+}
+
+async function clearPlaylistCover(id) {
+	return prisma.playlist.update({
+		where: { id },
+		data: { coverUrl: null },
+		include: PLAYLIST_INCLUDE,
+	});
+}
+
 async function deletePlaylist(id) {
 	return prisma.playlist.delete({ where: { id } });
 }
@@ -440,6 +462,8 @@ module.exports = {
 	getPlaylistById,
 	getUserPlaylists,
 	updatePlaylist,
+	updatePlaylistCover,
+	clearPlaylistCover,
 	deletePlaylist,
 	songExists,
 	addSongToPlaylist,

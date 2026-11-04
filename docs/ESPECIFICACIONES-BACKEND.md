@@ -459,7 +459,9 @@ Todas las lecturas de favoritos —`GET /`, `GET /songs/ids`, y las dos ramas de
 | `GET /:id` | — | `{ status, playlist }`. **404 si no es del creador, no es miembro y no es pública** |
 | `POST /` | body: `name` (obligatorio, ≤50), `description`, `isPublic`, `type` (`colab` o `personal`, **obligatorio**) | 201 `{ status, playlist }` con `creator` y `type`. 400 `PLAYLIST_TYPE_INVALID` |
 | `PUT /:id` | body: `name?`, `description?`, `addSongs?`, `removeSongs?` | 200 `{ status, playlist }`. 403 si no es el dueño o si es la de favoritos, 404 si no existe. **`reorder` ya no se acepta** (ver 9.2) |
-| `DELETE /:id` | — | 200 `{ status, message }`. 403 si no es el dueño o si es la de favoritos |
+| `DELETE /:id` | - | 200 `{ status, message }`. 403 si no es el dueño o si es la de favoritos |
+| `POST /:id/cover` | `multipart/form-data`, campo `picture`: JPG, PNG o WEBP de hasta 2 MB | 200 `{ status, playlist }` con `coverUrl` apuntando al CDN. 400 `MISSING_PICTURE` / `INVALID_IMAGE_TYPE` / `IMAGE_TOO_LARGE`, 403 `NOT_PLAYLIST_OWNER` o `FAVORITES_LOCKED`, 404 `PLAYLIST_NOT_FOUND` |
+| `DELETE /:id/cover` | - | 200 `{ status, playlist }` con `coverUrl: null`. Mismos 403/404. Idempotente |
 | `POST /:id/songs` | body: `songId` | 201 `{ status, song }`. 403 `NOT_PLAYLIST_OWNER` (personal ajena) o `NOT_PLAYLIST_MEMBER` (colab sin membresía), 409 si ya estaba |
 | `DELETE /:id/songs/:songId` | — | 200 `{ status, message }`. 404 si no estaba, 403 si no sos miembro |
 | `PUT /:id/songs/order` | body: `songIds: number[]` | 200 `{ status, songIds, merged }`. 400 `INVALID_SONG_IDS`, 400 `FAVORITES_MANAGED_ELSEWHERE`, 403 `NOT_PLAYLIST_OWNER` / `NOT_PLAYLIST_MEMBER`, 404 `PLAYLIST_NOT_FOUND` (ver 9.2) |
@@ -470,7 +472,7 @@ Todas las lecturas de favoritos —`GET /`, `GET /songs/ids`, y las dos ramas de
 | `POST /invitations/:idPlaylist/accept` | — | 201 `{ status, invitation }`. 404 `INVITATION_NOT_FOUND` si no hay pendiente |
 | `POST /invitations/:idPlaylist/reject` | — | 200 `{ status, invitation }`. 404 `INVITATION_NOT_FOUND` |
 
-Las canciones se agregan y quitan con `POST|DELETE /:id/songs`, que son las rutas que aplican los roles;
+Todas las respuestas de playlist incluyen `coverUrl: string | null` (la portada subida; si falta, el frontend cae a la carátula de la primera canción). Las canciones se agregan y quitan con `POST|DELETE /:id/songs`, que son las rutas que aplican los roles;
 `PUT /:id` sigue siendo del creador y ya no se usa para tocar canciones. El orden de la lista se cambia
 solo con `PUT /:id/songs/order`.
 

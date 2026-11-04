@@ -626,12 +626,73 @@ async function removeMember(req, res, next) {
 	}
 }
 
+async function requireCoverEditablePlaylist(req) {
+	const userId = req.user.sub;
+	const id = requireId(req.params.id);
+
+	const existing = await playlistService.getPlaylistById(id);
+	if (!existing) {
+		throw httpError(404, "La playlist no existe.", "PLAYLIST_NOT_FOUND");
+	}
+
+	if (existing.idCreator !== userId) {
+		throw httpError(
+			403,
+			"No sos el dueño de esta playlist.",
+			"NOT_PLAYLIST_OWNER",
+		);
+	}
+
+	if (isFavoritesPlaylist(existing)) {
+		throw httpError(
+			403,
+			"La playlist de favoritos no se puede editar.",
+			"FAVORITES_LOCKED",
+		);
+	}
+
+	return id;
+}
+
+async function uploadPlaylistCover(req, res, next) {
+	try {
+		const id = await requireCoverEditablePlaylist(req);
+
+		if (!req.file) {
+			throw httpError(
+				400,
+				"No se recibió ninguna imagen.",
+				"MISSING_PICTURE",
+			);
+		}
+
+		const playlist = await playlistService.updatePlaylistCover(id, req.file);
+
+		return res.status(200).json({ status: "success", playlist });
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function removePlaylistCover(req, res, next) {
+	try {
+		const id = await requireCoverEditablePlaylist(req);
+		const playlist = await playlistService.clearPlaylistCover(id);
+
+		return res.status(200).json({ status: "success", playlist });
+	} catch (error) {
+		next(error);
+	}
+}
+
 module.exports = {
 	createPlaylist,
 	getPlaylistById,
 	getUserPlaylists,
 	updatePlaylist,
 	deletePlaylist,
+	uploadPlaylistCover,
+	removePlaylistCover,
 	addSong,
 	removeSong,
 	updatePlaylistSongsOrder,

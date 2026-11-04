@@ -2,8 +2,9 @@ const ImageKit = require("@imagekit/nodejs");
 const { toFile } = require("@imagekit/nodejs");
 const { httpError } = require("../utils/errors");
 
-// Carpeta de ImageKit donde viven los avatares.
+// Carpetas de ImageKit por tipo de imagen.
 const AVATAR_FOLDER = "/avatars";
+const PLAYLIST_COVER_FOLDER = "/playlist-covers";
 
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -41,14 +42,14 @@ function isAllowedImageType(mimetype) {
 	return ALLOWED_IMAGE_TYPES.includes(mimetype);
 }
 
-async function uploadAvatar(buffer, { userId, mimetype }) {
+async function uploadImage(buffer, { key, mimetype, folder }) {
 	const extension = EXTENSION_BY_TYPE[mimetype];
 
 	if (!extension) {
 		throw httpError(400, "Formato de imagen no permitido.", "INVALID_IMAGE_TYPE");
 	}
 
-	const fileName = `avatar-${userId}.${extension}`;
+	const fileName = `${key}.${extension}`;
 
 	const client = getClient();
 
@@ -56,21 +57,36 @@ async function uploadAvatar(buffer, { userId, mimetype }) {
 		const uploaded = await client.files.upload({
 			file: await toFile(buffer, fileName, { type: mimetype }),
 			fileName,
-			folder: AVATAR_FOLDER,
+			folder,
 			useUniqueFileName: false,
 			overwrite: true,
 		});
 
 		return `${uploaded.url}${uploaded.url.includes("?") ? "&" : "?"}v=${Date.now()}`;
-		
 	} catch (error) {
-		console.error("[image.service] Falló la subida del avatar:", error);
+		console.error("[image.service] Falló la subida de la imagen:", error);
 		throw httpError(
 			500,
-			"No se pudo guardar la foto. Intentá de nuevo en un momento.",
+			"No se pudo guardar la imagen. Intentá de nuevo en un momento.",
 			"IMAGE_UPLOAD_FAILED",
 		);
 	}
+}
+
+async function uploadAvatar(buffer, { userId, mimetype }) {
+	return uploadImage(buffer, {
+		key: `avatar-${userId}`,
+		mimetype,
+		folder: AVATAR_FOLDER,
+	});
+}
+
+async function uploadPlaylistCover(buffer, { playlistId, mimetype }) {
+	return uploadImage(buffer, {
+		key: `playlist-${playlistId}`,
+		mimetype,
+		folder: PLAYLIST_COVER_FOLDER,
+	});
 }
 
 module.exports = {
@@ -78,4 +94,5 @@ module.exports = {
 	isAllowedImageType,
 	isBase64DataUrl,
 	uploadAvatar,
+	uploadPlaylistCover,
 };

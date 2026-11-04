@@ -1,4 +1,4 @@
-import { get, post, put, del, ApiError } from './api.js'
+import { get, post, postForm, put, del, ApiError } from './api.js'
 
 // Playlists y favoritos contra el backend real.
 //
@@ -77,6 +77,30 @@ export async function updatePlaylist(ownerId, playlistId, { name, description })
   return toPlaylist(data.playlist, ownerId)
 }
 
+export async function uploadPlaylistCover(ownerId, playlistId, file) {
+  requireOwner(ownerId)
+
+  const form = new FormData()
+  const filename = (file && typeof file.name === 'string' && file.name) || 'cover'
+  form.append('picture', file, filename)
+
+  const data = await postForm(`/playlists/${playlistId}/cover`, form)
+
+  notifyPlaylistsChanged()
+
+  return toPlaylist(data.playlist, ownerId)
+}
+
+export async function removePlaylistCover(ownerId, playlistId) {
+  requireOwner(ownerId)
+
+  const data = await del(`/playlists/${playlistId}/cover`)
+
+  notifyPlaylistsChanged()
+
+  return toPlaylist(data.playlist, ownerId)
+}
+
 export async function removePlaylist(ownerId, playlistId) {
   requireOwner(ownerId)
 
@@ -117,13 +141,18 @@ export async function addSongToPlaylist(ownerId, playlistId, songId) {
   return getPlaylistById(ownerId, playlistId)
 }
 
-export async function removeSongFromPlaylist(ownerId, playlistId, songId) {
+export async function removeSongFromPlaylist(ownerId, playlistId, songId, { isFavorites } = {}) {
   requireOwner(ownerId)
 
-  const playlist = await getPlaylistById(ownerId, playlistId)
-  if (!playlist) return null
+  // Quien llama puede informar si es la playlist de favoritos y evitarse el GET previo.
+  const favorites =
+    typeof isFavorites === 'boolean'
+      ? isFavorites
+      : (await getPlaylistById(ownerId, playlistId))?.isFavorites
 
-  if (playlist.isFavorites) {
+  if (favorites === undefined) return null
+
+  if (favorites) {
     await removeFavoriteSong(songId)
     return getPlaylistById(ownerId, playlistId)
   }
@@ -310,6 +339,7 @@ function toPlaylist(raw, viewerId) {
     members,
     name: isFavorites ? FAVORITES_PLAYLIST_NAME : raw.name,
     description: raw.description ?? '',
+    coverUrl: raw.coverUrl ?? null,
     isFavorites,
     isCollaborative: raw.type === 'colab',
     songIds: (raw.songs ?? []).map((row) => row.idSong ?? row.song?.id),

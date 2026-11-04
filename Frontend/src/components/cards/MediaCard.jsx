@@ -51,7 +51,7 @@ export default function MediaCard({ title, artist, label, coverUrl = null, onPla
           type="button"
           onClick={onPlay}
           aria-label={`Reproducir ${title}`}
-          className="Fucsia MediaCardPlaySize flex cursor-pointer items-center justify-center rounded-full"
+          className="Fucsia MediaCardPlaySize hover:brightness-80 flex cursor-pointer items-center justify-center rounded-full transition duration-150 active:scale-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <img src={playIcon} alt="" aria-hidden="true" className="h-4 w-4" />
         </button>

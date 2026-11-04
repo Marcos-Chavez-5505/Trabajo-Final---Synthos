@@ -45,7 +45,7 @@ export default function QueueActionButton({
       disabled={disabled}
       aria-label={stateLabel}
       title={title ?? stateLabel}
-      className={`flex shrink-0 cursor-pointer items-center justify-center rounded-full transition duration-150 active:scale-90 disabled:cursor-not-allowed disabled:opacity-40 ${
+      className={`flex shrink-0 cursor-pointer items-center justify-center rounded-full transition duration-150 active:scale-90 disabled:cursor-not-allowed disabled:opacity-40 hover:brightness-80 ${
         added ? 'ring-2 ring-white/40' : ''
       } ${className}`}
     >

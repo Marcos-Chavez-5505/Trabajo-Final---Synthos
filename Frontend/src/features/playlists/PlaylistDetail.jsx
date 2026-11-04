@@ -3,31 +3,58 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@synthos/shared'
 import { useFavorites } from '@synthos/shared'
 import { usePlayer } from '@synthos/shared'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog.tsx'
 import Avatar from '../../components/ui/Avatar.jsx'
-import { getSongById } from '@synthos/shared'
+import AvatarStack from '../../components/ui/AvatarStack.jsx'
+import { toastMessages } from '../../components/ui/toast-messages.js'
+import { getSongById, mapApiError } from '@synthos/shared'
 import {
   getPlaylistById,
   listSentInvitations,
   removePlaylist,
+  removePlaylistCover,
   removePlaylistMember,
   removeSongFromPlaylist,
+  sendInvitation,
   updatePlaylist,
+  uploadPlaylistCover,
   updatePlaylistSongsOrder,
   updateFavoritesOrder,
 } from '@synthos/shared'
 import { useReorderSongs, DRAG_SCALE, DRAG_SCALE_X, NEIGHBOR_SEPARATION, DRAG_SPRING, DRAG_SETTLE_SPRING } from '@synthos/shared'
+import cameraIcon from '@synthos/shared/assets/icons/camera.svg'
+import headphonesIcon from '@synthos/shared/assets/icons/headphones.svg'
 import musicNoteIcon from '@synthos/shared/assets/icons/music_note.svg'
+import pencilLineIcon from '@synthos/shared/assets/icons/pencil_line.svg'
+import playIcon from '@synthos/shared/assets/icons/play.svg'
+import trashIcon from '@synthos/shared/assets/icons/trash.svg'
+import userIcon from '@synthos/shared/assets/icons/user.svg'
+import userGroupIcon from '@synthos/shared/assets/icons/user_group.svg'
 import PlaylistSongRow from './PlaylistSongRow.jsx'
-import PlaylistEditForm from './PlaylistEditForm.jsx'
-import InviteUserDialog from './InviteUserDialog.jsx'
-import { motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
+import UserSearch from '../search/UserSearch.jsx'
+import useBreakpoint from '../../hooks/useBreakpoint.js'
+import { prepareProfileImage } from '../profile/profileImage.js'
+import { AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
 import { animate } from 'framer-motion'
 
 const MemoPlaylistSongRow = memo(PlaylistSongRow)
+const ROW_EXIT_MS = 150
+const EXIT_TIMEOUT_MS = 400
+const COVER_EDIT_TRANSITION = { duration: 0.18, ease: 'easeInOut' }
 
 export default function PlaylistDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const isMobile = useBreakpoint() === 'mobile'
   const { user } = useAuth()
   const { playSongs, removeFromPlaylistQueue, clearQueueIfSource } = usePlayer()
   const { isFavorite } = useFavorites()
@@ -35,11 +62,21 @@ export default function PlaylistDetail() {
   const userId = user?.id ?? null
 
   const [playlistResponse, setPlaylistResponse] = useState({ key: null, playlist: null })
-  const [songMapResponse, setSongMapResponse] = useState({ key: null, map: new Map() })
-  const [invitations, setInvitations] = useState([])
+  const [songById, setSongById] = useState(() => new Map())
+  const [removingIds, setRemovingIds] = useState(() => new Set())
+  const [hasExitingRow, setHasExitingRow] = useState(false)
+  const [invitationsResponse, setInvitationsResponse] = useState({ key: null, items: [] })
   const [inviting, setInviting] = useState(false)
   const [editing, setEditing] = useState(false)
-  const [error, setError] = useState('')
+  const [draftName, setDraftName] = useState('')
+  const [draftDescription, setDraftDescription] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editError, setEditError] = useState('')
+  const [coverMenuOpen, setCoverMenuOpen] = useState(false)
+  const [coverBusy, setCoverBusy] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const coverMenuRef = useRef(null)
+  const coverInputRef = useRef(null)
 
   const playlist = playlistResponse.key === `${userId}:${id}` ? playlistResponse.playlist : null
   const loading = userId !== null && playlistResponse.key !== `${userId}:${id}`
@@ -50,7 +87,7 @@ export default function PlaylistDetail() {
 
     return getPlaylistById(userId, id).then(
       (loaded) => setPlaylistResponse({ key: `${userId}:${id}`, playlist: loaded }),
-      (cause) => setError(mapApiError(cause))
+      (cause) => toastMessages.playlistLoadError(cause)
     )
   }, [userId, id])
 
@@ -58,13 +95,21 @@ export default function PlaylistDetail() {
     loadPlaylist()
   }, [loadPlaylist])
 
+  // Solo el creador de una playlist colaborativa administra invitaciones.
+  // Las personales no pueden tenerlas: invitar las convierte en colaborativas.
+  const canManageInvitations =
+    Boolean(playlist) && playlist.role === 'creator' && playlist.isCollaborative
+  const invitationsKey = `${userId}:${id}`
+  const invitations =
+    invitationsResponse.key === invitationsKey ? invitationsResponse.items : []
+
   const loadInvitations = useCallback(() => {
-    if (!userId || !playlist || playlist.role !== 'creator') return Promise.resolve()
+    if (!userId || !canManageInvitations) return Promise.resolve()
 
     return listSentInvitations(userId, id)
-      .then(setInvitations)
-      .catch((cause) => setError(mapApiError(cause)))
-  }, [userId, id, playlist])
+      .then((items) => setInvitationsResponse({ key: `${userId}:${id}`, items }))
+      .catch((cause) => toastMessages.playlistInvitationsError(cause))
+  }, [userId, id, canManageInvitations])
 
   useEffect(() => {
     loadInvitations()
@@ -72,24 +117,40 @@ export default function PlaylistDetail() {
 
   // Resolución de canciones por conjunto estable de ids (no se re-pide al reordenar).
   const songIdsKey = playlist ? [...playlist.songIds].map(String).sort().join(',') : null
+  const songByIdRef = useRef(songById)
 
+  useEffect(() => {
+    songByIdRef.current = songById
+  }, [songById])
+
+  // Las canciones ya resueltas se conservan entre cambios de la playlist: quitar
+  // una canción no vacía la lista ni vuelve a pedir las que siguen.
   useEffect(() => {
     if (!songIdsKey) return undefined
 
     const ids = songIdsKey.split(',').filter(Boolean)
+    const pendingIds = ids.filter((songId) => {
+      const cached = songByIdRef.current.get(songId)
+      // Las que fallaron (null) se reintentan en el próximo cambio de la lista.
+      return cached === undefined || cached === null
+    })
+
+    if (pendingIds.length === 0) return undefined
 
     let active = true
 
-    Promise.all(ids.map((songId) => getSongById(songId).catch(() => null)))
+    Promise.all(pendingIds.map((songId) => getSongById(songId).catch(() => null)))
       .then((songs) => {
-        if (active) {
-          const map = new Map()
-          ids.forEach((sid, i) => map.set(sid, songs[i]))
-          setSongMapResponse({ key: songIdsKey, map })
-        }
+        if (!active) return
+
+        setSongById((prev) => {
+          const next = new Map(prev)
+          pendingIds.forEach((sid, i) => next.set(sid, songs[i]))
+          return next
+        })
       })
       .catch((cause) => {
-        if (active) setError(mapApiError(cause))
+        if (active) toastMessages.playlistSongsError(cause)
       })
 
     return () => {
@@ -97,9 +158,8 @@ export default function PlaylistDetail() {
     }
   }, [songIdsKey])
 
-  const isSongsCurrent = songMapResponse.key === songIdsKey
-  const songById = isSongsCurrent ? songMapResponse.map : new Map()
-  const resolving = Boolean(songIdsKey) && !isSongsCurrent
+  const songIds = songIdsKey ? songIdsKey.split(',').filter(Boolean) : []
+  const resolving = Boolean(songIdsKey) && songIds.some((sid) => !songById.has(sid))
 
   // Permiso para reordenar: el creador y los colaboradores (igual que agregar/quitar).
   const canReorder = Boolean(playlist) && playlist.role !== null
@@ -121,7 +181,7 @@ export default function PlaylistDetail() {
   }, [loadPlaylist])
 
   const handleReorderError = useCallback((cause) => {
-    setError(mapApiError(cause))
+    toastMessages.playlistOrderError(cause)
   }, [])
 
   const { order, reorder, flush } = useReorderSongs({
@@ -131,9 +191,30 @@ export default function PlaylistDetail() {
     onError: handleReorderError,
   })
 
-  const orderedSongs = order.map((sid) => songById.get(String(sid)) ?? null)
-  const playable = orderedSongs.filter(Boolean)
-  const missing = orderedSongs.filter((s) => s === null).length
+  // Portada: imagen subida > carátula de la primera canción del orden actual >
+  // ícono. Mientras la canción se resuelve (o falló) se usa el ícono para no
+  // parpadear. No se usa `songIdsKey` a propósito: el orden manda.
+  const firstOrderedSong = order.length > 0 ? songById.get(String(order[0])) : null
+  const firstOrderedCoverUrl = firstOrderedSong?.coverUrl ?? null
+  const coverSrc = playlist?.coverUrl || firstOrderedCoverUrl || headphonesIcon
+  const hasCoverImage = Boolean(playlist?.coverUrl || firstOrderedCoverUrl)
+  const canEditCover = Boolean(playlist) && isCreator && !playlist.isFavorites
+  const hasMembers = Boolean(playlist?.members.length)
+
+  const playlistIds = new Set((playlist?.songIds ?? []).map(String))
+  const orderedEntries = order
+    .map((sid) => ({ sid, song: songById.get(String(sid)) ?? null }))
+    .filter(({ sid }) => playlistIds.has(String(sid)))
+  const visibleRows = orderedEntries.filter(({ sid }) => !removingIds.has(String(sid)))
+  const playable = visibleRows.map(({ song }) => song).filter(Boolean)
+  const missing = visibleRows.filter(({ song }) => song === null).length
+
+  const visibleCount = (playlist?.songIds ?? []).filter(
+    (sid) => !removingIds.has(String(sid))
+  ).length
+  const orderIds = new Set(order.map(String))
+  const orderInSync =
+    orderIds.size === playlistIds.size && [...playlistIds].every((sid) => orderIds.has(sid))
 
   // --- drag & drop (pointer events) ---
   const listRef = useRef(null)
@@ -141,6 +222,9 @@ export default function PlaylistDetail() {
   const indicatorRef = useRef(null)
   const rowRefs = useRef(new Map())
   const neighborsRef = useRef({ above: null, below: null })
+  const exitTimerRef = useRef(null)
+  const settleTimerRef = useRef(null)
+  const removalQueueRef = useRef(Promise.resolve())
 
   const prefersReduced = useReducedMotion()
   const draggedIdState = useState(null)
@@ -152,10 +236,19 @@ export default function PlaylistDetail() {
   const dragScale = useMotionValue(1)
   const dragScaleX = useTransform(dragScale, [1, DRAG_SCALE], [1, DRAG_SCALE_X], { clamp: false })
   const [isDragging, setIsDragging] = useState(false)
+  const [isSettling, setIsSettling] = useState(false)
+
+  useEffect(
+    () => () => {
+      clearTimeout(exitTimerRef.current)
+      clearTimeout(settleTimerRef.current)
+    },
+    []
+  )
 
   const handleDragPointerDown = useCallback(
     (event, songId) => {
-      if (!canReorder) return
+      if (!canReorder || removingIds.size > 0 || hasExitingRow) return
       event.preventDefault()
       event.stopPropagation()
       try {
@@ -189,7 +282,7 @@ export default function PlaylistDetail() {
       setDraggedId(songId)
       setIsDragging(true)
     },
-    [canReorder, order, dragScale, dragX, dragY, prefersReduced, setDraggedId]
+    [canReorder, order, dragScale, dragX, dragY, prefersReduced, setDraggedId, removingIds, hasExitingRow]
   )
 
   useEffect(() => {
@@ -197,7 +290,9 @@ export default function PlaylistDetail() {
     const d0 = dragRef.current
     if (!d0) return undefined
 
-    const rows = Array.from(listRef.current.querySelectorAll('[data-row]'))
+    const rows = Array.from(listRef.current.querySelectorAll('[data-row]')).filter(
+      (r) => r.style.position !== 'absolute'
+    )
     const baseRows = rows.filter((r) => Number(r.dataset.row) !== d0.id)
     const rects = baseRows.map((r) => {
       const rr = r.getBoundingClientRect()
@@ -270,7 +365,6 @@ export default function PlaylistDetail() {
       const pointerY = event.clientY
       const offset = pointerY - dd.startY
       dragY.set(offset)
-      console.log('onMove', { offset, dragY: dragY.get() })
       const insertIndex = computeInsertIndex(pointerY)
       if (insertIndex !== dd.insertIndex) {
         dd.insertIndex = insertIndex
@@ -325,6 +419,14 @@ export default function PlaylistDetail() {
       dragRef.current = null
       setDraggedId(null)
       setIsDragging(false)
+
+      // Deja que el settle de las vecinas termine antes de reactivar el layout,
+      // para que no compitan dos animaciones sobre el mismo transform.
+      if (!prefersReduced) {
+        setIsSettling(true)
+        clearTimeout(settleTimerRef.current)
+        settleTimerRef.current = setTimeout(() => setIsSettling(false), 200)
+      }
     }
 
     window.addEventListener('pointermove', onMove)
@@ -343,23 +445,80 @@ export default function PlaylistDetail() {
     }
   }, [isDragging, order, reorder, prefersReduced, dragY, dragScale, setDraggedId])
 
-  async function handleRemoveSong(songId) {
-    try {
-      const updated = await removeSongFromPlaylist(userId, id, songId)
+  // Quita optimista: la fila sale ya y el servidor confirma por detrás.
+  // Las bajas se serializan para que los snapshots lleguen en orden.
+  function handleRemoveSong(songId) {
+    const key = String(songId)
 
-      if (updated) {
-        setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
+    setRemovingIds((prev) => new Set(prev).add(key))
 
-        removeFromPlaylistQueue(songId, id)
-      }
-    } catch (cause) {
-      setError(mapApiError(cause))
+    if (!prefersReduced) {
+      setHasExitingRow(true)
+      clearTimeout(exitTimerRef.current)
+      exitTimerRef.current = setTimeout(() => setHasExitingRow(false), EXIT_TIMEOUT_MS)
     }
+
+    removalQueueRef.current = removalQueueRef.current
+      .then(async () => {
+        const updated = await removeSongFromPlaylist(userId, id, songId, {
+          isFavorites: Boolean(playlist?.isFavorites),
+        })
+
+        if (!updated) throw new Error('No se pudo quitar la canción de la playlist.')
+
+        setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
+        setRemovingIds((prev) => {
+          if (!prev.has(key)) return prev
+          const next = new Set(prev)
+          next.delete(key)
+          return next
+        })
+        removeFromPlaylistQueue(songId, id)
+      })
+      .catch((cause) => {
+        setRemovingIds((prev) => {
+          if (!prev.has(key)) return prev
+          const next = new Set(prev)
+          next.delete(key)
+          return next
+        })
+        toastMessages.songRemoveError(cause)
+      })
   }
 
+  // Mueve una canción a una posición (1-based) dentro de la lista visible.
+  function handleMoveSong(songId, position) {
+    if (!Number.isFinite(position)) return
+
+    const visibleIds = visibleRows.map(({ sid }) => sid)
+    const from = visibleIds.findIndex((sid) => String(sid) === String(songId))
+    if (from === -1) return
+
+    const to = Math.min(Math.max(Math.trunc(position) - 1, 0), visibleIds.length - 1)
+    if (to === from) return
+
+    const sid = visibleIds[from]
+    const nextVisible = [...visibleIds]
+    nextVisible.splice(from, 1)
+    nextVisible.splice(to, 0, sid)
+
+    // Los ids ocultos (quitas pendientes) conservan su lugar en el orden guardado.
+    const visibleSet = new Set(visibleIds.map(String))
+    let cursor = 0
+    const nextOrder = order.map((id) =>
+      visibleSet.has(String(id)) ? nextVisible[cursor++] : id
+    )
+
+    reorder(nextOrder)
+  }
+
+  const handleExitComplete = useCallback(() => {
+    clearTimeout(exitTimerRef.current)
+    setHasExitingRow(false)
+  }, [])
+
   async function handleDelete() {
-    const confirmed = window.confirm(`¿Eliminar "${playlist.name}"? No se puede deshacer.`)
-    if (!confirmed) return
+    setDeleteOpen(false)
 
     const deleted = await removePlaylist(userId, id)
 
@@ -374,6 +533,11 @@ export default function PlaylistDetail() {
     loadInvitations()
   }
 
+  async function handleInvite(person) {
+    const result = await sendInvitation(userId, id, person.id)
+    await handleInvited(result)
+  }
+
   async function handleRemoveMember(memberId) {
     if (!window.confirm('¿Sacar a esta persona de la playlist?')) return
 
@@ -382,7 +546,7 @@ export default function PlaylistDetail() {
       await loadPlaylist()
       loadInvitations()
     } catch (cause) {
-      setError(mapApiError(cause))
+      toastMessages.playlistMemberRemoveError(cause)
     }
   }
 
@@ -392,6 +556,115 @@ export default function PlaylistDetail() {
     if (updated) {
       setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
       setEditing(false)
+    }
+  }
+
+  function handleStartEdit() {
+    setDraftName(playlist.name)
+    setDraftDescription(playlist.description ?? '')
+    setEditError('')
+    setEditing(true)
+  }
+
+  function handleCancelEdit() {
+    if (savingEdit) return
+    setEditError('')
+    setEditing(false)
+  }
+
+  async function handleSaveEdit(event) {
+    event.preventDefault()
+
+    if (savingEdit) return
+
+    const name = draftName.trim()
+    if (!name) return
+
+    setEditError('')
+    setSavingEdit(true)
+
+    try {
+      await handleUpdate({ name, description: draftDescription })
+    } catch (cause) {
+      setEditError(mapApiError(cause))
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  function handleEditKeyDown(event) {
+    if (event.key !== 'Escape' || savingEdit) return
+    event.preventDefault()
+    handleCancelEdit()
+  }
+
+  useEffect(() => {
+    if (!coverMenuOpen) return undefined
+
+    function onPointerDown(event) {
+      if (!coverMenuRef.current?.contains(event.target)) setCoverMenuOpen(false)
+    }
+
+    function onKeyDown(event) {
+      if (event.key === 'Escape') setCoverMenuOpen(false)
+    }
+
+    // Igual que los rieles de las filas: scrollear (o redimensionar) la cierra.
+    function onScrollAway() {
+      setCoverMenuOpen(false)
+    }
+
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    document.addEventListener('scroll', onScrollAway, true)
+    window.addEventListener('wheel', onScrollAway, { passive: true })
+    window.addEventListener('resize', onScrollAway)
+
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+      document.removeEventListener('scroll', onScrollAway, true)
+      window.removeEventListener('wheel', onScrollAway)
+      window.removeEventListener('resize', onScrollAway)
+    }
+  }, [coverMenuOpen])
+
+  async function handleCoverFileChange(event) {
+    const file = event.target.files?.[0]
+
+    event.target.value = ''
+
+    if (!file || coverBusy) return
+
+    setCoverMenuOpen(false)
+    setCoverBusy(true)
+
+    try {
+      const prepared = await prepareProfileImage(file)
+      const updated = await uploadPlaylistCover(userId, id, prepared)
+
+      if (updated) setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
+    } catch (cause) {
+      toastMessages.playlistCoverUploadError(cause)
+    } finally {
+      setCoverBusy(false)
+    }
+  }
+
+  async function handleRemoveCover() {
+    if (coverBusy || !playlist?.coverUrl) return
+
+    setCoverMenuOpen(false)
+    setCoverBusy(true)
+
+    try {
+      const updated = await removePlaylistCover(userId, id)
+
+      if (updated) setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
+    } catch (cause) {
+      toastMessages.playlistCoverRemoveError(cause)
+    } finally {
+      setCoverBusy(false)
     }
   }
 
@@ -425,41 +698,270 @@ export default function PlaylistDetail() {
     return <NotFound />
   }
 
+  const deletePlaylistButton = (
+    <button
+      type="button"
+      onClick={() => setDeleteOpen(true)}
+      className={`flex items-center justify-center gap-2 whitespace-nowrap rounded px-4 bg-(--ds-volume)/60 Button hover:brightness-110 ${
+        isMobile ? 'mt-2 w-full py-2' : 'self-center py-2'
+      }`}
+    >
+      <img src={trashIcon} alt="" aria-hidden="true" className="h-5 w-5 shrink-0" />
+      <span className="flex flex-col items-start leading-tight">
+        <span>Eliminar</span>
+        <span>playlist</span>
+      </span>
+    </button>
+  )
+
   return (
-    <section className="px-6 py-4 md:px-10">
-      <header className="flex flex-wrap items-start gap-4">
-        <div className="min-w-0 flex-1">
-          {editing ? (
-            <PlaylistEditForm
-              initialName={playlist.name}
-              initialDescription={playlist.description}
-              onSave={handleUpdate}
-              onCancel={() => setEditing(false)}
+    <section className="px-6 pt-8 pb-6 md:px-10">
+      <header
+        className={`-mx-6 flex px-6 md:-mx-10 md:px-10 py-10 ${
+          isMobile
+            ? 'flex-col items-start gap-6'
+            : 'flex-row flex-wrap items-start gap-6 md:gap-10'
+        } ${hasCoverImage ? 'HeaderGlow' : ''}`}
+        style={hasCoverImage ? { '--cover-url': `url(${coverSrc})` } : undefined}
+      >
+        <motion.div
+          ref={coverMenuRef}
+          layout={!prefersReduced}
+          transition={{ layout: { type: 'spring', stiffness: 500, damping: 45 } }}
+          className={`relative shrink-0 ${isMobile ? 'self-center' : ''}`}
+        >
+          <div
+            className={`CardRadius relative flex h-40 w-40 items-center justify-center sm:h-44 sm:w-44 ${
+              hasCoverImage ? 'CoverGlow' : 'Light'
+            }`}
+            style={hasCoverImage ? { '--cover-url': `url(${coverSrc})` } : undefined}
+          >
+            {hasCoverImage ? (
+              <img
+                src={coverSrc}
+                alt=""
+                aria-hidden="true"
+                className="CardRadius absolute inset-0 h-full w-full object-cover"
+              />
+            ) : (
+              <img
+                src={headphonesIcon}
+                alt=""
+                aria-hidden="true"
+                className="h-10 w-10 opacity-70"
+              />
+            )}
+          </div>
+
+          <AnimatePresence initial={false}>
+            {canEditCover && !coverMenuOpen && !coverBusy && (
+              <motion.button
+                key="cover-hit"
+                type="button"
+                onClick={() => setCoverMenuOpen(true)}
+                aria-label="Cambiar portada"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, pointerEvents: 'none' }}
+                transition={prefersReduced ? { duration: 0 } : COVER_EDIT_TRANSITION}
+                className="CardRadius absolute inset-0 cursor-pointer motion-safe:transition-colors hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence initial={false}>
+            {canEditCover && coverMenuOpen && !coverBusy && (
+              <motion.div
+                key="cover-menu"
+                initial={{ opacity: 0, scale: prefersReduced ? 1 : 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: prefersReduced ? 1 : 0.98 }}
+                transition={prefersReduced ? { duration: 0 } : COVER_EDIT_TRANSITION}
+                className="CardRadius absolute inset-0 flex items-center justify-center gap-2 bg-surface/70 backdrop-blur-sm"
+              >
+                <button
+                  type="button"
+                  autoFocus
+                  onClick={() => {
+                    setCoverMenuOpen(false)
+                    coverInputRef.current?.click()
+                  }}
+                  aria-label="Subir nueva portada"
+                  className="rounded-full p-2 text-foreground motion-safe:transition-colors hover:bg-foreground/10 focus-visible:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <img
+                    src={cameraIcon}
+                    alt=""
+                    aria-hidden="true"
+                    className="h-6 w-6"
+                  />
+                </button>
+
+                {playlist.coverUrl && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveCover}
+                    aria-label="Quitar portada"
+                    className="rounded-full p-2 text-foreground motion-safe:transition-colors hover:bg-foreground/10 focus-visible:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    <img
+                      src={trashIcon}
+                      alt=""
+                      aria-hidden="true"
+                      className="h-6 w-6"
+                    />
+                  </button>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {coverBusy && (
+            <div
+              role="status"
+              aria-label="Actualizando portada"
+              className="CardRadius absolute inset-0 flex items-center justify-center bg-surface/70 backdrop-blur-sm"
+            >
+              <span className="size-6 animate-spin rounded-full border-2 border-current border-t-transparent text-foreground" />
+            </div>
+          )}
+
+          {canEditCover && (
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleCoverFileChange}
+              disabled={coverBusy}
             />
+          )}
+        </motion.div>
+
+        <motion.div
+          layout={prefersReduced ? false : 'position'}
+          transition={{ layout: { type: 'spring', stiffness: 500, damping: 45 } }}
+          className={`relative z-10 min-w-0 ${isMobile ? 'w-full' : 'flex-1'}`}
+        >
+          {editing ? (
+            <form
+              onSubmit={handleSaveEdit}
+              onKeyDown={handleEditKeyDown}
+              className="max-w-3xl"
+            >
+              <div className="flex items-stretch gap-6">
+                <div className="min-w-0 flex-1">
+                  <input
+                    type="text"
+                    value={draftName}
+                    onChange={(event) => setDraftName(event.target.value)}
+                    aria-label="Nombre de la playlist"
+                    maxLength={60}
+                    autoFocus
+                    placeholder="Título"
+                    className="Header2 w-full min-w-0 rounded bg-(--ds-surface)/20 px-1 outline-none ring-0 ring-transparent focus-visible:ring-2 focus-visible:ring-ring placeholder:opacity-60"
+                  />
+
+                  <textarea
+                    value={draftDescription}
+                    onChange={(event) => setDraftDescription(event.target.value)}
+                    aria-label="Descripción de la playlist"
+                    rows={3}
+                    maxLength={200}
+                    placeholder="Descripción"
+                    className="TextRegluar mt-1 w-full rounded bg-(--ds-surface)/20 px-1 py-1 outline-none ring-0 ring-transparent focus-visible:ring-2 focus-visible:ring-ring resize-none placeholder:opacity-60"
+                  />
+                </div>
+
+                {!isMobile && !playlist.isFavorites && isCreator && deletePlaylistButton}
+              </div>
+
+              {editError && (
+                <p className="Salmon TextMedium mt-2 rounded px-3 py-2">{editError}</p>
+              )}
+
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="submit"
+                  disabled={savingEdit || !draftName.trim()}
+                  className="rounded px-4 py-2 Fucsia Button hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100"
+                >
+                  {savingEdit ? 'Guardando…' : 'Guardar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  disabled={savingEdit}
+                  className="rounded px-4 py-2 Volume Button hover:brightness-110 disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+              </div>
+
+              {isMobile && !playlist.isFavorites && isCreator && deletePlaylistButton}
+            </form>
           ) : (
             <>
-              <h1 className="Header3 truncate">{playlist.name}</h1>
-              <p className="text-muted-foreground TextRegluar mt-1">
-                {playlist.description || 'Sin descripción.'}
-              </p>
-              <p className="text-muted-foreground TextMedium mt-1">
-                {playlist.songIds.length}{' '}
-                {playlist.songIds.length === 1 ? 'canción' : 'canciones'}
-              </p>
+              <div className="flex items-start gap-2">
+                <h1 className="Header2 min-w-0 truncate">{playlist.name}</h1>
 
-              {playlist.isCollaborative && (
-                <p className="TextFucsia TextMedium mt-1">
-                  {playlist.role === 'creator'
-                    ? 'Colaborativa. Vos sos quien la creó.'
-                    : `Colaborativa. La creó ${playlist.creator.username || 'alguien'}.`}
+                {isCreator && !playlist.isFavorites && (
+                  <button
+                    type="button"
+                    onClick={handleStartEdit}
+                    aria-label="Editar nombre y descripción"
+                    className="mt-1 shrink-0 rounded opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+                  >
+                    <img
+                      src={pencilLineIcon}
+                      alt=""
+                      aria-hidden="true"
+                      className="h-5 w-5"
+                    />
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-3 flex items-center gap-2">
+                {hasMembers && (
+                  <AvatarStack
+                    members={playlist.members}
+                    onClick={
+                      isCreator && !playlist.isFavorites
+                        ? () => setInviting(true)
+                        : undefined
+                    }
+                    label="Ver participantes e invitar"
+                  />
+                )}
+
+                <img
+                  src={playlist.isCollaborative ? userGroupIcon : userIcon}
+                  alt={playlist.isCollaborative ? 'Playlist colaborativa' : 'Playlist personal'}
+                  className="ml-4 h-6 w-6 shrink-0"
+                />
+
+                <span aria-hidden="true" className="text-muted-foreground TextMedium">
+                  •
+                </span>
+                <p className="text-muted-foreground TextMedium font-bold">
+                  {visibleCount} {visibleCount === 1 ? 'canción' : 'canciones'}
                 </p>
-              )}
+              </div>
+
+              <p className="text-muted-foreground TextRegluar mt-3 w-full max-w-md break-words md:max-w-xl">
+                {playlist.description}
+              </p>
             </>
           )}
-        </div>
+        </motion.div>
 
         {!editing && (
-          <div className="flex flex-wrap items-center gap-2">
+          <motion.div
+            layout={prefersReduced ? false : 'position'}
+            transition={{ layout: { type: 'spring', stiffness: 500, damping: 45 } }}
+            className={`relative z-10 flex flex-wrap items-center gap-2 ${isMobile ? 'w-full justify-end' : ''}`}
+          >
             <button
               type="button"
               onClick={() =>
@@ -469,60 +971,87 @@ export default function PlaylistDetail() {
                 })
               }
               disabled={playable.length === 0}
-              className="rounded px-4 py-2 Fucsia Button hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100"
+              aria-label={`Reproducir ${playlist.name}`}
+              className="Fucsia h-12 w-12 flex cursor-pointer items-center justify-center rounded-full transition duration-150 hover:brightness-80 active:scale-90 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Reproducir
+              <img src={playIcon} alt="" aria-hidden="true" className="h-6 w-6" />
             </button>
 
-            {!playlist.isFavorites && isCreator && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setEditing(true)}
-                  className="rounded px-4 py-2 Volume Button hover:brightness-110"
-                >
-                  Editar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  className="rounded px-4 py-2 Volume Button hover:brightness-110"
-                >
-                  Eliminar
-                </button>
-              </>
-            )}
-
-            {isCreator && !playlist.isFavorites && (
+            {!hasMembers && isCreator && !playlist.isFavorites && (
               <button
                 type="button"
                 onClick={() => setInviting(true)}
-                className="rounded px-4 py-2 Volume Button hover:brightness-110"
+                aria-label="Invitar personas"
+                className="Volume TextRegluar flex h-9 w-9 items-center justify-center rounded-full hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
               >
-                Invitar
+                <span aria-hidden="true">+</span>
               </button>
             )}
-          </div>
+          </motion.div>
         )}
       </header>
 
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen} closeOnOutsideClick>
+        <AlertDialogContent size="md">
+          <AlertDialogHeader>
+            <div className="AlertDialogRow items-center">
+              <span
+                aria-hidden="true"
+                className="h-8 w-8 shrink-0 bg-(--ds-red)"
+                style={{
+                  maskImage: `url("${trashIcon}")`,
+                  maskPosition: 'center',
+                  maskRepeat: 'no-repeat',
+                  maskSize: 'contain',
+                  WebkitMaskImage: `url("${trashIcon}")`,
+                  WebkitMaskPosition: 'center',
+                  WebkitMaskRepeat: 'no-repeat',
+                  WebkitMaskSize: 'contain',
+                }}
+              />
+              <div className="AlertDialogTextBlock">
+                <AlertDialogTitle>¿Eliminar playlist?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción no se puede deshacer.
+                </AlertDialogDescription>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel size="lg" className="h-10 px-4">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              size="lg"
+              className="h-10 px-4 bg-[var(--ds-red)] text-[var(--ds-lighter)] hover:bg-[var(--ds-red)]/80"
+              onClick={handleDelete}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {isCreator && !playlist.isFavorites && (
-        <InviteUserDialog
+        <UserSearch
           open={inviting}
           onOpenChange={setInviting}
-          playlistId={id}
+          onSelect={handleInvite}
           userId={userId}
-          isCollaborative={playlist.isCollaborative}
+          title="Invitar a la playlist"
+          description={
+            playlist.isCollaborative
+              ? 'Buscá a quien quieras sumar. Van a poder agregar y quitar canciones.'
+              : 'Buscá a quien quieras sumar. Al invitar a alguien, la playlist deja de ser privada y pasa a ser colaborativa.'
+          }
+          actionLabel="Invitar"
+          invitations={invitations}
           excludeIds={[
             ...playlist.members.map((member) => member.id),
             ...invitations.map((invitation) => invitation.receiver.id),
           ]}
-          onInvited={handleInvited}
         />
       )}
-
-      {error && <p className="mt-6 rounded px-3 py-2 Salmon TextMedium">{error}</p>}
 
       {playlist.isFavorites && !editing && (
         <p className="text-muted-foreground TextMedium mt-4">
@@ -532,49 +1061,69 @@ export default function PlaylistDetail() {
 
       {resolving && <p className="text-muted-foreground TextRegluar mt-8">Buscando canciones…</p>}
 
-      {!resolving && playlist.songIds.length === 0 && <EmptyPlaylist isFavorites={playlist.isFavorites} />}
+      {!resolving && !hasExitingRow && visibleRows.length === 0 && (playlist.songIds.length === 0 || orderInSync) && (
+        <motion.div initial={prefersReduced ? false : { opacity: 0 }} animate={{ opacity: 1 }}>
+          <EmptyPlaylist isFavorites={playlist.isFavorites} />
+        </motion.div>
+      )}
 
-      {!resolving && orderedSongs.length > 0 && (
+      {!resolving && (visibleRows.length > 0 || hasExitingRow) && (
         <ul ref={listRef} className="mt-8 flex flex-col gap-2" style={{ position: 'relative' }}>
-          {orderedSongs.map((song, index) => {
-            const sid = order[index]
-            const isDragged = draggedId === sid
-            return (
-              <motion.li
-                key={sid}
-                ref={(el) => {
-                  if (el) rowRefs.current.set(sid, el)
-                  else rowRefs.current.delete(sid)
-                }}
-                data-row={sid}
-                style={isDragged ? { y: dragY, scaleX: dragScaleX, scaleY: dragScale, zIndex: 10, position: 'relative' } : undefined}
-              >
-                {song === null ? (
-                  <UnavailableRow />
-                ) : (
-                  <MemoPlaylistSongRow
-                    song={song}
-                    index={index}
-                    isFavorite={isFavorite(song.id)}
-                    onPlay={() =>
-                      playSongs(
-                        playable,
-                        orderedSongs.slice(0, index).filter(Boolean).length,
-                        {
-                          playlistId: id,
-                          isFavorites: Boolean(playlist.isFavorites),
+          <AnimatePresence initial={false} mode="popLayout" onExitComplete={handleExitComplete}>
+            {visibleRows.map(({ sid, song }, index) => {
+              const isDragged = draggedId === sid
+              return (
+                <motion.li
+                  key={sid}
+                  ref={(el) => {
+                    if (el) rowRefs.current.set(sid, el)
+                    else rowRefs.current.delete(sid)
+                  }}
+                  data-row={sid}
+                  layout={!isDragging && !isSettling && !prefersReduced}
+                  initial={false}
+                  exit={
+                    prefersReduced
+                      ? undefined
+                      : {
+                          opacity: 0,
+                          scale: 0.98,
+                          pointerEvents: 'none',
+                          transition: { duration: ROW_EXIT_MS / 1000 },
                         }
-                      )
-                    }
-                    onRemove={() => handleRemoveSong(song.id)}
-                    canRemove={playlist.role !== null}
-                    canReorder={canReorder}
-                    onDragHandlePointerDown={(e) => handleDragPointerDown(e, sid)}
-                  />
-                )}
-              </motion.li>
-            )
-          })}
+                  }
+                  transition={{ layout: { type: 'spring', stiffness: 500, damping: 45 } }}
+                  style={isDragged ? { y: dragY, scaleX: dragScaleX, scaleY: dragScale, zIndex: 10, position: 'relative' } : undefined}
+                >
+                  {song === null ? (
+                    <UnavailableRow />
+                  ) : (
+                    <MemoPlaylistSongRow
+                      song={song}
+                      index={index}
+                      total={visibleRows.length}
+                      isFavorite={isFavorite(song.id)}
+                      onMoveTo={(position) => handleMoveSong(song.id, position)}
+                      onPlay={() =>
+                        playSongs(
+                          playable,
+                          visibleRows.slice(0, index).filter(({ song }) => song).length,
+                          {
+                            playlistId: id,
+                            isFavorites: Boolean(playlist.isFavorites),
+                          }
+                        )
+                      }
+                      onRemove={() => handleRemoveSong(song.id)}
+                      canRemove={playlist.role !== null}
+                      canReorder={canReorder}
+                      onDragHandlePointerDown={(e) => handleDragPointerDown(e, sid)}
+                    />
+                  )}
+                </motion.li>
+              )
+            })}
+          </AnimatePresence>
           <div ref={indicatorRef} style={{ display: 'none', position: 'absolute', left: 0, right: 0, height: 2, background: 'rgb(239, 47, 98)', borderRadius: 1, pointerEvents: 'none' }} />
         </ul>
       )}
@@ -605,36 +1154,6 @@ export default function PlaylistDetail() {
         </section>
       )}
 
-      {isCreator && invitations.length > 0 && (
-        <section className="mt-10">
-          <h2 className="Header4">Invitaciones</h2>
-          <ul className="mt-4 flex flex-col gap-2">
-            {invitations.map((invitation) => (
-              <li key={invitation.receiver.id}>
-                <div className="SurfaceLight CardRadius flex items-center gap-3 px-4 py-2">
-                  <Avatar
-                    src={invitation.receiver.avatarUrl}
-                    name={invitation.receiver.username}
-                    className="h-9 w-9"
-                  />
-
-                  <p className="text-foreground TextRegluar min-w-0 flex-1 truncate">
-                    {invitation.receiver.username}
-                  </p>
-
-                  <span className="text-muted-foreground TextTiny">
-                    {invitation.status === 'pendiente'
-                      ? 'Pendiente'
-                      : invitation.status === 'aceptada'
-                        ? 'Aceptó'
-                        : 'Rechazó'}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </section>
   )
 }

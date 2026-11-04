@@ -43,7 +43,7 @@ const avatarUpload = multer({
 	},
 }).single("picture");
 
-function uploadAvatar(req, res, next) {
+function uploadPicture(req, res, next) {
 	avatarUpload(req, res, (error) => {
 		if (!error) return next();
 
@@ -69,4 +69,8 @@ function uploadAvatar(req, res, next) {
 	});
 }
 
-module.exports = { MAX_AVATAR_BYTES, uploadAvatar };
+module.exports = {
+	MAX_AVATAR_BYTES,
+	uploadAvatar: uploadPicture,
+	uploadPicture,
+};

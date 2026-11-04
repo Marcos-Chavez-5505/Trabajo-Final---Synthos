@@ -12,7 +12,14 @@ export default function Avatar({ src, name, className = '' }) {
   const [failedKey, setFailedKey] = useState(null)
 
   if (src) {
-    return <img src={src} alt={name ?? 'avatar'} className={`object-cover ${classes}`} />
+    // El fondo translúcido solo se ve si la imagen tiene transparencia (SVG/PNG).
+    return (
+      <img
+        src={src}
+        alt={name ?? 'avatar'}
+        className={`bg-muted-foreground/15 object-cover ${classes}`}
+      />
+    )
   }
 
   // Sin foto subida: un blobatar determinístico por nombre, generado acá
@@ -25,7 +32,7 @@ export default function Avatar({ src, name, className = '' }) {
       <img
         src={blobatarUri(normalized)}
         alt={name}
-        className={classes}
+        className={`bg-muted-foreground/15 ${classes}`}
         onError={() => setFailedKey(normalized)}
       />
     )
