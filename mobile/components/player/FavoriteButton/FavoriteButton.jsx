@@ -4,6 +4,7 @@ import { useFavorites, usePlayer } from "@synthos/shared";
 import { colors } from "../../../theme";
 import { HeartIcon, HeartOutlineIcon } from "../../icons";
 import { FAVORITE_BUTTON_STYLES as styles } from "./FavoriteButton.styles";
+import { showActionError } from "../../../lib/toastMessages";
 
 /**
  * Corazón de favorito de la canción actual (port de `FavoriteButton` web).
@@ -33,6 +34,8 @@ export default function FavoriteButton({ songId }) {
 			const nowFavorite = await toggleFavorite(songId);
 
 			if (!nowFavorite) removeFromFavoritesQueue(songId);
+		} catch (cause) {
+			showActionError(cause, "favorite:toggle");
 		} finally {
 			setPending(false);
 		}

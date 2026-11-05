@@ -10,6 +10,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
+import { File } from "expo-file-system";
 import { useAuth } from "@synthos/shared";
 import {
 	Avatar,
@@ -17,6 +18,7 @@ import {
 	AvatarImage,
 } from "../../components/ui/Avatar/Avatar";
 import { PROFILE_EDIT_STYLES as styles } from "./ProfileEdit.styles";
+import { showActionError, showSuccess } from "../../lib/toastMessages";
 
 export default function ProfileEditScreen() {
 	const navigation = useNavigation();
@@ -25,13 +27,15 @@ export default function ProfileEditScreen() {
 	const [username, setUsername] = useState(user?.username ?? "");
 	const [bio, setBio] = useState(user?.bio ?? "");
 	const [pendingUri, setPendingUri] = useState(null);
-	const [error, setError] = useState("");
 	const [saving, setSaving] = useState(false);
 
 	async function pickImage() {
 		const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 		if (status !== "granted") {
-			setError("Necesitamos permiso para acceder a tus fotos.");
+			showActionError(
+				{ message: "Necesitamos permiso para acceder a tus fotos." },
+				"profile:picture",
+			);
 			return;
 		}
 		const result = await ImagePicker.launchImageLibraryAsync({
@@ -46,25 +50,24 @@ export default function ProfileEditScreen() {
 	}
 
 	async function handleSave() {
-		setError("");
 		setSaving(true);
+		let stage = "profile:save";
+
 		try {
-            await updateProfile({ username, bio });
+			await updateProfile({ username, bio });
 
 			if (pendingUri) {
-				const filename = pendingUri.split("/").pop() || "picture.jpg";
-				const match = /\.(\w+)$/.exec(filename);
-				const type = match ? `image/${match[1]}` : "image/jpeg";
+				stage = "profile:picture";
 
-				await uploadProfilePicture({
-					uri: pendingUri,
-					name: filename,
-					type: type,
-				});
+				// El fetch de Expo SDK 58 no acepta `{ uri, name, type }` en
+				// FormData; `File` implementa `bytes()` y sí lo convierte.
+				await uploadProfilePicture(new File(pendingUri));
 			}
+
+			showSuccess("profile:save");
 			navigation.goBack();
-		} catch (err) {
-			setError(err?.message || "Error al guardar los cambios.");
+		} catch (cause) {
+			showActionError(cause, stage);
 		} finally {
 			setSaving(false);
 		}
@@ -116,8 +119,6 @@ export default function ProfileEditScreen() {
 						placeholderTextColor="#b0a4b5"
 						multiline
 					/>
-
-					{error ? <Text style={styles.error}>{error}</Text> : null}
 
 					<View style={styles.buttonsRow}>
 						<Pressable

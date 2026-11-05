@@ -1,3 +1,5 @@
+// Debe ser el primer import: registra los gestos nativos antes de montar la app.
+import "react-native-gesture-handler";
 import { registerRootComponent } from "expo";
 
 //* PARA TESTING DE COMPONENTES

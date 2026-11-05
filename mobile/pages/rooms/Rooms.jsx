@@ -2,11 +2,12 @@ import { useState } from "react";
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
-import { useRoomsList, useDebounce, joinRoom, mapApiError } from "@synthos/shared";
+import { useRoomsList, useDebounce, joinRoom } from "@synthos/shared";
 import RoomCard from "../../components/cards/RoomCard/RoomCard";
 import { HeadphonesIcon } from "../../components/icons";
 import { ROOMS_STYLES as styles } from "./Rooms.styles";
 import { colors } from "../../theme";
+import { showActionError } from "../../lib/toastMessages";
 
 const DEBOUNCE_MS = 300;
 
@@ -79,7 +80,6 @@ export default function RoomsScreen() {
 
 function JoinButton({ room, navigation }) {
 	const [pending, setPending] = useState(false);
-	const [error, setError] = useState("");
 
 	const full = room.maxCapacity !== null && room.membersCount >= room.maxCapacity;
 
@@ -94,30 +94,26 @@ function JoinButton({ room, navigation }) {
 	async function handleJoin() {
 		if (pending) return;
 		setPending(true);
-		setError("");
 		try {
 			const joined = await joinRoom(room.code);
 			navigation.navigate("RoomDetail", { id: joined.id });
 		} catch (cause) {
-			setError(mapApiError(cause));
+			showActionError(cause, "room:join");
 		} finally {
 			setPending(false);
 		}
 	}
 
 	return (
-		<>
-			<Pressable
-				style={[styles.joinButton, pending && styles.joinButtonDisabled]}
-				onPress={handleJoin}
-				disabled={pending}
-			>
-				<Text style={styles.joinButtonText}>
-					{pending ? "Uniéndote…" : "Unirme"}
-				</Text>
-			</Pressable>
-			{error ? <Text style={styles.joinError}>{error}</Text> : null}
-		</>
+		<Pressable
+			style={[styles.joinButton, pending && styles.joinButtonDisabled]}
+			onPress={handleJoin}
+			disabled={pending}
+		>
+			<Text style={styles.joinButtonText}>
+				{pending ? "Uniéndote…" : "Unirme"}
+			</Text>
+		</Pressable>
 	);
 }
 

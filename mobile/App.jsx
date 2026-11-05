@@ -2,8 +2,14 @@ import { useMemo } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, View } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import {
+	SafeAreaProvider,
+	initialWindowMetrics,
+} from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import * as Haptics from "expo-haptics";
 import { AuthProvider, PlayerProvider, useAuth } from "@synthos/shared";
+import { Toaster } from "./components/ui/Toast";
 import Landing from "./pages/landing/Landing";
 import Login from "./pages/login/Login";
 import Register from "./pages/register/Register";
@@ -22,6 +28,20 @@ import MoodScreen from "./pages/mood/Mood";
 initApi();
 
 const Stack = createNativeStackNavigator();
+
+// El Toaster avisa cada toast nuevo o cambio de estado para que el teléfono
+// dé el háptico correspondiente (error duro, éxito suave).
+function handleToastShow(item) {
+	if (item.status === "error") {
+		Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
+			() => {},
+		);
+	} else if (item.status === "success") {
+		Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+			() => {},
+		);
+	}
+}
 
 function RootNavigator() {
 	const { user, loading } = useAuth();
@@ -71,12 +91,20 @@ export default function App() {
 	const motor = useMemo(() => createAudioMotor(), []);
 
 	return (
-		<SafeAreaProvider>
-			<AuthProvider>
-				<PlayerProvider motor={motor}>
-					<RootNavigator />
-				</PlayerProvider>
-			</AuthProvider>
-		</SafeAreaProvider>
+		<GestureHandlerRootView style={{ flex: 1 }}>
+			<SafeAreaProvider>
+				<AuthProvider>
+					<PlayerProvider motor={motor}>
+						<RootNavigator />
+						{/* Se monta una sola vez, después del navegador, para quedar por
+						    encima de las tabs. */}
+						<Toaster
+							topInset={initialWindowMetrics?.insets.top ?? 0}
+							onShow={handleToastShow}
+						/>
+					</PlayerProvider>
+				</AuthProvider>
+			</SafeAreaProvider>
+		</GestureHandlerRootView>
 	);
 }
