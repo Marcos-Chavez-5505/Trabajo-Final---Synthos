@@ -18,4 +18,15 @@ async function getAlbumById(req, res, next) {
 	}
 }
 
-module.exports = { getAlbumById };
+async function getLatestAlbums(req, res, next) {
+	try {
+		const limit = req.query.limit;
+
+		const items = await albumService.getLatestAlbums(limit);
+		res.status(200).json({ status: "success", items });
+	} catch (error) {
+		next(error);
+	}
+}
+
+module.exports = { getAlbumById, getLatestAlbums };
