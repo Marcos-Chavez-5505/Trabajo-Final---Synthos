@@ -82,6 +82,13 @@ export const MusicNoteIcon = fromCatalog("music_note");
 export const NotificationIcon = fromCatalog("notification");
 export const BellIcon = fromCatalog("notification");
 export const CameraAIIcon = fromCatalog("camera_ai");
+export const CameraIcon = fromCatalog("camera");
+export const PencilLineIcon = fromCatalog("pencil_line");
+export const TrashIcon = fromCatalog("trash");
+export const UserIcon = fromCatalog("user");
+export const UserGroupIcon = fromCatalog("user_group");
+export const HamburgerMenuIcon = fromCatalog("hamburger_menu");
+export const EllipsisIcon = fromCatalog("ellipsis");
 
 // ── Pendiente de migrar al catálogo ────────────────────────────────────────
 // `LibraryIcon` quedó como placeholder de carátula (MiniPlayerBar,

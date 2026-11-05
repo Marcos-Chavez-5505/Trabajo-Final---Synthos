@@ -11,6 +11,7 @@ import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth, listPlaylists, createRoom, mapApiError } from "@synthos/shared";
 import { CREATE_ROOM_STYLES as styles } from "./CreateRoom.styles";
+import { showActionError, showSuccess } from "../../lib/toastMessages";
 
 const MAX_NAME = 60;
 const MAX_DESCRIPTION = 200;
@@ -81,9 +82,10 @@ export default function CreateRoomScreen() {
 				password,
 				playlistId,
 			});
+			showSuccess("room:create");
 			navigation.replace("RoomDetail", { id: created.id });
 		} catch (cause) {
-			setError(mapApiError(cause));
+			showActionError(cause, "room:create");
 			setSaving(false);
 		}
 	}

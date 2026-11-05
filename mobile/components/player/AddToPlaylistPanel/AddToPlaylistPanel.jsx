@@ -10,6 +10,7 @@ import {
 import { colors, spacing } from "../../../theme";
 import { AddToPlaylistIcon, PlaylistIcon } from "../../icons";
 import { ADD_TO_PLAYLIST_STYLES as styles } from "./AddToPlaylistPanel.styles";
+import { showActionError } from "../../../lib/toastMessages";
 
 /**
  * "Agregar a playlist" del reproductor expandido (port de `AddToPlaylistPanel`
@@ -37,13 +38,19 @@ export default function AddToPlaylistPanel({ songId }) {
 		if (pendingId || !userId) return;
 
 		setPendingId(playlist.id);
+		const removing = contains(playlist);
 
 		try {
-			if (contains(playlist)) {
+			if (removing) {
 				await removeSongFromPlaylist(userId, playlist.id, songId);
 			} else {
 				await addSongToPlaylist(userId, playlist.id, songId);
 			}
+		} catch (cause) {
+			showActionError(
+				cause,
+				removing ? "song:playlist:remove" : "song:playlist:add",
+			);
 		} finally {
 			setPendingId(null);
 		}

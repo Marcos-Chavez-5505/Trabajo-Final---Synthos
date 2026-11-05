@@ -1,12 +1,12 @@
 import { View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import BottomTabBar from "./BottomTabBar";
-import PlaceholderScreen from "./PlaceholderScreen";
 import HomeScreen from "../pages/home/Home";
 import SearchScreen from "../pages/search/Search";
 import ExpandedPlayer from "../components/player/ExpandedPlayer/ExpandedPlayer";
 import { HeadphonesIcon, HomeIcon, PlaylistIcon, SearchIcon } from "../components/icons";
 import RoomsScreen from "../pages/rooms/Rooms";
+import PlaylistsStack from "./PlaylistsStack";
 
 const Tab = createBottomTabNavigator();
 
@@ -36,7 +36,7 @@ export default function MainTabs() {
 				/>
 				<Tab.Screen
 					name="Playlists"
-					component={PlaceholderScreen}
+					component={PlaylistsStack}
 					options={{ tabBarLabel: "Playlists", tabBarIcon: PlaylistIcon }}
 				/>
 			</Tab.Navigator>

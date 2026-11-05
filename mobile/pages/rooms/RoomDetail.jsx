@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/Avatar/
 import { HeadphonesIcon } from "../../components/icons";
 import { ROOM_DETAIL_STYLES as styles } from "./RoomDetail.styles";
 import { colors } from "../../theme";
+import { showActionError } from "../../lib/toastMessages";
 
 export default function RoomDetailScreen({ route }) {
 	const navigation = useNavigation();
@@ -33,7 +34,6 @@ export default function RoomDetailScreen({ route }) {
 	const [votes, setVotes] = useState({ voters: [], required: 0, hasVoted: false });
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
-	const [actionError, setActionError] = useState("");
 	const [pending, setPending] = useState("");
 
 	const membership = room?.members?.find((m) => String(m.userId) === viewerId);
@@ -131,45 +131,44 @@ export default function RoomDetailScreen({ route }) {
 		};
 	}, [room, id, navigation, viewerId]);
 
-	const runAction = useCallback(async (name, action) => {
+	const runAction = useCallback(async (name, key, action) => {
 		setPending(name);
-		setActionError("");
 		try {
 			await action();
 		} catch (cause) {
-			setActionError(mapApiError(cause));
+			showActionError(cause, key);
 		} finally {
 			setPending("");
 		}
 	}, []);
 
 	function handleControl(action) {
-		runAction(action, () => controlPlayback(id, action));
+		runAction(action, "room:control", () => controlPlayback(id, action));
 	}
 
 	function handleVoteSkip() {
-		runAction("vote", async () => {
+		runAction("vote", "room:vote", async () => {
 			const result = await voteSkip(id);
 			setVotes(result.skipVotes);
 		});
 	}
 
 	function handleLeave() {
-		runAction("leave", async () => {
+		runAction("leave", "room:leave", async () => {
 			await leaveRoom(id);
 			navigation.goBack();
 		});
 	}
 
 	function handleClose() {
-		runAction("close", async () => {
+		runAction("close", "room:close", async () => {
 			await closeRoom(id);
 			navigation.goBack();
 		});
 	}
 
 	function handleKick(targetId) {
-		runAction(`kick:${targetId}`, () => kickMember(id, targetId));
+		runAction(`kick:${targetId}`, "room:kick", () => kickMember(id, targetId));
 	}
 
 	if (loading) {
@@ -209,12 +208,6 @@ export default function RoomDetailScreen({ route }) {
 				<Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
 					<Text style={styles.backButtonText}>← Volver</Text>
 				</Pressable>
-
-				{actionError ? (
-					<View style={styles.errorBox}>
-						<Text style={styles.errorText}>{actionError}</Text>
-					</View>
-				) : null}
 
 				<View style={styles.header}>
 					<View style={styles.headerTop}>
