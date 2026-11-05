@@ -39,6 +39,7 @@ model Artist {
   id          Int          @id @default(autoincrement())
   name        String       @db.VarChar(150)
   pictureUrl  String?      @map("picture_url")
+  joindate    DateTime?    // Nuevo campo opcional
   albums      Album[]
   songs       Song[]
   songArtists SongArtist[]

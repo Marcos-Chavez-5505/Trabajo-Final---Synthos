@@ -33,4 +33,13 @@ async function getArtistById(req, res, next) {
 	}
 }
 
-module.exports = { searchArtists, getArtistById };
+async function getNewArtists(req, res) {
+	try {
+		const artists = await artistService.getNewArtists(req.query.limit);
+		res.json({ items: artists });
+	} catch (err) {
+		next(err);
+	}
+}
+
+module.exports = { searchArtists, getArtistById, getNewArtists };

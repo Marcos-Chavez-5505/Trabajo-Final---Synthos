@@ -1,15 +1,16 @@
 {
-  "name": "synthos",
-  "private": true,
-  "version": "0.0.0",
-  "workspaces": [
-    "frontend",
-    "shared",
-    "mobile"
-  ],
-  "scripts": {
-    "dev": "npm run dev -w frontend",
-    "build": "npm run build -w frontend",
-    "lint": "npm run lint -w frontend"
-  }
+	"name": "synthos",
+	"private": true,
+	"version": "0.0.0",
+	"workspaces": [
+		"Frontend",
+		"Backend",
+		"shared",
+		"mobile"
+	],
+	"scripts": {
+		"dev": "npm run dev -w Frontend",
+		"build": "npm run build -w Frontend",
+		"lint": "npm run lint -w Frontend"
+	}
 }
