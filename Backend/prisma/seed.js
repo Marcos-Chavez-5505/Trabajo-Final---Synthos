@@ -206,6 +206,7 @@ async function main() {
 				const artistData = {
 					name,
 					pictureUrl: toText(artist.image_url),
+					joindate: toDate(artist.joindate),
 				};
 
 				await tx.artist.upsert({
