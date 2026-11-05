@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getNewArtists } from "../../services/artistsService.js";
 import { mapApiError } from "../../utils/mapError.js";
 
-const NEW_ARTISTS_COUNT = 6;
+const NEW_ARTISTS_COUNT = 12;
 
 export default function useNewArtists() {
 	const [artists, setArtists] = useState([]);

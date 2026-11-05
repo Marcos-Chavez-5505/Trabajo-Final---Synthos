@@ -3,7 +3,7 @@ export default function HomeSection({
 	loading = false,
 	error,
 	items = [],
-	skeletonCount = 6,
+	skeletonCount = 12,
 	skeleton,
 	renderItem,
 }) {

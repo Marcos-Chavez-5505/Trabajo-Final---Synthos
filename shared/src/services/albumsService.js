@@ -11,7 +11,7 @@ import { toSong } from "./songsService.js";
 // canciones. El mapeo vive acá y no en los componentes (reglas 5 y 6 de AGENTS.md).
 
 export const ALBUMS_PAGE_SIZE = 12;
-const LATEST_ALBUMS_DEFAULT_LIMIT = 6;
+const LATEST_ALBUMS_DEFAULT_LIMIT = 12;
 
 // El enum `album_type` de la base, con el texto que muestra la UI.
 export const ALBUM_TYPE_LABELS = {
@@ -89,7 +89,10 @@ function toAlbumDetail(raw) {
 	};
 }
 
-export async function getLatestAlbums(limit, { signal } = {}) {
+export async function getLatestAlbums(
+	limit = LATEST_ALBUMS_DEFAULT_LIMIT,
+	{ signal } = {},
+) {
 	const data = await get("/albums/latest", { params: { limit }, signal });
 
 	if (data?.status !== "success" || !Array.isArray(data.items)) {

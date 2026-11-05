@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { mapApiError } from "../../utils/mapError.js";
 import { getLatestAlbums } from "../../services/albumsService.js";
 
-const LATEST_ALBUMS_COUNT = 6;
+const LATEST_ALBUMS_COUNT = 12;
 
 export default function useLatestAlbums() {
 	const [albums, setAlbums] = useState([]);

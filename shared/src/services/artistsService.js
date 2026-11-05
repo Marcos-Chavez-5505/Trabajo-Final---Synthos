@@ -10,7 +10,7 @@ import { toAlbum } from "./albumsService.js";
 // que se mapea con `toAlbum()` para reutilizar el contrato de los discos.
 
 export const ARTISTS_PAGE_SIZE = 18;
-const NEW_ARTISTS_DEFAULT_LIMIT = 6;
+const NEW_ARTISTS_DEFAULT_LIMIT = 12;
 
 /** Convierte un artista del backend a la forma que usa la app. */
 export function toArtist(raw) {
