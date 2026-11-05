@@ -1,11 +1,7 @@
 const prisma = require("../prisma/prismaClient");
 const { Prisma } = require("@prisma/client");
-const followService = require("./follow.service");
 const { httpError } = require("../utils/errors");
-const {
-	isBase64DataUrl,
-	uploadAvatar,
-} = require("./image.service");
+const { isBase64DataUrl, uploadAvatar } = require("./image.service");
 
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 50;
