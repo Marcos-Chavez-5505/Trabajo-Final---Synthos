@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
@@ -12,6 +12,7 @@ import {
 	kickMember,
 	mapApiError,
 	useAuth,
+	useRoomPlayback,
 	connectSocket,
 	joinRoomChannel,
 	leaveRoomChannel,
@@ -21,7 +22,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/Avatar/
 import { HeadphonesIcon } from "../../components/icons";
 import { ROOM_DETAIL_STYLES as styles } from "./RoomDetail.styles";
 import { colors } from "../../theme";
-import { showActionError } from "../../lib/toastMessages";
 
 export default function RoomDetailScreen({ route }) {
 	const navigation = useNavigation();
@@ -30,11 +30,12 @@ export default function RoomDetailScreen({ route }) {
 	const viewerId = String(user?.id ?? "");
 
 	const [room, setRoom] = useState(null);
-	const [playback, setPlayback] = useState(null);
 	const [votes, setVotes] = useState({ voters: [], required: 0, hasVoted: false });
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
+	const [actionError, setActionError] = useState("");
 	const [pending, setPending] = useState("");
+	const [loaded, setLoaded] = useState(false);
 
 	const membership = room?.members?.find((m) => String(m.userId) === viewerId);
 	const isHost = membership?.role === "host";
@@ -55,6 +56,7 @@ export default function RoomDetailScreen({ route }) {
 					return;
 				}
 				setRoom(found);
+				setLoaded(true);
 				setLoading(false);
 			})
 			.catch((cause) => {
@@ -69,18 +71,44 @@ export default function RoomDetailScreen({ route }) {
 		};
 	}, [id]);
 
-	// Socket + playback inicial
-	useEffect(() => {
-		if (!room) return undefined;
+	// Reproductor conectado a la sala
+	const requestNext = useCallback(() => {
+		controlPlayback(id, "next").catch((cause) => setActionError(mapApiError(cause)));
+	}, [id]);
 
-		let active = true;
+	const { playback, sync: syncPlayback } = useRoomPlayback({
+		roomId: id,
+		songs: room?.songs ?? [],
+		isHost,
+		onEnded: null,
+	});
+
+	// Ref estable para syncPlayback (el hook no garantiza useCallback)
+	const syncPlaybackRef = useRef(syncPlayback);
+	useEffect(() => {
+		syncPlaybackRef.current = syncPlayback;
+	}, [syncPlayback]);
+
+	// 1. Conexión al canal: solo depende del id
+	useEffect(() => {
+		if (!id) return undefined;
 		connectSocket();
 		joinRoomChannel(id);
+		return () => {
+			leaveRoomChannel(id);
+		};
+	}, [id]);
+
+	// 2. Suscripciones: no dependen de room ni de syncPlayback
+	useEffect(() => {
+		if (!loaded) return undefined;
+
+		let active = true;
 
 		getPlayback(id)
 			.then((data) => {
 				if (!active) return;
-				setPlayback(data.playback);
+				syncPlaybackRef.current(data.playback);
 				setVotes(data.skipVotes);
 			})
 			.catch(() => {});
@@ -99,7 +127,8 @@ export default function RoomDetailScreen({ route }) {
 		});
 
 		const offPlayback = subscribeToRoomEvent("room:playback", (next) => {
-			if (active) setPlayback(next);
+			if (!active) return;
+			syncPlaybackRef.current(next);
 		});
 
 		const offSkip = subscribeToRoomEvent("room:skip-votes", (payload) => {
@@ -122,53 +151,56 @@ export default function RoomDetailScreen({ route }) {
 
 		return () => {
 			active = false;
-			leaveRoomChannel(id);
 			offMembers();
 			offPlayback();
 			offSkip();
 			offKicked();
 			offClosed();
 		};
-	}, [room, id, navigation, viewerId]);
+	}, [id, loaded, viewerId, navigation]);
 
-	const runAction = useCallback(async (name, key, action) => {
+	const runAction = useCallback(async (name, action) => {
 		setPending(name);
+		setActionError("");
 		try {
 			await action();
 		} catch (cause) {
-			showActionError(cause, key);
+			setActionError(mapApiError(cause));
 		} finally {
 			setPending("");
 		}
 	}, []);
 
 	function handleControl(action) {
-		runAction(action, "room:control", () => controlPlayback(id, action));
+		runAction(action, async () => {
+			const result = await controlPlayback(id, action);
+			if (result) syncPlaybackRef.current(result);
+		});
 	}
 
 	function handleVoteSkip() {
-		runAction("vote", "room:vote", async () => {
+		runAction("vote", async () => {
 			const result = await voteSkip(id);
 			setVotes(result.skipVotes);
 		});
 	}
 
 	function handleLeave() {
-		runAction("leave", "room:leave", async () => {
+		runAction("leave", async () => {
 			await leaveRoom(id);
 			navigation.goBack();
 		});
 	}
 
 	function handleClose() {
-		runAction("close", "room:close", async () => {
+		runAction("close", async () => {
 			await closeRoom(id);
 			navigation.goBack();
 		});
 	}
 
 	function handleKick(targetId) {
-		runAction(`kick:${targetId}`, "room:kick", () => kickMember(id, targetId));
+		runAction(`kick:${targetId}`, () => kickMember(id, targetId));
 	}
 
 	if (loading) {
@@ -208,6 +240,12 @@ export default function RoomDetailScreen({ route }) {
 				<Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
 					<Text style={styles.backButtonText}>← Volver</Text>
 				</Pressable>
+
+				{actionError ? (
+					<View style={styles.errorBox}>
+						<Text style={styles.errorText}>{actionError}</Text>
+					</View>
+				) : null}
 
 				<View style={styles.header}>
 					<View style={styles.headerTop}>
