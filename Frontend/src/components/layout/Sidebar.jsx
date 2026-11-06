@@ -75,11 +75,6 @@ function MenuItem({ item, isActive }) {
   )
 }
 
-// El wordmark consume `useSidebarLabelMotion()` desde ADENTRO de `SidebarRoot`.
-// Si el hook se llamara en el componente `Sidebar()` (acá arriba, fuera del
-// provider que monta el `Sidebar` de `sidebar.tsx`), el context daría `null` y el
-// texto caería al fallback `group-data-[collapsible=icon]:hidden`: desaparecería
-// de golpe en vez de deslizarse sobre el logo.
 function SidebarWordmark() {
   const slides = useSidebarLabelMotion()
   const { opacity, clipPath } = slides ?? {}
@@ -97,41 +92,12 @@ function SidebarWordmark() {
   )
 }
 
-// Los grupos con datos (Mis Salas, Mis Playlists, Playlists Colaborativas) se
-// delegan enteros en la feature, no solo la lista: cada uno arma su propio
-// `SidebarGroup` con su label y, si no tiene nada que mostrar, lo cierra con
-// `SidebarAnimatedGroup` en vez de dejar un label colgado sobre un grupo vacío.
-// Con el `SidebarGroup` acá abajo y el label suelto, los grupos vacíos dejaban
-// ese label y una caja de padding sin contenido, y desaparecían de golpe.
-// Navegación y "Mi Colección" son estáticos, así se quedan acá.
 export default function Sidebar() {
   const location = useLocation()
 
   return (
     <SidebarRoot collapsible="icon">
       <SidebarHeader>
-        {/* Un solo nodo, por la misma razón que el avatar de `ProfileSummary`:
-            bifurcar en JSX según `state` remontaría el logo y la transición no
-            tendría de dónde interpolar. Con un nodo, el alto baja de 48px a 32px
-            con `transition-[width,height,padding]`, y como el header está anclado
-            arriba de la columna el logo se desliza 8px hacia arriba, mientras que
-            en el footer el avatar baja. Las clases son las mismas que lleva
-            `SidebarMenuButton` con `size="lg"`, para que ambos extremos se
-            comporten igual.
-
-            El logo queda de 32px porque es el ancho usable que deja el `p-2` de
-            `SidebarHeader` sobre los `3rem` del sidebar contraído, igual que el
-            avatar. Un logo más chico quedaría pegado al borde en vez de centrado.
-            El wordmark se borra con el mismo spring de ancho que el resto de los
-            labels (ver `useSidebarLabelMotion` en `sidebar.tsx`): un wipe con
-            `clip-path` que lo desvanece de izquierda a derecha SIN moverlo (el
-            texto no viaja, se recorta en su lugar) en vez de saltar con `hidden`.
-            Al estar dentro de este header `overflow-hidden`, además queda
-            recortado si el wipe y el encogido del bloque se desfasan. En mobile
-            no hay `data-collapsible`, así que logo y nombre se ven siempre.
-
-            El `fill` del SVG ya es `#EF2F62`, que es `--ds-fucsia`, y viene
-            hardcodeado como el resto del set: no se recolorea desde CSS. */}
         <div className="flex h-12 w-full items-center gap-2 overflow-hidden rounded-md p-2 transition-[width,height,padding] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0!">
           <img src={logoSynthos} alt="" aria-hidden="true" className="size-8 shrink-0" />
           <SidebarWordmark />
