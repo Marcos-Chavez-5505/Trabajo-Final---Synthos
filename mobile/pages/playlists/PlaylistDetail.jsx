@@ -53,7 +53,7 @@ import {
 	UserGroupIcon,
 	UserIcon,
 } from "../../components/icons";
-import { colors, spacing } from "../../theme";
+import { colors, spacing, withAlpha } from "../../theme";
 import {
 	runWithToast,
 	showActionError,
@@ -800,7 +800,7 @@ export default function PlaylistDetailScreen({ route }) {
 									resizeMode="cover"
 								/>
 								<LinearGradient
-									colors={[`${colors.surface}00`, colors.surface]}
+									colors={[withAlpha(colors.surface, 0), colors.surface]}
 									start={{ x: 0.5, y: 0 }}
 									end={{ x: 0.5, y: 1 }}
 									style={StyleSheet.absoluteFill}

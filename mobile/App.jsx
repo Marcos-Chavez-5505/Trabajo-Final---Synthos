@@ -24,6 +24,7 @@ import CreateRoomScreen from "./pages/rooms/CreateRoom";
 import RoomDetailScreen from "./pages/rooms/RoomDetail";
 import AlbumsScreen from "./pages/albums/Albums";
 import ArtistsScreen from "./pages/artists/Artists";
+import PopularScreen from "./pages/popular/Popular";
 import NotificationScreen from "./pages/notifications/Notifications";
 import MoodScreen from "./pages/mood/Mood";
 
@@ -85,6 +86,7 @@ function RootNavigator() {
 				<Stack.Screen name="RoomDetail" component={RoomDetailScreen} />
 				<Stack.Screen name="Albums" component={AlbumsScreen} />
 				<Stack.Screen name="Artists" component={ArtistsScreen} />
+				<Stack.Screen name="Popular" component={PopularScreen} />
 				<Stack.Screen name="Notifications" component={NotificationScreen} />
 				<Stack.Screen name="Mood" component={MoodScreen} />
 			</Stack.Navigator>

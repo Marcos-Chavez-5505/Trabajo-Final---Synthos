@@ -60,15 +60,4 @@ export const HOME_STYLES = StyleSheet.create({
 		alignItems: "center",
 		marginBottom: spacing.lg,
 	},
-	pill: {
-		backgroundColor: colors.surfaceLight,
-		paddingVertical: spacing.xs,
-		paddingHorizontal: spacing.lg,
-		borderRadius: radius.full,
-	},
-	pillText: {
-		color: colors.textPrimary,
-		fontSize: fontSize.sm,
-		fontWeight: fontWeight.medium,
-	},
 });
