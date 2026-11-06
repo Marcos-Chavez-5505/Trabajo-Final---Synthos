@@ -136,7 +136,7 @@ export default function PlaylistDetailScreen({ route }) {
 	// Solo el creador de una colaborativa administra invitaciones. Las
 	// personales no pueden tenerlas: invitar las convierte en colaborativas.
 	const canManageInvitations =
-		Boolean(playlist) && playlist.role === "creator" && playlist.isCollaborative;
+		Boolean(playlist) && playlist.role === "creator" && !playlist.isFavorites;
 	const invitations = invitationsResponse.key === key ? invitationsResponse.items : [];
 
 	const loadInvitations = useCallback(() => {

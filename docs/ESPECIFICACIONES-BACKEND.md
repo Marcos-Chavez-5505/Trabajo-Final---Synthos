@@ -457,7 +457,7 @@ Todas las lecturas de favoritos —`GET /`, `GET /songs/ids`, y las dos ramas de
 |---|---|---|
 | `GET /` | — | `{ status, playlists[] }` — las que creó **y** las colaborativas donde es miembro, con `creator`, `members` y `songs` ordenadas por posición |
 | `GET /:id` | — | `{ status, playlist }`. **404 si no es del creador, no es miembro y no es pública** |
-| `POST /` | body: `name` (obligatorio, ≤50), `description`, `isPublic`, `type` (`colab` o `personal`, **obligatorio**) | 201 `{ status, playlist }` con `creator` y `type`. 400 `PLAYLIST_TYPE_INVALID` |
+| `POST /` | body: `name` (obligatorio, ≤50), `description`, `isPublic` | 201 `{ status, playlist }` con `creator` y `type: "personal"`. **Toda playlist nace personal**: `type` se ignora si viene |
 | `PUT /:id` | body: `name?`, `description?`, `addSongs?`, `removeSongs?` | 200 `{ status, playlist }`. 403 si no es el dueño o si es la de favoritos, 404 si no existe. **`reorder` ya no se acepta** (ver 9.2) |
 | `DELETE /:id` | - | 200 `{ status, message }`. 403 si no es el dueño o si es la de favoritos |
 | `POST /:id/cover` | `multipart/form-data`, campo `picture`: JPG, PNG o WEBP de hasta 2 MB | 200 `{ status, playlist }` con `coverUrl` apuntando al CDN. 400 `MISSING_PICTURE` / `INVALID_IMAGE_TYPE` / `IMAGE_TOO_LARGE`, 403 `NOT_PLAYLIST_OWNER` o `FAVORITES_LOCKED`, 404 `PLAYLIST_NOT_FOUND` |
@@ -467,10 +467,10 @@ Todas las lecturas de favoritos —`GET /`, `GET /songs/ids`, y las dos ramas de
 | `PUT /:id/songs/order` | body: `songIds: number[]` | 200 `{ status, songIds, merged }`. 400 `INVALID_SONG_IDS`, 400 `FAVORITES_MANAGED_ELSEWHERE`, 403 `NOT_PLAYLIST_OWNER` / `NOT_PLAYLIST_MEMBER`, 404 `PLAYLIST_NOT_FOUND` (ver 9.2) |
 | `POST /:id/invitation` | body: `userId` | 201 `{ status, invitation, converted }`. 400 id inválido / `INVITATION_SELF` / `INVITATION_FAVORITES_LOCKED`, 404 si no existe la playlist o la persona (`INVITATION_USER_NOT_FOUND`), 403 si no es el creador, 409 `PLAYLIST_ALREADY_MEMBER`. `converted: true` si la playlist era `personal` y pasó a `colab` |
 | `GET /:id/invitations` | — | `{ status, invitations[] }`. Solo el creador (403 si no) |
-| `DELETE /:id/members/:userId` | — | 200 `{ status }`. Solo el creador, 404 si no era miembro, 400 `CANNOT_REMOVE_CREATOR` |
+| `DELETE /:id/members/:userId` | — | 200 `{ status }`. Solo el creador, 404 si no era miembro, 400 `CANNOT_REMOVE_CREATOR`. Si el creador queda solo, la playlist vuelve a `personal` |
 | `GET /invitations` | — | `{ status, invitations[] }` — las **pendientes** recibidas |
-| `POST /invitations/:idPlaylist/accept` | — | 201 `{ status, invitation }`. 404 `INVITATION_NOT_FOUND` si no hay pendiente |
-| `POST /invitations/:idPlaylist/reject` | — | 200 `{ status, invitation }`. 404 `INVITATION_NOT_FOUND` |
+| `POST /invitations/:idPlaylist/accept` | — | 201 `{ status, invitation }`. 404 `INVITATION_NOT_FOUND` si no hay pendiente. Si la playlist se había vuelto personal, pasa a `colab` de nuevo |
+| `POST /invitations/:idPlaylist/reject` | — | 200 `{ status, invitation }`. 404 `INVITATION_NOT_FOUND`. Si el creador queda solo, la playlist vuelve a `personal` |
 
 Todas las respuestas de playlist incluyen `coverUrl: string | null` (la portada subida; si falta, el frontend cae a la carátula de la primera canción). Las canciones se agregan y quitan con `POST|DELETE /:id/songs`, que son las rutas que aplican los roles;
 `PUT /:id` sigue siendo del creador y ya no se usa para tocar canciones. El orden de la lista se cambia
@@ -478,9 +478,9 @@ solo con `PUT /:id/songs/order`.
 
 ### 9.1 Playlists colaborativas e invitaciones (TS-12/TS-13, backend)
 
-**Crear una colaborativa** es `POST /` con `type: "colab"`, y el controller **valida el tipo**: sin `type`, o con uno
-que no sea `personal` o `colab`, responde `400 PLAYLIST_TYPE_INVALID`. Cuando es `colab`, se inserta la fila
-`PlaylistMember` con rol `creator` (el dueño se reconoce por `idCreator` y por esa fila).
+**Toda playlist nace personal.** `POST /` crea con `type = 'personal'` y sin fila en `PlaylistMember` (el dueño se
+reconoce por `idCreator`); `type` ya no forma parte del contrato y se ignora si el cliente lo manda. No existen
+playlists colaborativas creadas de entrada: se vuelven colaborativas al invitar.
 
 **Permisos (D9):** `PUT /:id` y `DELETE /:id` validan `idCreator !== req.user.sub → 403`. Editar el nombre, borrar la
 playlist, invitar y echar son del creador. **Las canciones no**: `POST /:id/songs` y `DELETE /:id/songs/:songId`
@@ -490,16 +490,23 @@ dejan que cualquier miembro de una `colab` agregue y quite; en una `personal`, s
 pendiente, en la tabla `playlist_invitation` (clave primaria `[id_playlist, id_receiver]`, enum `invitation_status`
 con `pendiente | aceptada | rechazada`).
 
-- `POST /:id/invitation` solo para el creador y solo sobre `colab`. Invitar de nuevo a alguien que ya estaba invitado
-  deja la fila en `pendiente` otra vez (D11); si ya es miembro, `409 PLAYLIST_ALREADY_MEMBER`.
+- `POST /:id/invitation` solo para el creador y sobre cualquier playlist propia que no sea la de favoritos
+  (`personal` o `colab`). Invitar de nuevo a alguien que ya estaba invitado deja la fila en `pendiente` otra vez
+  (D11); si ya es miembro, `409 PLAYLIST_ALREADY_MEMBER`.
 - **Invitar convierte la playlist en colaborativa.** Si la playlist era `personal`, la misma transacción hace
   `UPDATE playlist SET type = 'colab'` e inserta la fila `playlist_member` del creador, así que no existe el
   concepto de "miembro de una playlist personal". La respuesta trae `converted: true`. La playlist de
   favoritos queda fuera (`400 INVITATION_FAVORITES_LOCKED`).
 - `GET /invitations` lista solo las pendientes del usuario que pregunta; `POST /invitations/:idPlaylist/accept`
-  inserta el `PlaylistMember` con rol `colaborator` y marca la invitación en la misma transacción; `reject` la marca
-  como `rechazada`.
-- `DELETE /:id/members/:userId` saca al participante y borra sus invitaciones.
+  inserta el `PlaylistMember` con rol `colaborator` y marca la invitación en la misma transacción. Si la playlist
+  había vuelto a `personal` mientras la invitación seguía pendiente, la aceptación la pasa a `colab` y recrea la
+  fila del creador; `reject` la marca como `rechazada`.
+- **Reversión a personal.** Cuando no queda ningún miembro además del creador (al echar al último participante o al
+  rechazar la última invitación pendiente), `type` vuelve a `personal` y se borran todas las filas de
+  `playlist_member`. Las invitaciones pendientes no cuentan como miembros y se conservan: el creador las sigue
+  viendo y puede invitarlas de nuevo.
+- `DELETE /:id/members/:userId` saca al participante, borra sus invitaciones y aplica la reversión a `personal` si
+  el creador quedó solo.
 - La columna `Playlist.tokenInvitation` **ya no existe** (migración `drop_token_invitation`): el flujo por token y
   `FRONTEND_URL` se eliminaron por completo.
 

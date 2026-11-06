@@ -30,35 +30,55 @@ const PLAYLIST_INCLUDE = {
 	},
 };
 
-async function createPlaylist(userId, { name, description, isPublic, type }) {
-	const finalType = type === "colab" ? "colab" : "personal";
-
-	return prisma.$transaction(async (tx) => {
-		const playlist = await tx.playlist.create({
-			data: {
-				name,
-				description: description ?? null,
-				idCreator: userId,
-				type: finalType,
-				isPublic: isPublic ?? false,
-			},
-		});
-
-		if (finalType === "colab") {
-			await tx.playlistMember.create({
-				data: {
-					idPlaylist: playlist.id,
-					idUser: userId,
-					role: "creator",
-				},
-			});
-		}
-
-		return tx.playlist.findUnique({
-			where: { id: playlist.id },
-			include: PLAYLIST_INCLUDE,
-		});
+/**
+ * Toda playlist nace personal. Se vuelve colaborativa recién al invitar a
+ * alguien (ver `createInvitation`), y vuelve a personal cuando el creador queda
+ * solo (`syncPlaylistType`).
+ */
+async function createPlaylist(userId, { name, description, isPublic }) {
+	return prisma.playlist.create({
+		data: {
+			name,
+			description: description ?? null,
+			idCreator: userId,
+			type: "personal",
+			isPublic: isPublic ?? false,
+		},
+		include: PLAYLIST_INCLUDE,
 	});
+}
+
+/**
+ * Deja la playlist en `personal` cuando no queda ningún miembro además del
+ * creador. Las personales no tienen filas en `playlist_member` (el creador se
+ * reconoce por `idCreator`), así que se borran todas.
+ */
+async function syncPlaylistType(tx, playlistId) {
+	const playlist = await tx.playlist.findUnique({
+		where: { id: playlistId },
+		select: { idCreator: true, type: true },
+	});
+
+	if (!playlist || playlist.type === "favorites") {
+		return playlist?.type ?? null;
+	}
+
+	const otherMembers = await tx.playlistMember.count({
+		where: {
+			idPlaylist: playlistId,
+			idUser: { not: playlist.idCreator },
+		},
+	});
+
+	if (otherMembers > 0) return "colab";
+
+	await tx.playlist.update({
+		where: { id: playlistId },
+		data: { type: "personal" },
+	});
+	await tx.playlistMember.deleteMany({ where: { idPlaylist: playlistId } });
+
+	return "personal";
 }
 
 async function getPlaylistById(id) {
@@ -361,6 +381,33 @@ async function acceptInvitation(playlistId, userId) {
 	if (!invitation || invitation.status !== "pendiente") return null;
 
 	return prisma.$transaction(async (tx) => {
+		const playlist = await tx.playlist.findUnique({
+			where: { id: playlistId },
+			select: { idCreator: true, type: true },
+		});
+
+		// La playlist pudo haber vuelto a `personal` si el creador quedó solo
+		// mientras la invitación seguía pendiente. Al aceptar vuelve a ser
+		// colaborativa y se recrea la fila del creador.
+		if (playlist?.type === "personal") {
+			await tx.playlist.update({
+				where: { id: playlistId },
+				data: { type: "colab" },
+			});
+
+			await tx.playlistMember.upsert({
+				where: {
+					idPlaylist_idUser: { idPlaylist: playlistId, idUser: playlist.idCreator },
+				},
+				update: {},
+				create: {
+					idPlaylist: playlistId,
+					idUser: playlist.idCreator,
+					role: "creator",
+				},
+			});
+		}
+
 		await tx.playlistMember.upsert({
 			where: { idPlaylist_idUser: { idPlaylist: playlistId, idUser: userId } },
 			update: {},
@@ -382,10 +429,16 @@ async function rejectInvitation(playlistId, userId) {
 
 	if (!invitation || invitation.status !== "pendiente") return null;
 
-	return prisma.playlistInvitation.update({
-		where: { idPlaylist_idReceiver: { idPlaylist: playlistId, idReceiver: userId } },
-		data: { status: "rechazada" },
-		include: INVITATION_INCLUDE,
+	return prisma.$transaction(async (tx) => {
+		const rejected = await tx.playlistInvitation.update({
+			where: { idPlaylist_idReceiver: { idPlaylist: playlistId, idReceiver: userId } },
+			data: { status: "rechazada" },
+			include: INVITATION_INCLUDE,
+		});
+
+		await syncPlaylistType(tx, playlistId);
+
+		return rejected;
 	});
 }
 
@@ -396,16 +449,18 @@ async function removeMember(playlistId, userId) {
 
 	if (!existing) return { removed: false };
 
-	await prisma.$transaction([
-		prisma.playlistMember.delete({
+	return prisma.$transaction(async (tx) => {
+		await tx.playlistMember.delete({
 			where: { idPlaylist_idUser: { idPlaylist: playlistId, idUser: userId } },
-		}),
-		prisma.playlistInvitation.deleteMany({
+		});
+		await tx.playlistInvitation.deleteMany({
 			where: { idPlaylist: playlistId, idReceiver: userId },
-		}),
-	]);
+		});
 
-	return { removed: true };
+		const type = await syncPlaylistType(tx, playlistId);
+
+		return { removed: true, type };
+	});
 }
 
 async function updatePlaylistSongsOrder(playlistId, incomingIds) {

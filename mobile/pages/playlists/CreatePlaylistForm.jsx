@@ -22,7 +22,6 @@ const MAX_DESCRIPTION = 200;
 export default function CreatePlaylistForm({ onCreate, onCancel }) {
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
-	const [type, setType] = useState("personal");
 	const [error, setError] = useState("");
 	const [saving, setSaving] = useState(false);
 
@@ -38,7 +37,7 @@ export default function CreatePlaylistForm({ onCreate, onCancel }) {
 		setSaving(true);
 
 		try {
-			await onCreate({ name: name.trim(), description, type });
+			await onCreate({ name: name.trim(), description });
 		} catch (cause) {
 			showActionError(cause, "playlist:create");
 			setSaving(false);
@@ -69,33 +68,6 @@ export default function CreatePlaylistForm({ onCreate, onCancel }) {
 				style={[styles.input, styles.textarea]}
 				accessibilityLabel="Descripción de la playlist"
 			/>
-
-			<Text style={styles.legend}>¿Quién la puede usar?</Text>
-
-			<View style={styles.typeRow}>
-				<Pressable
-					onPress={() => setType("personal")}
-					style={[styles.typeButton, type === "personal" && styles.typeButtonActive]}
-					accessibilityRole="button"
-					accessibilityState={{ selected: type === "personal" }}
-				>
-					<Text style={styles.typeButtonText}>Solo vos</Text>
-				</Pressable>
-				<Pressable
-					onPress={() => setType("colab")}
-					style={[styles.typeButton, type === "colab" && styles.typeButtonActive]}
-					accessibilityRole="button"
-					accessibilityState={{ selected: type === "colab" }}
-				>
-					<Text style={styles.typeButtonText}>Colaborativa</Text>
-				</Pressable>
-			</View>
-
-			<Text style={styles.hint}>
-				{type === "colab"
-					? "Podés invitar personas: todos agregan y quitan canciones, y vos además editás el nombre, la borrás o echás a alguien."
-					: "Es privada: nadie más la ve ni puede agregar canciones."}
-			</Text>
 
 			{error ? <Text style={styles.error}>{error}</Text> : null}
 

@@ -12,8 +12,8 @@ export default function usePlaylistsPage() {
 
   const [creating, setCreating] = useState(false)
 
-  async function handleCreate({ name, description, type }) {
-    const created = await createPlaylist(userId, { name, description, type })
+  async function handleCreate({ name, description }) {
+    const created = await createPlaylist(userId, { name, description })
     setCreating(false)
     return created
   }

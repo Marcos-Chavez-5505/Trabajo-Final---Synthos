@@ -390,10 +390,10 @@ espaÃ±ol, pero no hay lint que lo proteja.
 **Estado: implementado de punta a punta** (TS-12 y TS-13), verificado contra la base real con dos
 usuarios.
 
-- **Crear:** `POST /api/playlists` con `type: "colab"`; el controller valida el tipo (`400
-  PLAYLIST_TYPE_INVALID`) e inserta la fila `playlist_member` con rol `creator`. El frontend tenÃ­a un bug
-  abierto: no mandaba `type` y **toda creaciÃ³n devolvÃ­a 400**; ahora `playlistsService.createPlaylist`
-  manda el tipo y `PlaylistCreateForm` ofrece "Solo vos / Colaborativa".
+- **Crear:** `POST /api/playlists` crea siempre una playlist `personal` y ya no acepta `type`: se ignora si
+  el cliente lo manda, así que `PLAYLIST_TYPE_INVALID` dejó de emitirse. La playlist se vuelve `colab` al
+  invitar, y esa misma transacción inserta la fila `playlist_member` del creador. El formulario de creación
+  ya no ofrece elegir tipo: se crea vacía y se invita después.
 - **Permisos:** en una `colab` cualquier participante **agrega y quita** canciones
   (`POST|DELETE /playlists/:id/songs`); editar, borrar, invitar y echar son del creador. `GET /:id` pide
   sesiÃ³n y responde `404` si no sos creador, ni miembro, ni es pÃºblica.

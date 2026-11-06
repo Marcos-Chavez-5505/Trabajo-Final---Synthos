@@ -49,6 +49,16 @@ function NotificationText({ notification }) {
 	}
 
 	if (notification.type === "playlist_invitation") {
+		// `playlist` queda en null si la playlist se borró: la FK usa
+		// `onDelete: SetNull` y la notificación sobrevive.
+		if (!notification.playlist) {
+			return (
+				<p className="TextRegluar">
+					{actor} te invitó a una playlist que ya no está disponible.
+				</p>
+			);
+		}
+
 		return (
 			<p className="TextRegluar">
 				{actor} te invitó a la playlist{" "}

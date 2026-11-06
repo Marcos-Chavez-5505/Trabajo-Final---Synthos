@@ -33,33 +33,6 @@ export const CREATE_PLAYLIST_FORM_STYLES = StyleSheet.create({
 		minHeight: 64,
 		textAlignVertical: "top",
 	},
-	legend: {
-		...text.medium,
-		color: colors.textMuted,
-		marginTop: spacing.xs,
-	},
-	typeRow: {
-		flexDirection: "row",
-		gap: spacing.sm,
-	},
-	typeButton: {
-		flex: 1,
-		backgroundColor: colors.volume,
-		borderRadius: 8,
-		paddingVertical: spacing.sm,
-		alignItems: "center",
-	},
-	typeButtonActive: {
-		backgroundColor: colors.fucsia,
-	},
-	typeButtonText: {
-		...text.button,
-		color: colors.textPrimary,
-	},
-	hint: {
-		...text.tiny,
-		color: colors.textMuted,
-	},
 	error: {
 		...text.medium,
 		color: colors.red,

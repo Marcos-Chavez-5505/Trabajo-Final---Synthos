@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { mapApiError } from '@synthos/shared'
 
 /**
- * Formulario de creación de playlist. Se usa suelto en `/playlists`; la edición
- * del detalle es inline, con los mismos campos, para que el copy y la
- * validación no se dupliquen.
+ * Formulario de creación de playlist. Se muestra dentro del popover de
+ * `/playlists`; la edición del detalle es inline con los mismos campos y copy,
+ * para que el copy y la validación no se dupliquen.
  *
  * Presentacional con la lógica del submit: el service lo llama quien lo usa
  * (AGENTS.md, regla 5).
@@ -12,7 +12,6 @@ import { mapApiError } from '@synthos/shared'
 export default function PlaylistCreateForm({ onCreate, onCancel }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [type, setType] = useState('personal')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -25,7 +24,7 @@ export default function PlaylistCreateForm({ onCreate, onCancel }) {
     setSaving(true)
 
     try {
-      await onCreate({ name, description, type })
+      await onCreate({ name, description })
     } catch (cause) {
       setError(mapApiError(cause))
     } finally {
@@ -34,64 +33,26 @@ export default function PlaylistCreateForm({ onCreate, onCancel }) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-md space-y-4 rounded-lg p-6 SurfaceLight Elevation1"
-    >
-      <h2 className="Header4">Nueva playlist</h2>
-
+    <form onSubmit={handleSubmit} className="space-y-3">
       <input
         type="text"
         value={name}
         onChange={(event) => setName(event.target.value)}
-        placeholder="Nombre de la playlist"
+        placeholder="Nombre"
         aria-label="Nombre de la playlist"
         maxLength={50}
-        className="w-full rounded px-3 py-2 Volume TextRegluar outline-none"
+        className="w-full rounded px-3 py-2 Volume TextRegluar outline-none bg-(--ds-surface)/20 ring-0 ring-transparent focus-visible:ring-2 focus-visible:ring-ring placeholder:opacity-60"
       />
 
       <textarea
         value={description}
         onChange={(event) => setDescription(event.target.value)}
-        placeholder="Descripción (opcional)"
+        placeholder="Descripción"
         aria-label="Descripción de la playlist"
-        rows={2}
+        rows={6}
         maxLength={200}
-        className="w-full rounded px-3 py-2 Volume TextRegluar outline-none"
+        className="TextRegluar mt-1 w-full rounded bg-(--ds-surface)/20 px-3 py-2 outline-none ring-0 ring-transparent focus-visible:ring-2 focus-visible:ring-ring resize-none placeholder:opacity-60"
       />
-
-      <fieldset>
-        <legend className="Volume TextMedium mb-2">¿Quién la puede usar?</legend>
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setType('personal')}
-            aria-pressed={type === 'personal'}
-            className={`rounded px-4 py-2 Button ${
-              type === 'personal' ? 'Fucsia' : 'Volume hover:brightness-110'
-            }`}
-          >
-            Solo vos
-          </button>
-          <button
-            type="button"
-            onClick={() => setType('colab')}
-            aria-pressed={type === 'colab'}
-            className={`rounded px-4 py-2 Button ${
-              type === 'colab' ? 'Fucsia' : 'Volume hover:brightness-110'
-            }`}
-          >
-            Colaborativa
-          </button>
-        </div>
-
-        <p className="text-muted-foreground TextTiny mt-2">
-          {type === 'colab'
-            ? 'Podés invitar personas: todos agregan y quitan canciones, y vos además editás el nombre, la borrás o echás a alguien.'
-            : 'Es privada: nadie más la ve ni puede agregar canciones.'}
-        </p>
-      </fieldset>
 
       {error && <p className="rounded px-3 py-2 Salmon TextMedium">{error}</p>}
 

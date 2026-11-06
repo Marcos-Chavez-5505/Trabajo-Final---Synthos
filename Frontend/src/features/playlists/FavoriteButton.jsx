@@ -58,7 +58,7 @@ export default function FavoriteButton({ songId, className = '', tooltip = false
       aria-pressed={active}
       aria-label={label}
       title={tooltip ? undefined : label}
-      className={`shrink-0 rounded-full p-2 transition-opacity disabled:opacity-50 ${
+      className={`shrink-0 rounded-full p-2 transition-opacity disabled:opacity-50 hover:opacity-80 ${
         active ? 'Fucsia' : 'Volume hover:opacity-80'
       } ${className}`}
     >

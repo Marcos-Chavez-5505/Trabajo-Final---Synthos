@@ -205,7 +205,7 @@ que ya aplica el mock. Verificado por humo: crear, name vacío/>50 → 400, ajen
 `members` viaja incluido en `GET /` y `GET /:id`, así que no hace falta un `/members` de solo lectura.
 
 - [x] `name` no vacío y de largo `<= 50`; si no, `400`, no un 500 de Prisma (verificado).
-- [x] `type` lo manda el cliente y es obligatorio; el controller lo valida (`400 PLAYLIST_TYPE_INVALID`).
+- [x] Toda playlist nace `personal`; `type` ya no es obligatorio y se ignora si llega. Se vuelve `colab` al invitar.
 - [x] `members` de las colaborativas, con rol, en la respuesta de `GET /` y `GET /:id`.
 
 ### 4.3 [x] REQ-PLAYLIST-2 — Reglas que el esquema impone
