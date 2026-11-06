@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import roomIcon from "@synthos/shared/assets/icons/headphones.svg";
 
 /**
@@ -33,7 +34,17 @@ export default function RoomCard({ room, action }) {
 
 					{room.hostUsername && (
 						<p className="text-muted-foreground TextMedium mt-0.5 truncate">
-							Anfitriona: {room.hostUsername}
+							Anfitriona:{" "}
+							{room.hostId || room.hostUserId || room.ownerId ? (
+								<Link
+									to={`/profile/${room.hostId || room.hostUserId || room.ownerId}`}
+									className="hover:underline"
+								>
+									{room.hostUsername}
+								</Link>
+							) : (
+								room.hostUsername
+							)}
 						</p>
 					)}
 				</div>

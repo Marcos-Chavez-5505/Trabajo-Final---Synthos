@@ -1161,10 +1161,17 @@ export default function PlaylistDetail() {
 function MemberRow({ member, canRemove = false, onRemove }) {
   return (
     <div className="SurfaceLight CardRadius flex items-center gap-3 px-4 py-2">
-      <Avatar src={member.avatarUrl} name={member.username} className="h-9 w-9" />
+      <Avatar
+        src={member.avatarUrl}
+        name={member.username}
+        to={`/profile/${member.id}`}
+        className="h-9 w-9"
+      />
 
       <p className="text-foreground TextRegluar min-w-0 flex-1 truncate">
-        {member.username}
+        <Link to={`/profile/${member.id}`} className="hover:underline">
+          {member.username}
+        </Link>
       </p>
 
       <span className="text-muted-foreground TextTiny">

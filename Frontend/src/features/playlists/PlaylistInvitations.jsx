@@ -133,9 +133,15 @@ export default function PlaylistInvitations() {
               <Avatar
                 src={invitation.sender.avatarUrl}
                 name={invitation.sender.username}
+                to={`/profile/${invitation.sender.id}`}
                 className="h-5 w-5"
               />
-              <span className="truncate">{invitation.sender.username} te invitó</span>
+              <span className="truncate">
+                <Link to={`/profile/${invitation.sender.id}`} className="hover:underline">
+                  {invitation.sender.username}
+                </Link>{" "}
+                te invitó
+              </span>
             </p>
           </div>
 
