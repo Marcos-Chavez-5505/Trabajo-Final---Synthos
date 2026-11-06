@@ -19,6 +19,13 @@ export const MEMBER_ROW_STYLES = StyleSheet.create({
 		paddingVertical: spacing.sm,
 		...shadows.elevation1,
 	},
+	person: {
+		flex: 1,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.sm,
+		minWidth: 0,
+	},
 	name: {
 		...text.regular,
 		color: colors.textPrimary,

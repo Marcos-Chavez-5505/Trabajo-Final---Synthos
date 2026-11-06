@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Image, Text, View } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 import { blobatarUri } from "blobatar/uri";
 import { SvgXml } from "react-native-svg";
 import { AVATAR_STYLES } from "./Avatar.styles";
@@ -12,14 +12,36 @@ function getInitials(name = "") {
 	return (parts[0][0] + parts[1][0]).slice(0, 2);
 }
 
-export function Avatar({ size = 32, style, children }) {
+export function Avatar({
+	size = 32,
+	style,
+	children,
+	onPress,
+	accessibilityLabel,
+}) {
 	const containerStyle = [
 		AVATAR_STYLES.container,
 		{ width: size, height: size, borderRadius: size / 2 },
 		style,
 	];
 
-	return <View style={containerStyle}>{children}</View>;
+	if (!onPress) {
+		return <View style={containerStyle}>{children}</View>;
+	}
+
+	return (
+		<Pressable
+			onPress={onPress}
+			accessibilityRole="button"
+			accessibilityLabel={accessibilityLabel}
+			style={({ pressed }) => [
+				containerStyle,
+				pressed && AVATAR_STYLES.pressed,
+			]}
+		>
+			{children}
+		</Pressable>
+	);
 }
 
 export function AvatarImage({ uri, name, style }) {

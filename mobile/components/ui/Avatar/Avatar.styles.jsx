@@ -41,4 +41,7 @@ export const AVATAR_STYLES = StyleSheet.create({
 		fontWeight: fontWeight.medium,
 		textTransform: "uppercase",
 	},
+	pressed: {
+		opacity: 0.8,
+	},
 });

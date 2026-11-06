@@ -30,12 +30,14 @@ export default function HomeScreen() {
 							flexWrap: "wrap",
 						}}
 					>
-						<Pressable onPress={() => navigation.navigate("Profile")}>
-							<Avatar size={40}>
-								<AvatarImage uri={user?.avatarUrl} name={user?.username} />
-								<AvatarFallback name={user?.username} />
-							</Avatar>
-						</Pressable>
+						<Avatar
+							size={40}
+							onPress={() => navigation.navigate("Profile")}
+							accessibilityLabel="Ir a mi perfil"
+						>
+							<AvatarImage uri={user?.avatarUrl} name={user?.username} />
+							<AvatarFallback name={user?.username} />
+						</Avatar>
 						<Pressable
 							onPress={() => navigation.navigate("Albums")}
 							style={HOME_STYLES.pill}

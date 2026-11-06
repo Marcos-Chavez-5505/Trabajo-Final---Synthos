@@ -659,6 +659,14 @@ export default function PlaylistDetailScreen({ route }) {
 		setInviting(true);
 	}
 
+	function openPersonProfile(personId) {
+		if (String(personId) === String(userId)) {
+			navigation.navigate("Profile");
+			return;
+		}
+		navigation.navigate("ProfilePublic", { userId: personId });
+	}
+
 	function confirmRemoveMember(member) {
 		Alert.alert(
 			"¿Sacar a esta persona?",
@@ -920,6 +928,9 @@ export default function PlaylistDetailScreen({ route }) {
 														? openInvite
 														: undefined
 												}
+												onMemberPress={(member) =>
+													openPersonProfile(member.id)
+												}
 											/>
 										) : null}
 
@@ -1079,6 +1090,7 @@ export default function PlaylistDetailScreen({ route }) {
 									member={member}
 									canRemove={isCreator && member.role !== "creator"}
 									onRemove={() => confirmRemoveMember(member)}
+									onPress={() => openPersonProfile(member.id)}
 								/>
 							))}
 						</View>

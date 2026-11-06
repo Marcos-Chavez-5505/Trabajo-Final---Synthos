@@ -344,19 +344,36 @@ export default function RoomDetailScreen({ route }) {
 					</Text>
 					{(room.members ?? []).map((member) => (
 						<View key={member.userId} style={styles.memberRow}>
-							<Avatar size={32}>
-								<AvatarImage uri={member.avatarUrl} name={member.username} />
-								<AvatarFallback name={member.username} />
-							</Avatar>
-							<View style={styles.memberInfo}>
-								<Text style={styles.memberName} numberOfLines={1}>
-									{member.username || "Usuario"}
-									{member.userId === viewerId ? " (vos)" : ""}
-								</Text>
-								<Text style={styles.memberRole}>
-									{member.role === "host" ? "Anfitriona" : "Participante"}
-								</Text>
-							</View>
+							<Pressable
+								onPress={() => {
+									if (String(member.userId) === viewerId) {
+										navigation.navigate("Profile");
+										return;
+									}
+									navigation.navigate("ProfilePublic", {
+										userId: member.userId,
+									});
+								}}
+								style={styles.memberLink}
+								accessibilityRole="button"
+								accessibilityLabel={`Ver perfil de ${member.username || "usuario"}`}
+							>
+								<Avatar size={32}>
+									<AvatarImage uri={member.avatarUrl} name={member.username} />
+									<AvatarFallback name={member.username} />
+								</Avatar>
+								<View style={styles.memberInfo}>
+									<Text style={styles.memberName} numberOfLines={1}>
+										{member.username || "Usuario"}
+										{member.userId === viewerId ? " (vos)" : ""}
+									</Text>
+									<Text style={styles.memberRole}>
+										{member.role === "host"
+											? "Anfitriona"
+											: "Participante"}
+									</Text>
+								</View>
+							</Pressable>
 							{isHost && member.role !== "host" ? (
 								<Pressable
 									style={styles.kickButton}
