@@ -35,6 +35,7 @@ export default function AvatarStack({
           key={member.id ?? member.username}
           src={member.avatarUrl}
           name={member.username}
+          to={!onClick && member.id ? `/profile/${member.id}` : undefined}
           className={`relative h-9 w-9 ${Z_INDEX[index] ?? "z-0"}`}
         />
       ))}

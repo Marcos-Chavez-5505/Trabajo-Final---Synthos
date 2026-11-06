@@ -821,11 +821,18 @@ function RoomMembers({ room, viewerId, isHost, onKick }) {
 						key={member.userId}
 						className="flex items-center gap-3 rounded-lg p-3 SurfaceLight Elevation1"
 					>
-						<Avatar name={member.username || "?"} className="h-8 w-8" />
+						<Avatar
+							src={member.avatarUrl}
+							name={member.username || "?"}
+							to={`/profile/${member.userId}`}
+							className="h-8 w-8"
+						/>
 
 						<div className="min-w-0 flex-1">
 							<p className="text-foreground TextRegluar truncate">
-								{member.username || "Usuario"}{" "}
+								<Link to={`/profile/${member.userId}`} className="hover:underline">
+									{member.username || "Usuario"}
+								</Link>{" "}
 								{member.userId === viewerId && (
 									<span className="text-muted-foreground TextTiny">(vos)</span>
 								)}

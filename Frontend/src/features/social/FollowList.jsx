@@ -42,13 +42,24 @@ export default function FollowList({ relation: requested }) {
     <div className="px-6 py-4 md:px-10">
       <div className="flex items-center gap-4">
         {person && (
-          <Avatar src={person.avatarUrl} name={person.username} className="h-14 w-14" />
+          <Avatar
+            src={person.avatarUrl}
+            name={person.username}
+            to={backTo}
+            className="h-14 w-14"
+          />
         )}
 
         <div className="min-w-0">
           <h1 className="Header3">{title}</h1>
           <p className="text-muted-foreground TextMedium truncate">
-            {person ? person.username : 'Persona'}
+            {person ? (
+              <Link to={backTo} className="hover:underline">
+                {person.username}
+              </Link>
+            ) : (
+              'Persona'
+            )}
           </p>
         </div>
       </div>
