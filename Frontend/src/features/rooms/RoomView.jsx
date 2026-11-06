@@ -22,6 +22,14 @@ import { usePlayerTime } from "@synthos/shared";
 import { useRoomPlayback } from "@synthos/shared";
 import Avatar from "../../components/ui/Avatar.jsx";
 import ProgressBar from "../../components/player/ProgressBar.jsx";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "../../components/ui/dialog";
 import roomIcon from "@synthos/shared/assets/icons/headphones.svg";
 import nextTrackIcon from "@synthos/shared/assets/icons/next_track.svg";
 import playIcon from "@synthos/shared/assets/icons/play.svg";
@@ -31,11 +39,7 @@ import emptyHeartIcon from "@synthos/shared/assets/icons/empty_heart.svg";
 import volumeOnIcon from "@synthos/shared/assets/icons/volume_on.svg";
 import volumeOffIcon from "@synthos/shared/assets/icons/volume_off.svg";
 import { mapApiError } from "@synthos/shared";
-
-// Aviso que se muestra al volver al listado (expulsado, sala cerrada, salida).
-// Va en `sessionStorage` porque la redirección cambia la ruta, no sobrevive un
-// `useState` del componente que ya se estaba desmontando.
-const NOTICE_KEY = "synthos_room_notice";
+import { clearRoomNotice, writeRoomNotice } from "./roomNotice.js";
 
 const PLAYBACK_FALLBACK = {
 	songId: null,
@@ -73,7 +77,6 @@ export default function RoomView() {
 	const [loaded, setLoaded] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [loadError, setLoadError] = useState("");
-	const [notice] = useState(() => sessionStorage.getItem(NOTICE_KEY) ?? "");
 
 	const [votes, setVotes] = useState({
 		voters: [],
@@ -85,6 +88,10 @@ export default function RoomView() {
 	const [ratingValue, setRatingValue] = useState(0);
 	const [actionError, setActionError] = useState("");
 	const [pending, setPending] = useState("");
+	// Modal para eventos forzados dentro de la sala (expulsión/cierre por otro).
+	// No se usa sessionStorage acá para evitar que el aviso quede pegado y se
+	// muestre en otra sala al navegar o al volver a entrar.
+	const [forcedExit, setForcedExit] = useState(null);
 
 	const membership =
 		room?.members.find((member) => member.userId === viewerId) ?? null;
@@ -119,10 +126,10 @@ export default function RoomView() {
 
 	syncPlaybackRef.current = syncPlayback;
 
-	// El aviso se consume una vez: si no, quedaría pegado en la pantalla.
-	useEffect(() => {
-		if (notice) sessionStorage.removeItem(NOTICE_KEY);
-	}, [notice]);
+	function goToRooms() {
+		clearRoomNotice();
+		navigate("/salas", { replace: true });
+	}
 
 	useEffect(() => {
 		let active = true;
@@ -182,11 +189,6 @@ export default function RoomView() {
 			.catch((cause) => {
 				if (active) setActionError(mapApiError(cause));
 			});
-
-		function leaveWithNotice(message) {
-			sessionStorage.setItem(NOTICE_KEY, message);
-			navigate("/salas", { replace: true });
-		}
 
 		// El `room:playback` lo atiende `useRoomPlayback` (es el que mueve el
 		// reproductor), así que acá no hay una suscripción aparte al mismo evento.
@@ -252,11 +254,23 @@ export default function RoomView() {
 		});
 
 		const offKicked = subscribeToRoomEvent("room:kicked", () => {
-			if (active) leaveWithNotice("Te sacaron de la sala.");
+			if (!active) return;
+			clearRoomNotice();
+			setForcedExit({
+				title: "Te sacaron de la sala",
+				message:
+					"El anfitrión te quitó de esta sala. Podés volver al listado para entrar a otra.",
+			});
 		});
 
 		const offClosed = subscribeToRoomEvent("room:closed", () => {
-			if (active) leaveWithNotice("La sala se cerró.");
+			if (!active) return;
+			clearRoomNotice();
+			setForcedExit({
+				title: "La sala se cerró",
+				message:
+					"Esta sala ya no está disponible. Podés volver al listado para buscar otra.",
+			});
 		});
 
 		return () => {
@@ -305,8 +319,7 @@ export default function RoomView() {
 		runAction("leave", async () => {
 			await leaveRoom(id);
 
-			sessionStorage.setItem(
-				NOTICE_KEY,
+			writeRoomNotice(
 				isHost ? "Cerraste la sala al salir." : "Saliste de la sala.",
 			);
 			navigate("/salas", { replace: true });
@@ -371,13 +384,8 @@ export default function RoomView() {
 	if (loadError || !room) {
 		return (
 			<section className="px-6 py-4 md:px-10">
-				{notice && (
-					<p className="max-w-md rounded px-3 py-2 Volume TextMedium">
-						{notice}
-					</p>
-				)}
 				{loadError && (
-					<p className="mt-4 max-w-md rounded px-3 py-2 Salmon TextMedium">
+					<p className="max-w-md rounded px-3 py-2 Salmon TextMedium">
 						{loadError}
 					</p>
 				)}
@@ -410,12 +418,6 @@ export default function RoomView() {
 			</Link>
 
 			<RoomHeader room={room} host={host} />
-
-			{notice && (
-				<p className="mt-4 max-w-2xl rounded px-3 py-2 Volume TextMedium">
-					{notice}
-				</p>
-			)}
 
 			{actionError && (
 				<p className="mt-4 max-w-2xl rounded px-3 py-2 Salmon TextMedium">
@@ -478,6 +480,31 @@ export default function RoomView() {
 					</button>
 				)}
 			</footer>
+
+			<Dialog
+				open={Boolean(forcedExit)}
+				onOpenChange={(open) => {
+					if (!open) goToRooms();
+				}}
+			>
+				<DialogContent showCloseButton={false}>
+					<DialogHeader>
+						<DialogTitle>{forcedExit?.title ?? "Sala no disponible"}</DialogTitle>
+						<DialogDescription>
+							{forcedExit?.message ?? "Volvé al listado para continuar."}
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<button
+							type="button"
+							onClick={goToRooms}
+							className="rounded px-4 py-2 Fucsia Button hover:brightness-110"
+						>
+							Ir a Salas
+						</button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</section>
 	);
 }

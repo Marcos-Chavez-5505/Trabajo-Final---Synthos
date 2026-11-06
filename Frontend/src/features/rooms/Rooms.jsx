@@ -22,6 +22,7 @@ import roomIcon from '@synthos/shared/assets/icons/headphones.svg'
 import searchIcon from '@synthos/shared/assets/icons/search.svg'
 import threeDotsIcon from '@synthos/shared/assets/icons/three_dots.svg'
 import { mapApiError } from '@synthos/shared'
+import { clearRoomNotice, readRoomNotice } from './roomNotice.js'
 
 const DEBOUNCE_MS = 300
 
@@ -37,6 +38,11 @@ export default function Rooms() {
 
   const [input, setInput] = useState(query)
   const [joinOpen, setJoinOpen] = useState(false)
+  const [roomNotice] = useState(() => {
+    const message = readRoomNotice()
+    if (message) clearRoomNotice()
+    return message
+  })
 
   const debounced = useDebounce(input, DEBOUNCE_MS)
 
@@ -132,6 +138,12 @@ export default function Rooms() {
           />
         </div>
       </div>
+
+      {roomNotice && (
+        <p className="mt-6 max-w-2xl rounded px-3 py-2 Volume TextMedium" role="status">
+          {roomNotice}
+        </p>
+      )}
 
       {error && <p className="mt-6 rounded px-3 py-2 Salmon TextMedium">{error}</p>}
 
