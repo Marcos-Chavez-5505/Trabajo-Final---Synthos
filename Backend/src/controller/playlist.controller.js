@@ -24,7 +24,7 @@ function requireId(raw) {
 async function createPlaylist(req, res, next) {
 	try {
 		const userId = req.user.sub;
-		const { name, description, isPublic, type } = req.body || {};
+		const { name, description, isPublic } = req.body || {};
 
 		if (typeof name !== "string" || name.trim().length === 0) {
 			throw httpError(
@@ -42,19 +42,11 @@ async function createPlaylist(req, res, next) {
 			);
 		}
 
-		if (type !== "personal" && type !== "colab") {
-			throw httpError(
-				400,
-				"El tipo debe ser 'personal' o 'colab'.",
-				"PLAYLIST_TYPE_INVALID",
-			);
-		}
-
+		// Toda playlist nace personal; se vuelve colaborativa al invitar.
 		const playlist = await playlistService.createPlaylist(userId, {
 			name: name.trim(),
 			description,
 			isPublic,
-			type,
 		});
 
 		return res.status(201).json({ status: "success", playlist });

@@ -16,7 +16,7 @@ import {
 import Avatar from '../../components/ui/Avatar.jsx'
 import AvatarStack from '../../components/ui/AvatarStack.jsx'
 import { toastMessages } from '../../components/ui/toast-messages.js'
-import { getSongById, mapApiError } from '@synthos/shared'
+import { getSongById, mapApiError, resolvePlaylistCoverUrl } from '@synthos/shared'
 import {
   getPlaylistById,
   listSentInvitations,
@@ -95,10 +95,11 @@ export default function PlaylistDetail() {
     loadPlaylist()
   }, [loadPlaylist])
 
-  // Solo el creador de una playlist colaborativa administra invitaciones.
-  // Las personales no pueden tenerlas: invitar las convierte en colaborativas.
+  // El creador administra invitaciones también en playlists personales: puede
+  // invitar cuando quiera (la playlist pasa a colaborativa) y, si vuelve a
+  // quedar solo, las invitaciones pendientes siguen visibles.
   const canManageInvitations =
-    Boolean(playlist) && playlist.role === 'creator' && playlist.isCollaborative
+    Boolean(playlist) && playlist.role === 'creator' && !playlist.isFavorites
   const invitationsKey = `${userId}:${id}`
   const invitations =
     invitationsResponse.key === invitationsKey ? invitationsResponse.items : []
@@ -196,7 +197,11 @@ export default function PlaylistDetail() {
   // parpadear. No se usa `songIdsKey` a propósito: el orden manda.
   const firstOrderedSong = order.length > 0 ? songById.get(String(order[0])) : null
   const firstOrderedCoverUrl = firstOrderedSong?.coverUrl ?? null
-  const coverSrc = playlist?.coverUrl || firstOrderedCoverUrl || headphonesIcon
+  const coverSrc =
+    resolvePlaylistCoverUrl({
+      coverUrl: playlist?.coverUrl,
+      firstSongCoverUrl: firstOrderedCoverUrl,
+    }) || headphonesIcon
   const hasCoverImage = Boolean(playlist?.coverUrl || firstOrderedCoverUrl)
   const canEditCover = Boolean(playlist) && isCreator && !playlist.isFavorites
   const hasMembers = Boolean(playlist?.members.length)
@@ -1051,12 +1056,6 @@ export default function PlaylistDetail() {
             ...invitations.map((invitation) => invitation.receiver.id),
           ]}
         />
-      )}
-
-      {playlist.isFavorites && !editing && (
-        <p className="text-muted-foreground TextMedium mt-4">
-          Se creó sola cuando marcaste tu primera canción favorita. Para cambiarla, usá el corazón en cada canción.
-        </p>
       )}
 
       {resolving && <p className="text-muted-foreground TextRegluar mt-8">Buscando canciones…</p>}

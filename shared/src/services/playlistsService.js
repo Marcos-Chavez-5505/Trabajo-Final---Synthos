@@ -57,10 +57,11 @@ export async function getPlaylistById(ownerId, playlistId) {
   }
 }
 
-export async function createPlaylist(ownerId, { name, description = '', type = 'personal' }) {
+export async function createPlaylist(ownerId, { name, description = '' }) {
   requireOwner(ownerId)
 
-  const data = await post('/playlists', { name, description, type })
+  // Toda playlist nace personal; se vuelve colaborativa al invitar.
+  const data = await post('/playlists', { name, description })
 
   notifyPlaylistsChanged()
 
@@ -326,6 +327,13 @@ function toPlaylist(raw, viewerId) {
     role: member.role,
   }))
 
+  // Las personales no tienen filas en `playlist_member`, pero el creador sí es
+  // participante: sin esto `members` llega vacío y el `AvatarStack` no se
+  // renderiza (ni aparece el menú para invitar). En las colaborativas ya viene.
+  if (raw.type === 'personal' && !members.some((member) => member.id === creator.id)) {
+    members.unshift({ ...creator, role: 'creator' })
+  }
+
   return {
     id: String(raw.id),
     ownerId: creator.id,
@@ -340,6 +348,7 @@ function toPlaylist(raw, viewerId) {
     name: isFavorites ? FAVORITES_PLAYLIST_NAME : raw.name,
     description: raw.description ?? '',
     coverUrl: raw.coverUrl ?? null,
+    firstSongCoverUrl: raw.songs?.[0]?.song?.coverUrl ?? null,
     isFavorites,
     isCollaborative: raw.type === 'colab',
     songIds: (raw.songs ?? []).map((row) => row.idSong ?? row.song?.id),

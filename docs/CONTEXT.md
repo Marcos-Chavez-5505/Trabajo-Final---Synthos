@@ -113,7 +113,7 @@ DELETE /api/favorites/songs/:songId    â†’ authenticate (404 si no estaba)
 
 GET    /api/playlists                  â†’ authenticate â†’ { playlists } (las que creÃ³ y las colab donde es miembro)
 GET    /api/playlists/:id              â†’ authenticate (404 si no es suya, no es miembro y no es pÃºblica)
-POST   /api/playlists                  â†’ authenticate, { name (â‰¤50), description?, isPublic?, type? } â†’ 201 ("colab" o "personal"); `type` obligatorio (400 PLAYLIST_TYPE_INVALID)
+POST   /api/playlists                  â†’ authenticate, { name (â‰¤50), description?, isPublic? } â†’ 201 (siempre `type = "personal"`; se vuelve `colab` al invitar)
 PUT    /api/playlists/:id              â†’ authenticate, dueÃ±o, NO favorites; body { name?, description?, addSongs?, removeSongs? }
 DELETE /api/playlists/:id              â†’ authenticate, dueÃ±o, NO favorites
 POST   /api/playlists/:id/songs        â†’ authenticate â†’ 201 { song } (403 NOT_PLAYLIST_OWNER / NOT_PLAYLIST_MEMBER, 409 si ya estaba)
