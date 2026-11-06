@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
 	getRoomById,
@@ -91,10 +91,15 @@ export default function RoomView() {
 	const isHost = membership?.role === "host";
 	const host = room?.members.find((member) => member.role === "host") ?? null;
 
-	const requestNext = useCallback(() => {
-		controlPlayback(id, "next").catch((cause) =>
-			setActionError(mapApiError(cause)),
-		);
+	const syncPlaybackRef = useRef(null);
+
+	const requestNext = useCallback(async () => {
+		try {
+			const next = await controlPlayback(id, "next");
+			syncPlaybackRef.current?.(next);
+		} catch (cause) {
+			setActionError(mapApiError(cause));
+		}
 	}, [id]);
 
 	// Va antes que el efecto de la sala de más abajo porque este es el que le pasa
@@ -111,6 +116,8 @@ export default function RoomView() {
 		isHost,
 		onEnded: requestNext,
 	});
+
+	syncPlaybackRef.current = syncPlayback;
 
 	// El aviso se consume una vez: si no, quedaría pegado en la pantalla.
 	useEffect(() => {
@@ -425,7 +432,10 @@ export default function RoomView() {
 				isBlocked={isBlocked}
 				onResume={resume}
 				onControl={(action) =>
-					runAction(action, () => controlPlayback(id, action))
+					runAction(action, async () => {
+						const next = await controlPlayback(id, action);
+						syncPlayback(next);
+					})
 				}
 				controlPending={Boolean(pending)}
 				votes={votes.voters.length}
