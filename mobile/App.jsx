@@ -16,6 +16,7 @@ import Register from "./pages/register/Register";
 import MainTabs from "./navigation/MainTabs";
 import ProfileScreen from "./pages/profile/ProfileView";
 import ProfilePublicScreen from "./pages/profile/ProfilePublic";
+import FollowListScreen from "./pages/social/FollowList";
 import { initApi } from "./config/api";
 import { createAudioMotor } from "./lib/audioMotor";
 import ProfileEditScreen from "./pages/profile/ProfileEdit";
@@ -78,6 +79,7 @@ function RootNavigator() {
 					name="ProfilePublic"
 					component={ProfilePublicScreen}
 				/>
+				<Stack.Screen name="FollowList" component={FollowListScreen} />
 				<Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
 				<Stack.Screen name="CreateRoom" component={CreateRoomScreen} />
 				<Stack.Screen name="RoomDetail" component={RoomDetailScreen} />

@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth, useFollow } from "@synthos/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/Avatar/Avatar";
+import FollowStats from "../../components/social/FollowStats/FollowStats";
 import { PROFILE_STYLES } from "./ProfileView.styles";
 
 export default function ProfileScreen() {
@@ -58,10 +59,16 @@ export default function ProfileScreen() {
 						{user.bio || "Sin bio todavía."}
 					</Text>
 
-					<Text style={PROFILE_STYLES.bio}>
-						Seguidores: {follow?.followerCount ?? 0} · Siguiendo:{" "}
-						{follow?.followingCount ?? 0}
-					</Text>
+					<FollowStats
+						followerCount={follow?.followerCount ?? 0}
+						followingCount={follow?.followingCount ?? 0}
+						onSelect={(relation) =>
+							navigation.navigate("FollowList", {
+								userId: user.id,
+								relation,
+							})
+						}
+					/>
 
 					<Pressable
 						style={PROFILE_STYLES.editButton}

@@ -1,20 +1,10 @@
-import {
-	ActivityIndicator,
-	Pressable,
-	ScrollView,
-	Text,
-	View,
-} from "react-native";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useSearchPeople } from "@synthos/shared";
 import { colors } from "../../theme";
 import SearchTabs from "./SearchTabs";
 import { SEARCH_TABS } from "./constants";
-import {
-	Avatar,
-	AvatarFallback,
-	AvatarImage,
-} from "../../components/ui/Avatar/Avatar";
+import SearchPersonRow from "./SearchPersonRow";
 
 export default function SearchPeople({ query, onChangeTab }) {
 	const navigation = useNavigation();
@@ -51,38 +41,15 @@ export default function SearchPeople({ query, onChangeTab }) {
 				>
 					{results.items?.length ? (
 						results.items.map((person) => (
-							<Pressable
+							<SearchPersonRow
 								key={person.id}
+								person={person}
 								onPress={() =>
 									navigation.navigate("ProfilePublic", {
 										userId: person.id,
 									})
 								}
-								style={{
-									flexDirection: "row",
-									gap: 12,
-									backgroundColor: colors.surfaceLight,
-									borderRadius: 8,
-									padding: 10,
-									alignItems: "center",
-								}}
-							>
-								<Avatar size={48}>
-									<AvatarImage uri={person.avatarUrl} name={person.username} />
-									<AvatarFallback name={person.username} />
-								</Avatar>
-								<View style={{ flex: 1 }}>
-									<Text style={{ color: colors.textPrimary }} numberOfLines={1}>
-										{person.username}
-									</Text>
-									<Text
-										style={{ color: colors.textPrimary, opacity: 0.7 }}
-										numberOfLines={1}
-									>
-										{person.bio || "Sin bio todavía."}
-									</Text>
-								</View>
-							</Pressable>
+							/>
 						))
 					) : (
 						<Text style={{ color: colors.textPrimary, opacity: 0.5 }}>

@@ -13,6 +13,8 @@ import {
 	AvatarFallback,
 	AvatarImage,
 } from "../../components/ui/Avatar/Avatar";
+import FollowButton from "../../components/social/FollowButton/FollowButton";
+import FollowStats from "../../components/social/FollowStats/FollowStats";
 import { PROFILE_STYLES } from "./ProfileView.styles";
 import { PROFILE_PUBLIC_STYLES as styles } from "./ProfilePublic.styles";
 import { colors } from "../../theme";
@@ -109,20 +111,16 @@ export default function ProfilePublicScreen({ route }) {
 						{person.bio || "Sin bio todavía."}
 					</Text>
 
-					<View style={styles.statsRow}>
-						<View>
-							<Text style={styles.statValue}>{follow.followerCount}</Text>
-							<Text style={styles.statLabel}>
-								{follow.followerCount === 1 ? "Seguidor" : "Seguidores"}
-							</Text>
-						</View>
-						<View>
-							<Text style={styles.statValue}>{follow.followingCount}</Text>
-							<Text style={styles.statLabel}>
-								{follow.followingCount === 1 ? "Seguido" : "Seguidos"}
-							</Text>
-						</View>
-					</View>
+					<FollowStats
+						followerCount={follow.followerCount}
+						followingCount={follow.followingCount}
+						onSelect={(relation) =>
+							navigation.navigate("FollowList", {
+								userId: person.id,
+								relation,
+							})
+						}
+					/>
 
 					{person.hostRating != null ? (
 						<Text style={styles.rating}>
@@ -142,27 +140,16 @@ export default function ProfilePublicScreen({ route }) {
 						>
 							<Text style={PROFILE_STYLES.editButtonText}>Editar perfil</Text>
 						</Pressable>
-					) : follow.canFollow ? (
-						<Pressable
-							onPress={follow.toggle}
-							disabled={follow.pending}
-							style={({ pressed }) => [
-								styles.followButton,
-								follow.isFollowing && styles.followingButton,
-								pressed && styles.pressed,
-								follow.pending && styles.disabled,
-							]}
-							accessibilityRole="button"
-							accessibilityState={{
-								selected: follow.isFollowing,
-								disabled: follow.pending,
-							}}
-						>
-							<Text style={styles.followButtonText}>
-								{follow.isFollowing ? "Siguiendo" : "Seguir"}
-							</Text>
-						</Pressable>
-					) : null}
+					) : (
+						<FollowButton
+							canFollow={follow.canFollow}
+							isFollowing={follow.isFollowing}
+							onToggle={follow.toggle}
+							pending={follow.pending}
+							loading={follow.loading}
+							style={styles.followButton}
+						/>
+					)}
 
 					{follow.error ? (
 						<Text style={styles.error}>{follow.error}</Text>
