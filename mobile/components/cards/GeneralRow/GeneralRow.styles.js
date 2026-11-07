@@ -1,26 +1,26 @@
 import { StyleSheet } from "react-native";
 import {
 	colors,
-	spacing,
 	radius,
 	shadows,
+	spacing,
 	text,
 } from "../../../theme";
 
-export const USER_ROW_STYLES = StyleSheet.create({
+export const GENERAL_ROW_STYLES = StyleSheet.create({
 	row: {
-		flexDirection: "row",
 		alignItems: "center",
-		gap: spacing.md,
 		backgroundColor: colors.surfaceLight,
 		borderRadius: radius.card,
+		flexDirection: "row",
+		gap: spacing.md,
 		padding: spacing.md,
 		...shadows.elevation1,
 	},
-	person: {
+	content: {
+		alignItems: "center",
 		flex: 1,
 		flexDirection: "row",
-		alignItems: "center",
 		gap: spacing.md,
 		minWidth: 0,
 	},
@@ -28,14 +28,20 @@ export const USER_ROW_STYLES = StyleSheet.create({
 		flex: 1,
 		minWidth: 0,
 	},
-	name: {
+	title: {
 		...text.regular,
 		color: colors.textPrimary,
 	},
-	bio: {
+	subtitle: {
 		...text.medium,
 		color: colors.textMuted,
 		marginTop: 2,
+	},
+	label: {
+		...text.tiny,
+		color: colors.fucsia,
+		marginTop: 2,
+		textTransform: "uppercase",
 	},
 	action: {
 		alignItems: "flex-end",

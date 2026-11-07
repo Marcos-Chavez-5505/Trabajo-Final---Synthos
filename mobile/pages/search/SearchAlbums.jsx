@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
-import { ALBUM_TYPE_LABELS, useSearchAlbums } from "@synthos/shared";
+import { useSearchAlbums } from "@synthos/shared";
 import { colors } from "../../theme";
 import AlbumRow from "../../components/cards/AlbumRow/AlbumRow";
 import Pagination from "../../components/ui/Pagination/Pagination";
@@ -47,13 +47,7 @@ export default function SearchAlbums({ query, onChangeTab }) {
 				>
 					{results.items?.length ? (
 						results.items.map((album) => (
-							<AlbumRow
-								key={album.id}
-								title={album.name}
-								artist={album.artistName ?? "Artista desconocido"}
-								label={ALBUM_TYPE_LABELS[album.type] ?? album.type}
-								coverUrl={album.coverUrl}
-							/>
+							<AlbumRow key={album.id} album={album} />
 						))
 					) : (
 						<Text style={{ color: colors.textPrimary, opacity: 0.5 }}>

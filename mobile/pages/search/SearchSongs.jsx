@@ -1,17 +1,11 @@
-import {
-	ActivityIndicator,
-	Image,
-	Pressable,
-	ScrollView,
-	Text,
-	View,
-} from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { usePlayer, useSearchSongs } from "@synthos/shared";
 import { colors } from "../../theme";
+import SongRow from "../../components/cards/SongRow/SongRow";
+import Pagination from "../../components/ui/Pagination/Pagination";
 import SearchTabs from "./SearchTabs";
 import { SEARCH_TABS } from "./constants";
-import Pagination from "../../components/ui/Pagination/Pagination";
-import { useState } from "react";
 
 export default function SearchSongs({ query, onChangeTab }) {
 	const { playSongs, addToQueue } = usePlayer();
@@ -54,63 +48,12 @@ export default function SearchSongs({ query, onChangeTab }) {
 				>
 					{results.items?.length ? (
 						results.items.map((song, index) => (
-							<Pressable
+							<SongRow
 								key={song.id}
+								song={song}
 								onPress={() => playSongs(results.items, index)}
-								style={{
-									flexDirection: "row",
-									gap: 12,
-									backgroundColor: colors.surfaceLight,
-									borderRadius: 8,
-									padding: 10,
-									alignItems: "center",
-								}}
-							>
-								{song.coverUrl ? (
-									<Image
-										source={{ uri: song.coverUrl }}
-										style={{ width: 56, height: 56, borderRadius: 6 }}
-									/>
-								) : (
-									<View
-										style={{
-											width: 56,
-											height: 56,
-											borderRadius: 6,
-											backgroundColor: colors.border,
-											alignItems: "center",
-											justifyContent: "center",
-										}}
-									>
-										<Text style={{ color: colors.textPrimary }}>♪</Text>
-									</View>
-								)}
-								<View style={{ flex: 1 }}>
-									<Text style={{ color: colors.textPrimary }} numberOfLines={1}>
-										{song.title}
-									</Text>
-									<Text
-										style={{ color: colors.textPrimary, opacity: 0.7 }}
-										numberOfLines={1}
-									>
-										{song.artist}
-									</Text>
-								</View>
-								<Pressable
-									onPress={(e) => {
-										e.stopPropagation();
-										addToQueue(song);
-									}}
-									style={{
-										paddingHorizontal: 12,
-										paddingVertical: 6,
-										backgroundColor: colors.primary,
-										borderRadius: 16,
-									}}
-								>
-									<Text style={{ color: colors.textPrimary }}>+</Text>
-								</Pressable>
-							</Pressable>
+								onAddToQueue={addToQueue}
+							/>
 						))
 					) : (
 						<Text style={{ color: colors.textPrimary, opacity: 0.5 }}>
