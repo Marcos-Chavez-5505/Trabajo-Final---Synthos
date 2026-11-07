@@ -30,7 +30,8 @@ import {
   updatePlaylistSongsOrder,
   updateFavoritesOrder,
 } from '@synthos/shared'
-import { useReorderSongs, DRAG_SCALE, DRAG_SCALE_X, NEIGHBOR_SEPARATION, DRAG_SPRING, DRAG_SETTLE_SPRING } from '@synthos/shared'
+import { useReorderSongs } from '@synthos/shared'
+import { DRAG_SCALE, DRAG_SCALE_X, NEIGHBOR_SEPARATION, DRAG_SPRING, DRAG_SETTLE_SPRING } from '../../lib/motion/reorderConfig.js'
 import cameraIcon from '@synthos/shared/assets/icons/camera.svg'
 import headphonesIcon from '@synthos/shared/assets/icons/headphones.svg'
 import musicNoteIcon from '@synthos/shared/assets/icons/music_note.svg'

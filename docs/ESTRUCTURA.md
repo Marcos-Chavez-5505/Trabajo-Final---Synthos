@@ -5,6 +5,11 @@ No reemplaza a los demÃ¡s documentos del proyecto (ver [Â§7](#7-otros-docume
 
 > **Actualizado post-reestructura:** el repo ahora es un monorepo con workspaces (`frontend`, `shared`, `mobile`; `backend` fuera).
 > La lógica de negocio vive en `shared/` y la UI web en `frontend/`. Ver `AGENTS.md` (sección "Estructura del monorepo") y `docs/plan/restructure-plan.md`.
+>
+> En `shared/`: `services/` (red), `context/` (providers globales), `hooks/` (solo transversales/globales),
+> `features/<dominio>/hooks/` y `features/<dominio>/lib/`, `tokens/`, `icons/` y `utils/`. Las apps
+> importan por el `exports` map (`@synthos/shared`, `@synthos/shared/tokens`, `@synthos/shared/icons`,
+> `@synthos/shared/assets/*`), nunca por `@synthos/shared/src/*`.
 
 
 ---

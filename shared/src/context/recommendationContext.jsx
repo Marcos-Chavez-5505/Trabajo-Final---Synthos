@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import useRecommendation from "../hooks/useRecommendation";
+import useRecommendation from "../hooks/useRecommendation.js";
 
 const RecommendationsContext = createContext(null);
 

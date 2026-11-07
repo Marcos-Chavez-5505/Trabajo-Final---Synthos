@@ -1,9 +1,12 @@
-import { useAuth, useHomeSongs } from "@synthos/shared";
+import {
+	useAuth,
+	useHomeSongs,
+	useLatestAlbums,
+	useNewArtists,
+} from "@synthos/shared";
 import MediaCard from "../../components/cards/MediaCard.jsx";
 import ArtistCard from "../../components/cards/ArtistCard.jsx";
-import useNewArtists from "@synthos/shared/src/features/home/useHomeArtists.jsx";
 import HomeSection from "../../components/home/HomeSection.jsx";
-import useLatestAlbums from "@synthos/shared/src/features/home/useHomeAlbums.jsx";
 import { useNavigate } from "react-router-dom";
 import AlbumCard from "../../components/cards/AlbumCard.jsx";
 

@@ -5,6 +5,7 @@ import playIcon from '@synthos/shared/assets/icons/play.svg'
 import pauseIcon from '@synthos/shared/assets/icons/pause.svg'
 import nextIcon from '@synthos/shared/assets/icons/next_track.svg'
 import { usePlayer } from '@synthos/shared'
+import { SIDEBAR_SPRING } from '../../lib/motion/sidebarMotion.js'
 
 /* ======================================================
    TRANSPORT - valores de expansión originales
@@ -12,7 +13,6 @@ import { usePlayer } from '@synthos/shared'
    flex-grow y border-radius animados con spring
    Consume el estado global del player (PlayerContext).
 ====================================================== */
-const SIDEBAR_SPRING = { stiffness: 300, damping: 20, mass: 0.6 }
 const SPRING = { type: 'spring', ...SIDEBAR_SPRING }
 const RELEASE_DELAY = 220
 

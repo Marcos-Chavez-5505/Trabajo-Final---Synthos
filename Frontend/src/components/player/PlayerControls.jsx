@@ -9,11 +9,11 @@ import { usePlayer } from '@synthos/shared'
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip.tsx'
 import { motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
+import { SIDEBAR_SPRING } from '../../lib/motion/sidebarMotion.js'
 
 // Mecánica de pulsado tomada del TransportControls del reproductor expandido:
 // spring de ancho, grow 1.1 mientras se sostiene el clic y suelta a los 220ms.
 // Acá la usa solo el play/pause de la barra (los demás botones no animan ancho).
-const SIDEBAR_SPRING = { stiffness: 300, damping: 20, mass: 0.6 }
 const SPRING = { type: 'spring', ...SIDEBAR_SPRING }
 const RELEASE_DELAY = 220
 

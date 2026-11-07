@@ -1,6 +1,6 @@
 import Svg, { Path } from "react-native-svg";
 // Import profundo (no el barrel de @synthos/shared: arrastraría servicios y socket.io).
-import { icons } from "@synthos/shared/src/icons/icons.js";
+import { icons } from "@synthos/shared/icons";
 
 // Contrato de todo ícono de la app: <Icon size={number} color={string} />.
 // Cualquier componente que cumpla ese contrato sirve (SVG propio, librería de

@@ -4,6 +4,12 @@
   "private": true,
   "type": "module",
   "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./tokens": "./src/tokens/tokens.js",
+    "./icons": "./src/icons/icons.js",
+    "./assets/*": "./assets/*"
+  },
   "scripts": {
     "generate:tokens": "node scripts/generate-tokens.mjs",
     "generate:icons": "node scripts/generate-icons.mjs",

@@ -80,12 +80,14 @@ src/
 /
 ├── backend/     # sin cambios. Fuera de "workspaces". Conserva su package-lock.json
 ├── frontend/    # web (Vite). No se renombra. Queda solo la UI
-├── shared/      # paquete @synthos/shared. Sin DOM, sin CSS, sin router. Exporta código fuente (main: src/index.js)
+├── shared/      # paquete @synthos/shared. Sin DOM, sin CSS, sin router. Exporta código fuente con `exports` map (`.`, `./tokens`, `./icons`, `./assets/*`)
 ├── mobile/      # app Expo (Fase 7+)
 └── package.json # { "workspaces": ["frontend", "shared", "mobile"] }
 ```
 
 `shared/` no importa nada de `frontend/` ni de `mobile/` (regla permanente). `react` es `peerDependency` de `shared`.
+
+Dentro de `shared/`, los hooks de dominio viven en `src/features/<dominio>/hooks/` y los helpers puros en `src/features/<dominio>/lib/`; `src/hooks/` queda solo para hooks transversales o de acceso a contextos globales. Las apps importan por los subpaths públicos del `exports` map (`@synthos/shared`, `@synthos/shared/tokens`, `@synthos/shared/icons`, `@synthos/shared/assets/*`), nunca por `@synthos/shared/src/*`.
 
 ## Adaptadores (compartir lógica entre web y mobile)
 

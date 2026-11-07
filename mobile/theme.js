@@ -5,7 +5,7 @@
 //
 // Import profundo: shared/package.json no define "exports", así que se puede
 // importar el archivo directamente sin cargar src/index.js (socket.io, hooks).
-import { getToken } from "@synthos/shared/src/tokens/tokens.js";
+import { getToken } from "@synthos/shared/tokens";
 
 const str = (name) => {
 	const value = getToken(name);
