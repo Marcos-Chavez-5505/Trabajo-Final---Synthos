@@ -8,6 +8,7 @@ import {
 	AvatarFallback,
 	AvatarImage,
 } from "../../components/ui/Avatar/Avatar";
+import HomePills from "./HomePills";
 import { HOME_STYLES } from "./Home.styles";
 import { BellIcon, CameraAIIcon } from "../../components/icons";
 import { colors } from "../../theme";
@@ -27,27 +28,17 @@ export default function HomeScreen() {
 							alignItems: "center",
 							gap: 12,
 							flex: 1,
-							flexWrap: "wrap",
 						}}
 					>
-						<Pressable onPress={() => navigation.navigate("Profile")}>
-							<Avatar size={40}>
-								<AvatarImage uri={user?.avatarUrl} name={user?.username} />
-								<AvatarFallback name={user?.username} />
-							</Avatar>
-						</Pressable>
-						<Pressable
-							onPress={() => navigation.navigate("Albums")}
-							style={HOME_STYLES.pill}
+						<Avatar
+							size={40}
+							onPress={() => navigation.navigate("Profile")}
+							accessibilityLabel="Ir a mi perfil"
 						>
-							<Text style={HOME_STYLES.pillText}>Álbumes</Text>
-						</Pressable>
-						<Pressable
-							onPress={() => navigation.navigate("Artists")}
-							style={HOME_STYLES.pill}
-						>
-							<Text style={HOME_STYLES.pillText}>Artistas</Text>
-						</Pressable>
+							<AvatarImage uri={user?.avatarUrl} name={user?.username} />
+							<AvatarFallback name={user?.username} />
+						</Avatar>
+						<HomePills />
 					</View>
 					<View
 						style={{

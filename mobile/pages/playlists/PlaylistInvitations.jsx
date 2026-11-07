@@ -158,7 +158,19 @@ export default function PlaylistInvitations() {
 						<Text style={styles.name} numberOfLines={1}>
 							{invitation.playlist.name}
 						</Text>
-						<View style={styles.senderRow}>
+						<Pressable
+							onPress={() =>
+								navigation.navigate("ProfilePublic", {
+									userId: invitation.sender.id,
+								})
+							}
+							style={({ pressed }) => [
+								styles.senderRow,
+								pressed && styles.pressed,
+							]}
+							accessibilityRole="button"
+							accessibilityLabel={`Ver perfil de ${invitation.sender.username}`}
+						>
 							<Avatar size={20}>
 								<AvatarImage
 									uri={invitation.sender.avatarUrl}
@@ -169,7 +181,7 @@ export default function PlaylistInvitations() {
 							<Text style={styles.sender} numberOfLines={1}>
 								{invitation.sender.username} te invitó
 							</Text>
-						</View>
+						</Pressable>
 					</View>
 
 					<View style={styles.actions}>

@@ -21,7 +21,18 @@ export default function RoomsScreen() {
 	function renderItem({ item }) {
 		return (
 			<View style={styles.cardWrapper}>
-				<RoomCard room={item} action={<JoinButton room={item} navigation={navigation} />} />
+				<RoomCard
+					room={item}
+					onHostPress={
+						item.hostId
+							? () =>
+									navigation.navigate("ProfilePublic", {
+										userId: item.hostId,
+									})
+							: undefined
+					}
+					action={<JoinButton room={item} navigation={navigation} />}
+				/>
 			</View>
 		);
 	}

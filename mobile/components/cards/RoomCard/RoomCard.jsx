@@ -1,4 +1,4 @@
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { ROOM_CARD_STYLES as styles } from "./RoomCard.styles";
 import { colors } from "../../../theme";
 import { HeadphonesIcon } from "../../icons";
@@ -15,7 +15,7 @@ import { HeadphonesIcon } from "../../icons";
  * pero la tarjeta también se usa en "Mis Salas", donde sí puede aparecer una
  * privada.
  */
-export default function RoomCard({ room, action }) {
+export default function RoomCard({ room, action, onHostPress }) {
 	const full = room.membersCount >= room.maxCapacity && room.maxCapacity !== null;
 
 	return (
@@ -31,9 +31,20 @@ export default function RoomCard({ room, action }) {
 					</Text>
 
 					{room.hostUsername ? (
-						<Text style={styles.host} numberOfLines={1}>
-							Anfitriona: {room.hostUsername}
-						</Text>
+						<Pressable
+							onPress={onHostPress}
+							disabled={!onHostPress}
+							accessibilityRole={onHostPress ? "button" : undefined}
+							accessibilityLabel={
+								onHostPress
+									? `Ver perfil de ${room.hostUsername}`
+									: undefined
+							}
+						>
+							<Text style={styles.host} numberOfLines={1}>
+								Anfitriona: {room.hostUsername}
+							</Text>
+						</Pressable>
 					) : null}
 				</View>
 			</View>

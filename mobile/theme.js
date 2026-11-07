@@ -44,6 +44,18 @@ export const colors = {
 	dangerBg: str("--ds-danger-bg"),
 };
 
+// Convierte un token hex a rgba con alpha. Para degradados hay que usar
+// `withAlpha`: `#RRGGBBAA` no se interpreta como un color transparente en
+// expo-linear-gradient y el degradado termina pareciendo sólido.
+export const withAlpha = (hex, alpha) => {
+	const [red, green, blue] = hex
+		.replace("#", "")
+		.match(/.{2}/g)
+		.map((channel) => parseInt(channel, 16));
+
+	return `rgba(${red},${green},${blue},${alpha})`;
+};
+
 // ── Barra de navegación del sistema (Android) ──────────────────────────────
 // `expo-navigation-bar` nombra el estilo por el color del CONTENIDO, no por el
 // del fondo: 'light' = íconos claros (se leen sobre fondo oscuro), 'dark' =

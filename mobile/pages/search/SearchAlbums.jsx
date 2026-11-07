@@ -1,11 +1,20 @@
-import { ActivityIndicator, Image, ScrollView, Text, View } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { useSearchAlbums } from "@synthos/shared";
 import { colors } from "../../theme";
+import AlbumRow from "../../components/cards/AlbumRow/AlbumRow";
+import Pagination from "../../components/ui/Pagination/Pagination";
 import SearchTabs from "./SearchTabs";
 import { SEARCH_TABS } from "./constants";
 
 export default function SearchAlbums({ query, onChangeTab }) {
-	const { isLoading, error, results } = useSearchAlbums(query || "", 1);
+	const [page, setPage] = useState(1);
+	const { isLoading, error, results } = useSearchAlbums(query || "", page);
+
+	const goToPage = (nextPage) => {
+		if (nextPage < 1 || nextPage > results.totalPages) return;
+		setPage(nextPage);
+	};
 
 	return (
 		<View style={{ flex: 1 }}>
@@ -38,50 +47,21 @@ export default function SearchAlbums({ query, onChangeTab }) {
 				>
 					{results.items?.length ? (
 						results.items.map((album) => (
-							<View
-								key={album.id}
-								style={{
-									flexDirection: "row",
-									gap: 12,
-									backgroundColor: colors.surfaceLight,
-									borderRadius: 8,
-									padding: 10,
-									alignItems: "center",
-								}}
-							>
-								{album.coverUrl ? (
-									<Image
-										source={{ uri: album.coverUrl }}
-										style={{ width: 56, height: 56, borderRadius: 6 }}
-									/>
-								) : (
-									<View
-										style={{
-											width: 56,
-											height: 56,
-											borderRadius: 6,
-											backgroundColor: colors.border,
-										}}
-									/>
-								)}
-								<View style={{ flex: 1 }}>
-									<Text style={{ color: colors.textPrimary }} numberOfLines={1}>
-										{album.title}
-									</Text>
-									<Text
-										style={{ color: colors.textPrimary, opacity: 0.7 }}
-										numberOfLines={1}
-									>
-										{album.artistName}
-									</Text>
-								</View>
-							</View>
+							<AlbumRow key={album.id} album={album} />
 						))
 					) : (
 						<Text style={{ color: colors.textPrimary, opacity: 0.5 }}>
 							Sin resultados
 						</Text>
 					)}
+
+					{results.totalPages > 1 ? (
+						<Pagination
+							page={results.page}
+							totalPages={results.totalPages}
+							onPageChange={goToPage}
+						/>
+					) : null}
 				</ScrollView>
 			)}
 		</View>

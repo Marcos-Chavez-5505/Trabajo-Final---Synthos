@@ -10,17 +10,32 @@ import { MEMBER_ROW_STYLES as styles } from "./MemberRow.styles";
  * Participante de una playlist colaborativa. El botón "Echar" solo aparece
  * para el creador y nunca sobre su propia fila (lo decide quien lo usa).
  */
-export default function MemberRow({ member, canRemove = false, onRemove }) {
+export default function MemberRow({
+	member,
+	canRemove = false,
+	onRemove,
+	onPress,
+}) {
 	return (
 		<View style={styles.row}>
-			<Avatar size={36}>
-				<AvatarImage uri={member.avatarUrl} name={member.username} />
-				<AvatarFallback name={member.username} />
-			</Avatar>
+			<Pressable
+				onPress={onPress}
+				disabled={!onPress}
+				style={styles.person}
+				accessibilityRole={onPress ? "button" : undefined}
+				accessibilityLabel={
+					onPress ? `Ver perfil de ${member.username}` : undefined
+				}
+			>
+				<Avatar size={36}>
+					<AvatarImage uri={member.avatarUrl} name={member.username} />
+					<AvatarFallback name={member.username} />
+				</Avatar>
 
-			<Text style={styles.name} numberOfLines={1}>
-				{member.username}
-			</Text>
+				<Text style={styles.name} numberOfLines={1}>
+					{member.username}
+				</Text>
+			</Pressable>
 
 			<Text style={styles.role}>
 				{member.role === "creator" ? "Creador" : "Colaborador"}

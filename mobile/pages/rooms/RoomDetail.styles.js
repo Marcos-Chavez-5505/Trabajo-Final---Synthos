@@ -163,6 +163,12 @@ export const ROOM_DETAIL_STYLES = StyleSheet.create({
 		borderBottomWidth: 1,
 		borderBottomColor: colors.border,
 	},
+	memberLink: {
+		flex: 1,
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.md,
+	},
 	memberInfo: {
 		flex: 1,
 	},

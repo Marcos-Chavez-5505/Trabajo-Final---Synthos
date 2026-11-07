@@ -13,31 +13,49 @@ const SIZE = 36;
  * Grupo de avatares de una playlist (port de `AvatarStack` web).
  *
  * Muestra hasta 3 y, si hay más, un contador "+N". Con `onPress` se vuelve un
- * botón (abrir participantes / invitar); sin `onPress` es presentacional.
+ * botón (abrir participantes / invitar). Sin `onPress`, cada avatar puede
+ * abrir el perfil de su dueño si se pasa `onMemberPress`; si no, es
+ * presentacional.
  */
 export default function AvatarStack({
 	members = [],
 	onPress,
+	onMemberPress,
 	label = "Ver participantes e invitar",
 }) {
 	if (members.length === 0) return null;
 
 	const visibleMembers = members.slice(0, MAX_VISIBLE);
 	const remaining = members.length - visibleMembers.length;
+	const canOpenMember = !onPress && Boolean(onMemberPress);
 
 	const group = (
 		<View style={styles.group}>
-			{visibleMembers.map((member, index) => (
-				<View
-					key={member.id ?? member.username}
-					style={[styles.item, index > 0 && styles.overlap, { zIndex: 30 - index * 10 }]}
-				>
-					<Avatar size={SIZE}>
-						<AvatarImage uri={member.avatarUrl} name={member.username} />
-						<AvatarFallback name={member.username} />
-					</Avatar>
-				</View>
-			))}
+			{visibleMembers.map((member, index) => {
+				const hasProfile = canOpenMember && member.id != null;
+
+				return (
+					<View
+						key={member.id ?? member.username}
+						style={[styles.item, index > 0 && styles.overlap, { zIndex: 30 - index * 10 }]}
+					>
+						<Avatar
+							size={SIZE}
+							onPress={
+								hasProfile ? () => onMemberPress(member) : undefined
+							}
+							accessibilityLabel={
+								hasProfile
+									? `Ver perfil de ${member.username || "usuario"}`
+									: undefined
+							}
+						>
+							<AvatarImage uri={member.avatarUrl} name={member.username} />
+							<AvatarFallback name={member.username} />
+						</Avatar>
+					</View>
+				);
+			})}
 
 			{remaining > 0 ? (
 				<View style={[styles.remaining, styles.overlap]}>

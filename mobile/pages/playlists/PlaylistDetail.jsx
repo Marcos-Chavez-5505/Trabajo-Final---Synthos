@@ -53,7 +53,7 @@ import {
 	UserGroupIcon,
 	UserIcon,
 } from "../../components/icons";
-import { colors, spacing } from "../../theme";
+import { colors, spacing, withAlpha } from "../../theme";
 import {
 	runWithToast,
 	showActionError,
@@ -659,6 +659,14 @@ export default function PlaylistDetailScreen({ route }) {
 		setInviting(true);
 	}
 
+	function openPersonProfile(personId) {
+		if (String(personId) === String(userId)) {
+			navigation.navigate("Profile");
+			return;
+		}
+		navigation.navigate("ProfilePublic", { userId: personId });
+	}
+
 	function confirmRemoveMember(member) {
 		Alert.alert(
 			"¿Sacar a esta persona?",
@@ -792,7 +800,7 @@ export default function PlaylistDetailScreen({ route }) {
 									resizeMode="cover"
 								/>
 								<LinearGradient
-									colors={[`${colors.surface}00`, colors.surface]}
+									colors={[withAlpha(colors.surface, 0), colors.surface]}
 									start={{ x: 0.5, y: 0 }}
 									end={{ x: 0.5, y: 1 }}
 									style={StyleSheet.absoluteFill}
@@ -919,6 +927,9 @@ export default function PlaylistDetailScreen({ route }) {
 													isCreator && !playlist.isFavorites
 														? openInvite
 														: undefined
+												}
+												onMemberPress={(member) =>
+													openPersonProfile(member.id)
 												}
 											/>
 										) : null}
@@ -1079,6 +1090,7 @@ export default function PlaylistDetailScreen({ route }) {
 									member={member}
 									canRemove={isCreator && member.role !== "creator"}
 									onRemove={() => confirmRemoveMember(member)}
+									onPress={() => openPersonProfile(member.id)}
 								/>
 							))}
 						</View>
