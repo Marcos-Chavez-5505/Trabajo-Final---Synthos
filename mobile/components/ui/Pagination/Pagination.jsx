@@ -1,4 +1,6 @@
 import { Pressable, Text, View } from "react-native";
+import { colors } from "../../../theme";
+import { ArrowLeftIcon, ArrowRightIcon } from "../../icons";
 import { PAGINATION_STYLES as styles } from "./Pagination.styles";
 
 /**
@@ -32,6 +34,7 @@ export default function Pagination({
 				accessibilityLabel="Página anterior"
 				accessibilityState={{ disabled: disabled || isFirstPage }}
 			>
+				<ArrowLeftIcon size={16} color={colors.textPrimary} />
 				<Text style={styles.buttonLabel}>Anterior</Text>
 			</Pressable>
 
@@ -50,6 +53,7 @@ export default function Pagination({
 				accessibilityState={{ disabled: disabled || isLastPage }}
 			>
 				<Text style={styles.buttonLabel}>Siguiente</Text>
+				<ArrowRightIcon size={16} color={colors.textPrimary} />
 			</Pressable>
 		</View>
 	);

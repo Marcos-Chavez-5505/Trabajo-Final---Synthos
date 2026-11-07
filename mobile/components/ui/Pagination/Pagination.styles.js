@@ -10,17 +10,20 @@ export const PAGINATION_STYLES = StyleSheet.create({
 		marginTop: spacing.lg,
 	},
 	button: {
+		alignItems: "center",
 		backgroundColor: colors.surfaceLight,
 		borderRadius: radius.full,
+		flexDirection: "row",
+		gap: spacing.xs,
 		paddingHorizontal: spacing.md,
 		paddingVertical: spacing.sm,
 	},
 	buttonLabel: {
-		...text.large,
+		...text.button,
 		color: colors.textPrimary,
 	},
 	pageLabel: {
-		...text.large,
+		...text.medium,
 		color: colors.textPrimary,
 		opacity: opacity.muted,
 	},
