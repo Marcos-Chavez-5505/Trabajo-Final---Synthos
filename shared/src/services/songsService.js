@@ -14,7 +14,7 @@ const SONGS_PATH = "/songs";
 
 // Tamaño de página para búsquedas. Con backend real pasa a ser el `pageSize` de
 // la query, que es lo que el endpoint espera.
-export const SEARCH_PAGE_SIZE = 10;
+export const SEARCH_PAGE_SIZE = 4;
 
 /**
  * Convierte una canción del backend a la forma que usa la app.

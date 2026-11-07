@@ -1,10 +1,11 @@
-import { ActivityIndicator, Image, ScrollView, Text, View } from "react-native";
-import { useSearchAlbums } from "@synthos/shared";
+import { useState } from "react";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ALBUM_TYPE_LABELS, useSearchAlbums } from "@synthos/shared";
 import { colors } from "../../theme";
+import AlbumRow from "../../components/cards/AlbumRow/AlbumRow";
+import Pagination from "../../components/ui/Pagination/Pagination";
 import SearchTabs from "./SearchTabs";
 import { SEARCH_TABS } from "./constants";
-import Pagination from "../../components/ui/Pagination/Pagination";
-import { useState } from "react";
 
 export default function SearchAlbums({ query, onChangeTab }) {
 	const [page, setPage] = useState(1);
@@ -14,6 +15,7 @@ export default function SearchAlbums({ query, onChangeTab }) {
 		if (nextPage < 1 || nextPage > results.totalPages) return;
 		setPage(nextPage);
 	};
+
 	return (
 		<View style={{ flex: 1 }}>
 			<SearchTabs active={SEARCH_TABS.ALBUMS} onChange={onChangeTab} />
@@ -45,44 +47,13 @@ export default function SearchAlbums({ query, onChangeTab }) {
 				>
 					{results.items?.length ? (
 						results.items.map((album) => (
-							<View
+							<AlbumRow
 								key={album.id}
-								style={{
-									flexDirection: "row",
-									gap: 12,
-									backgroundColor: colors.surfaceLight,
-									borderRadius: 8,
-									padding: 10,
-									alignItems: "center",
-								}}
-							>
-								{album.coverUrl ? (
-									<Image
-										source={{ uri: album.coverUrl }}
-										style={{ width: 56, height: 56, borderRadius: 6 }}
-									/>
-								) : (
-									<View
-										style={{
-											width: 56,
-											height: 56,
-											borderRadius: 6,
-											backgroundColor: colors.border,
-										}}
-									/>
-								)}
-								<View style={{ flex: 1 }}>
-									<Text style={{ color: colors.textPrimary }} numberOfLines={1}>
-										{album.title}
-									</Text>
-									<Text
-										style={{ color: colors.textPrimary, opacity: 0.7 }}
-										numberOfLines={1}
-									>
-										{album.artistName}
-									</Text>
-								</View>
-							</View>
+								title={album.name}
+								artist={album.artistName ?? "Artista desconocido"}
+								label={ALBUM_TYPE_LABELS[album.type] ?? album.type}
+								coverUrl={album.coverUrl}
+							/>
 						))
 					) : (
 						<Text style={{ color: colors.textPrimary, opacity: 0.5 }}>

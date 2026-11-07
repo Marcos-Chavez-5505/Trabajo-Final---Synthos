@@ -10,7 +10,7 @@ import { toSong } from "./songsService.js";
 // canciones con `type=albums`, que devuelve álbum + `_count.songs` en vez de
 // canciones. El mapeo vive acá y no en los componentes (reglas 5 y 6 de AGENTS.md).
 
-export const ALBUMS_PAGE_SIZE = 12;
+export const ALBUMS_PAGE_SIZE = 4;
 const LATEST_ALBUMS_DEFAULT_LIMIT = 12;
 
 // El enum `album_type` de la base, con el texto que muestra la UI.
