@@ -39,7 +39,9 @@ export default function SearchScreen() {
 
 				{tab === SEARCH_TABS.SONGS && <SearchSongs query={query} onChangeTab={setTab} />}
 				{tab === SEARCH_TABS.ALBUMS && <SearchAlbums query={query} onChangeTab={setTab} />}
-				{tab === SEARCH_TABS.PEOPLE && <SearchPeople query={query} onChangeTab={setTab} />}
+				{tab === SEARCH_TABS.PEOPLE && (
+					<SearchPeople key={query} query={query} onChangeTab={setTab} />
+				)}
 			</View>
 		</SafeAreaView>
 	);

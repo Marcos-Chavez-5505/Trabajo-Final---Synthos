@@ -1,14 +1,22 @@
+import { useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useSearchPeople } from "@synthos/shared";
 import { colors } from "../../theme";
+import Pagination from "../../components/ui/Pagination/Pagination";
 import SearchTabs from "./SearchTabs";
 import { SEARCH_TABS } from "./constants";
 import SearchPersonRow from "./SearchPersonRow";
 
 export default function SearchPeople({ query, onChangeTab }) {
 	const navigation = useNavigation();
-	const { isLoading, error, results } = useSearchPeople(query || "", 1);
+	const [page, setPage] = useState(1);
+	const { isLoading, error, results } = useSearchPeople(query || "", page);
+
+	const goToPage = (nextPage) => {
+		if (nextPage < 1 || nextPage > results.totalPages) return;
+		setPage(nextPage);
+	};
 
 	return (
 		<View style={{ flex: 1 }}>
@@ -42,7 +50,7 @@ export default function SearchPeople({ query, onChangeTab }) {
 					{results.items?.length ? (
 						results.items.map((person) => (
 							<SearchPersonRow
-								key={person.id}
+								key={`${results.page}-${person.id}`}
 								person={person}
 								onPress={() =>
 									navigation.navigate("ProfilePublic", {
@@ -56,6 +64,14 @@ export default function SearchPeople({ query, onChangeTab }) {
 							Sin resultados
 						</Text>
 					)}
+
+					{results.totalPages > 1 ? (
+						<Pagination
+							page={results.page}
+							totalPages={results.totalPages}
+							onPageChange={goToPage}
+						/>
+					) : null}
 				</ScrollView>
 			)}
 		</View>
