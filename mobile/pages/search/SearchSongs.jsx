@@ -10,10 +10,18 @@ import { usePlayer, useSearchSongs } from "@synthos/shared";
 import { colors } from "../../theme";
 import SearchTabs from "./SearchTabs";
 import { SEARCH_TABS } from "./constants";
+import Pagination from "../../components/ui/Pagination/Pagination";
+import { useState } from "react";
 
 export default function SearchSongs({ query, onChangeTab }) {
 	const { playSongs, addToQueue } = usePlayer();
-	const { isLoading, error, results } = useSearchSongs(query || "", 1);
+	const [page, setPage] = useState(1);
+	const { isLoading, error, results } = useSearchSongs(query || "", page);
+
+	const goToPage = (nextPage) => {
+		if (nextPage < 1 || nextPage > results.totalPages) return;
+		setPage(nextPage);
+	};
 
 	return (
 		<View style={{ flex: 1 }}>
@@ -109,6 +117,14 @@ export default function SearchSongs({ query, onChangeTab }) {
 							Sin resultados
 						</Text>
 					)}
+
+					{results.totalPages > 1 ? (
+						<Pagination
+							page={results.page}
+							totalPages={results.totalPages}
+							onPageChange={goToPage}
+						/>
+					) : null}
 				</ScrollView>
 			)}
 		</View>

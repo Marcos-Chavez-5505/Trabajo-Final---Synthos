@@ -3,10 +3,17 @@ import { useSearchAlbums } from "@synthos/shared";
 import { colors } from "../../theme";
 import SearchTabs from "./SearchTabs";
 import { SEARCH_TABS } from "./constants";
+import Pagination from "../../components/ui/Pagination/Pagination";
+import { useState } from "react";
 
 export default function SearchAlbums({ query, onChangeTab }) {
-	const { isLoading, error, results } = useSearchAlbums(query || "", 1);
+	const [page, setPage] = useState(1);
+	const { isLoading, error, results } = useSearchAlbums(query || "", page);
 
+	const goToPage = (nextPage) => {
+		if (nextPage < 1 || nextPage > results.totalPages) return;
+		setPage(nextPage);
+	};
 	return (
 		<View style={{ flex: 1 }}>
 			<SearchTabs active={SEARCH_TABS.ALBUMS} onChange={onChangeTab} />
@@ -82,6 +89,14 @@ export default function SearchAlbums({ query, onChangeTab }) {
 							Sin resultados
 						</Text>
 					)}
+
+					{results.totalPages > 1 ? (
+						<Pagination
+							page={results.page}
+							totalPages={results.totalPages}
+							onPageChange={goToPage}
+						/>
+					) : null}
 				</ScrollView>
 			)}
 		</View>
