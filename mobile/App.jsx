@@ -27,6 +27,7 @@ import ArtistsScreen from "./pages/artists/Artists";
 import PopularScreen from "./pages/popular/Popular";
 import NotificationScreen from "./pages/notifications/Notifications";
 import MoodScreen from "./pages/mood/Mood";
+import ArtistDetailPage from "./pages/artists/ArtistsDetail/ArtistDetail";
 
 initApi();
 
@@ -76,19 +77,18 @@ function RootNavigator() {
 				<Stack.Screen name="Register" component={Register} />
 				<Stack.Screen name="Main" component={MainTabs} />
 				<Stack.Screen name="Profile" component={ProfileScreen} />
-				<Stack.Screen
-					name="ProfilePublic"
-					component={ProfilePublicScreen}
-				/>
+				<Stack.Screen name="ProfilePublic" component={ProfilePublicScreen} />
 				<Stack.Screen name="FollowList" component={FollowListScreen} />
 				<Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
 				<Stack.Screen name="CreateRoom" component={CreateRoomScreen} />
 				<Stack.Screen name="RoomDetail" component={RoomDetailScreen} />
-				<Stack.Screen name="Albums" component={AlbumsScreen} />
-				<Stack.Screen name="Artists" component={ArtistsScreen} />
-				<Stack.Screen name="Popular" component={PopularScreen} />
 				<Stack.Screen name="Notifications" component={NotificationScreen} />
 				<Stack.Screen name="Mood" component={MoodScreen} />
+				{/* ❌ ya no van acá */}
+				{/* <Stack.Screen name="Albums" component={AlbumsScreen} /> */}
+				{/* <Stack.Screen name="Artists" component={ArtistsScreen} /> */}
+				{/* <Stack.Screen name="Popular" component={PopularScreen} /> */}
+				{/* <Stack.Screen name="ArtistDetail" component={ArtistDetailPage} /> */}
 			</Stack.Navigator>
 		</NavigationContainer>
 	);

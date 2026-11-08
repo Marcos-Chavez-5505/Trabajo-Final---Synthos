@@ -56,12 +56,7 @@ export default function ArtistsPage() {
 	const keyExtractor = useCallback((item) => String(item.id), []);
 
 	return (
-		<View
-			style={[
-				styles.container,
-				{ paddingTop: insets.top, paddingBottom: insets.bottom },
-			]}
-		>
+		<View style={[styles.container, { paddingTop: insets.top }]}>
 			<ScreenHeader
 				title="Artistas"
 				subtitle="El catálogo completo. Abrí un artista para ver sus álbumes."

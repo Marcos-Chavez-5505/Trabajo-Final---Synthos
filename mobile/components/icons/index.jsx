@@ -98,6 +98,7 @@ export const HamburgerMenuIcon = fromCatalog("hamburger_menu");
 export const EllipsisIcon = fromCatalog("ellipsis");
 export const MicrophoneIcon = fromCatalog("microphone");
 export const CloseIcon = fromCatalog("close");
+export const AlbumIcon = fromCatalog("album");
 
 // ── Pendiente de migrar al catálogo ────────────────────────────────────────
 // `LibraryIcon` quedó como placeholder de carátula (MiniPlayerBar,

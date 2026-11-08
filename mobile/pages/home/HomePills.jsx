@@ -4,9 +4,9 @@ import HorizontalScrollBar from "../../components/ui/HorizontalScrollBar/Horizon
 import { HOME_PILLS_STYLES as styles } from "./HomePills.styles";
 
 const PILLS = [
-	{ label: "Álbumes", route: "Albums" },
-	{ label: "Artistas", route: "Artists" },
-	{ label: "Populares", route: "Popular" },
+	{ label: "Álbumes", screen: "Albums" },
+	{ label: "Artistas", screen: "Artists" },
+	{ label: "Populares", screen: "Popular" },
 ];
 
 export default function HomePills() {
@@ -14,10 +14,10 @@ export default function HomePills() {
 
 	return (
 		<HorizontalScrollBar contentContainerStyle={styles.content}>
-			{PILLS.map(({ label, route }) => (
+			{PILLS.map(({ label, screen }) => (
 				<Pressable
-					key={route}
-					onPress={() => navigation.navigate(route)}
+					key={screen}
+					onPress={() => navigation.navigate("Search", { screen })}
 					style={styles.pill}
 				>
 					<Text style={styles.pillText}>{label}</Text>

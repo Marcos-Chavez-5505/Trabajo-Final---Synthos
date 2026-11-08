@@ -2,11 +2,16 @@ import { View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import BottomTabBar from "./BottomTabBar";
 import HomeScreen from "../pages/home/Home";
-import SearchScreen from "../pages/search/Search";
 import ExpandedPlayer from "../components/player/ExpandedPlayer/ExpandedPlayer";
-import { HeadphonesIcon, HomeIcon, PlaylistIcon, SearchIcon } from "../components/icons";
+import {
+	HeadphonesIcon,
+	HomeIcon,
+	PlaylistIcon,
+	SearchIcon,
+} from "../components/icons";
 import RoomsScreen from "../pages/rooms/Rooms";
 import PlaylistsStack from "./PlaylistsStack";
+import SearchStack from "./SearchStack";
 
 const Tab = createBottomTabNavigator();
 
@@ -25,13 +30,13 @@ export default function MainTabs() {
 					options={{ tabBarLabel: "Inicio", tabBarIcon: HomeIcon }}
 				/>
 				<Tab.Screen
-                    name="Rooms"
-                    component={RoomsScreen}
-                    options={{ tabBarLabel: "Salas", tabBarIcon: HeadphonesIcon }}
-                />
+					name="Rooms"
+					component={RoomsScreen}
+					options={{ tabBarLabel: "Salas", tabBarIcon: HeadphonesIcon }}
+				/>
 				<Tab.Screen
 					name="Search"
-					component={SearchScreen}
+					component={SearchStack}
 					options={{ tabBarLabel: "Buscar", tabBarIcon: SearchIcon }}
 				/>
 				<Tab.Screen
