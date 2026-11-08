@@ -49,7 +49,6 @@ export { default as useSongSearch } from "./hooks/useSongsSearch.jsx";
 export * from "./utils/mapError.js";
 export * from "./utils/formatTime.js";
 export { default as buildPageRange } from "./utils/pageRange.js";
-export * from "./utils/sidebarMotion.js";
 
 // tokens
 export * from "./tokens/tokens.js";
@@ -60,6 +59,8 @@ export * from "./icons/icons.js";
 // feature hooks
 export { default as usePopularSongs } from "./features/popular/usePopularSongs.js";
 export { default as useHomeSongs } from "./features/home/useHomeSongs.js";
+export { default as useNewArtists } from "./features/home/useHomeArtists.jsx";
+export { default as useLatestAlbums } from "./features/home/useHomeAlbums.jsx";
 export { default as useRoomsList } from "./features/rooms/useRoomsList.js";
 export { default as useMoodSongs } from "./features/mood/useMoodSongs.js";
 export { default as useAlbums } from "./features/albums/useAlbums.js";
@@ -81,14 +82,6 @@ export { usePlaylistCover } from "./features/playlists/usePlaylistCover.js";
 export { usePlaylistEdit } from "./features/playlists/usePlaylistEdit.js";
 export { resolvePlaylistCoverUrl } from "./features/playlists/playlistCover.js";
 export { default as useReorderSongs } from "./features/playlists/useReorderSongs.js";
-export {
-	REORDER_DEBOUNCE_MS,
-	DRAG_SCALE,
-	DRAG_SCALE_X,
-	NEIGHBOR_SEPARATION,
-	DRAG_SPRING,
-	DRAG_SETTLE_SPRING,
-} from "./features/playlists/reorderConfig.js";
 export { default as useMyRooms } from "./features/rooms/useMyRooms.js";
 export { default as useRoomPlayback } from "./features/rooms/useRoomPlayback.js";
 export { default as useFollow } from "./features/social/useFollow.js";

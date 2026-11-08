@@ -1,5 +1,5 @@
 import musicNoteIcon from '@synthos/shared/assets/icons/music_note.svg'
-import QueueActionButton from '../player/QueueActionButton.jsx'
+import QueueActionButton from '@/components/actions/QueueActionButton.jsx'
 
 /**
  * Tarjeta de canción compacta, sin overlay: carátula cuadrada y texto debajo

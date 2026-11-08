@@ -4,7 +4,7 @@ import * as React from "react"
 import * as ToastPrimitive from "@/components/animate-ui/primitives/toast"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button } from "./button"
 import checkIcon from "@synthos/shared/assets/icons/check.svg"
 import closeIcon from "@synthos/shared/assets/icons/close.svg"
 

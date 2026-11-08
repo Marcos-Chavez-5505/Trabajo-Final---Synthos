@@ -1,0 +1,309 @@
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuPopup,
+  DropdownMenuPositioner,
+  DropdownMenuPortal,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu.tsx'
+import {
+  joinRoom,
+  ROOM_SORTS,
+  DEFAULT_ROOM_SORT,
+  ROOM_ORDERS,
+  DEFAULT_ROOM_ORDER,
+} from '@synthos/shared'
+import { useDebounce, useRoomsList } from '@synthos/shared'
+import RoomCard from '@/components/cards/RoomCard.jsx'
+import JoinRoomDialog from '@/features/rooms/components/JoinRoomDialog.jsx'
+import roomIcon from '@synthos/shared/assets/icons/headphones.svg'
+import searchIcon from '@synthos/shared/assets/icons/search.svg'
+import threeDotsIcon from '@synthos/shared/assets/icons/three_dots.svg'
+import { mapApiError } from '@synthos/shared'
+import { clearRoomNotice, readRoomNotice } from '@/features/rooms/lib/roomNotice.js'
+
+const DEBOUNCE_MS = 300
+
+/**
+ * `/salas`: listado de salas con buscador y filtros (TS-16 + TS-17).
+ */
+export default function RoomsPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const query = searchParams.get('q') ?? ''
+  const sort = readSort(searchParams.get('sort'))
+  const order = readOrder(searchParams.get('order'))
+
+  const [input, setInput] = useState(query)
+  const [joinOpen, setJoinOpen] = useState(false)
+  const [roomNotice] = useState(() => {
+    const message = readRoomNotice()
+    if (message) clearRoomNotice()
+    return message
+  })
+
+  const debounced = useDebounce(input, DEBOUNCE_MS)
+
+  useEffect(() => {
+    setInput(query)
+  }, [query])
+
+  useEffect(() => {
+    const next = debounced.trim()
+
+    if (next === query.trim()) return
+
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+
+        if (next) params.set('q', next)
+        else params.delete('q')
+
+        return params
+      },
+      { replace: true },
+    )
+  }, [debounced, query, setSearchParams])
+
+  const { isCurrent, rooms, error } = useRoomsList(query, sort, order)
+
+  function patchParams(patch) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+
+      Object.entries(patch).forEach(([key, value]) => {
+        if (value === null) next.delete(key)
+        else next.set(key, value)
+      })
+
+      return next
+    })
+  }
+
+  function handleSort(criterio) {
+    patchParams({ sort: criterio === DEFAULT_ROOM_SORT ? null : criterio })
+  }
+
+  function handleOrder(sentido) {
+    patchParams({ order: sentido === DEFAULT_ROOM_ORDER ? null : sentido })
+  }
+
+  return (
+    <section className="px-6 py-4 md:px-10">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-foreground Header3">Salas</h1>
+          <p className="text-muted-foreground TextMedium mt-1">
+            Salas de escucha compartida. Buscá por nombre de sala o por el nombre
+            de quien la anfitriona.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/salas/crear"
+            className="rounded px-4 py-2 Fucsia Button hover:brightness-110"
+          >
+            Crear sala
+          </Link>
+          <button
+            type="button"
+            onClick={() => setJoinOpen(true)}
+            className="rounded px-4 py-2 Volume Button hover:brightness-110"
+          >
+            Unirme con código
+          </button>
+          <RoomSortMenu
+            sort={sort}
+            order={order}
+            onSort={handleSort}
+            onOrder={handleOrder}
+          />
+        </div>
+      </header>
+
+      <div className="mt-6 max-w-md" role="search">
+        <div className="Volume flex items-center gap-2 rounded-full px-4 py-2">
+          <img src={searchIcon} alt="" aria-hidden="true" className="h-4 w-4 shrink-0" />
+          <input
+            type="search"
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder="Buscar sala o anfitriona"
+            aria-label="Buscar sala por nombre o por anfitriona"
+            className="text-foreground TextRegluar placeholder-muted-foreground/60 w-full bg-transparent outline-none"
+          />
+        </div>
+      </div>
+
+      {roomNotice && (
+        <p className="mt-6 max-w-2xl rounded px-3 py-2 Volume TextMedium" role="status">
+          {roomNotice}
+        </p>
+      )}
+
+      {error && <p className="mt-6 rounded px-3 py-2 Salmon TextMedium">{error}</p>}
+
+      {!isCurrent ? (
+        <p className="text-muted-foreground TextRegluar mt-8">Buscando salas…</p>
+      ) : rooms.length === 0 ? (
+        <EmptyState hasQuery={Boolean(query.trim())} />
+      ) : (
+        <ul className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {rooms.map((room) => (
+            <li key={room.id}>
+              <RoomCard room={room} action={<RoomCardAction room={room} />} />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <JoinRoomDialog open={joinOpen} onOpenChange={setJoinOpen} />
+    </section>
+  )
+}
+
+function RoomCardAction({ room }) {
+  const full = room.maxCapacity !== null && room.membersCount >= room.maxCapacity
+
+  if (full) {
+    return (
+      <span className="text-muted-foreground TextTiny self-center">
+        Sala llena ({room.membersCount}/{room.maxCapacity})
+      </span>
+    )
+  }
+
+  return <JoinRoomButton room={room} />
+}
+
+function JoinRoomButton({ room }) {
+  const navigate = useNavigate()
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleJoin() {
+    if (pending) return
+
+    setPending(true)
+    setError('')
+
+    try {
+      const joined = await joinRoom(room.code)
+
+      navigate(`/salas/${joined.id}`)
+    } catch (cause) {
+      setError(mapApiError(cause))
+      setPending(false)
+    }
+  }
+
+  return (
+    <span className="flex flex-1 flex-col">
+      <button
+        type="button"
+        onClick={handleJoin}
+        disabled={pending}
+        className="rounded px-3 py-2 Fucsia Button hover:brightness-110 disabled:opacity-50"
+      >
+        {pending ? 'Uniéndote…' : 'Unirme'}
+      </button>
+      {error && <span className="text-muted-foreground TextTiny mt-1">{error}</span>}
+    </span>
+  )
+}
+
+function RoomSortMenu({ sort, order, onSort, onOrder }) {
+  const active = ROOM_SORTS.find((c) => c.value === sort) ?? ROOM_SORTS[0]
+  const sentido = ROOM_ORDERS.find((o) => o.value === order) ?? ROOM_ORDERS[0]
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            className="Volume Button CardRadius flex items-center gap-2 rounded px-4 py-2"
+            aria-label={`Ordenar por ${active.label}, ${sentido.label}`}
+          />
+        }
+      >
+        <img src={threeDotsIcon} alt="" aria-hidden="true" className="h-4 w-4" />
+        {active.label} · {sentido.label}
+      </DropdownMenuTrigger>
+
+      <DropdownMenuPortal>
+        <DropdownMenuPositioner side="bottom" align="end">
+          <DropdownMenuPopup>
+            {ROOM_SORTS.map((criterio) => (
+              <DropdownMenuItem
+                key={criterio.value}
+                nativeButton
+                label={`Ordenar por ${criterio.label}`}
+                onClick={() => onSort(criterio.value)}
+                className={
+                  criterio.value === sort ? 'bg-sidebar-accent TextMedium' : undefined
+                }
+              >
+                {criterio.label}
+              </DropdownMenuItem>
+            ))}
+
+            <DropdownMenuItem
+              nativeButton
+              label={
+                order === 'asc' ? 'Cambiar a orden descendente' : 'Cambiar a orden ascendente'
+              }
+              onClick={() => onOrder(order === 'asc' ? 'desc' : 'asc')}
+              className="border-t border-sidebar-border"
+            >
+              {order === 'asc' ? 'Orden descendente' : 'Orden ascendente'}
+            </DropdownMenuItem>
+          </DropdownMenuPopup>
+        </DropdownMenuPositioner>
+      </DropdownMenuPortal>
+    </DropdownMenu>
+  )
+}
+
+function EmptyState({ hasQuery }) {
+  return (
+    <div className="py-16 text-center">
+      <img
+        src={roomIcon}
+        alt=""
+        aria-hidden="true"
+        className="mx-auto h-10 w-10 invert opacity-50"
+      />
+      {hasQuery ? (
+        <>
+          <p className="text-foreground Header4 mt-4">
+            No encontramos salas con ese criterio
+          </p>
+          <p className="text-muted-foreground TextRegluar mt-1">
+            Probá con otro nombre de sala o de anfitriona. Si la sala es privada,
+            entrá con su código.
+          </p>
+        </>
+      ) : (
+        <>
+          <p className="text-foreground Header4 mt-4">Todavía no hay salas</p>
+          <p className="text-muted-foreground TextRegluar mt-1">
+            Cuando alguien abra una sala, aparece acá.
+          </p>
+        </>
+      )}
+    </div>
+  )
+}
+
+function readSort(value) {
+  return ROOM_SORTS.some((c) => c.value === value) ? value : DEFAULT_ROOM_SORT
+}
+
+function readOrder(value) {
+  return ROOM_ORDERS.some((o) => o.value === value) ? value : DEFAULT_ROOM_ORDER
+}
