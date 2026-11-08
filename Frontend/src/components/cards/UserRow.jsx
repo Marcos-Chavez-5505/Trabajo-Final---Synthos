@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import Avatar from '../ui/Avatar.jsx'
+import Avatar from '@/components/ui/Avatar.jsx'
 
 /**
  * Fila de persona en una lista: avatar, nombre y bio, con el perfil como

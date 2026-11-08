@@ -2,7 +2,7 @@ import * as React from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { cn } from "@/lib/utils"
 
-import { Button } from "@/components/ui/button"
+import { Button } from "./button"
 import closeIcon from "@synthos/shared/assets/icons/close.svg"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {

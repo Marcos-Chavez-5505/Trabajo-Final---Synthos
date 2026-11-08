@@ -23,7 +23,7 @@ import {
   useShouldReduceMotion,
   useTempoTransition,
   type CssTiming,
-} from "../internal/motion"
+} from "@/components/animate-ui/internal/motion"
 import {
   iconOf,
   moveDrag,
@@ -40,7 +40,7 @@ import {
   type Direction,
   type Drag,
   type Snapshot,
-} from "../internal/toast-motion"
+} from "@/components/animate-ui/internal/toast-motion"
 
 // Valores que en el repo original viven en `internal/modal-motion`
 // (TOAST_TRANSITION, DISMISS_TRANSITION) y `internal/anchored`

@@ -2,11 +2,11 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
-import App from './App.jsx'
-import { Toaster } from './components/ui/toast.tsx'
+import App from '@/app/App.jsx'
+import { Toaster } from '@/components/ui/toast.tsx'
 import { AuthProvider, PlayerProvider, NotificationsProvider } from '@synthos/shared'
 import { configureApi } from '@synthos/shared'
-import { createHtmlAudioMotor } from './lib/audioMotor.js'
+import { createHtmlAudioMotor } from '@/lib/audioMotor.js'
 
 // Motor de audio web (HTMLAudioElement) inyectado al PlayerProvider compartido.
 const audioElement = document.createElement('audio')

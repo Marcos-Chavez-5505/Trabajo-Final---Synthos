@@ -1,26 +1,26 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import AppLayout from '../components/layout/AppLayout.jsx'
-import Landing from '../pages/Landing/Landing.jsx'
-import Home from '../features/home/Home.jsx'
-import Login from '../features/auth/Login.jsx'
-import Register from '../features/auth/Register.jsx'
-import ProfileView from '../features/profile/ProfileView.jsx'
-import ProfilePublic from '../features/profile/ProfilePublic.jsx'
-import Rooms from '../features/rooms/Rooms.jsx'
-import CreateRoom from '../features/rooms/CreateRoom.jsx'
-import RoomView from '../features/rooms/RoomView.jsx'
-import MoodScan from '../features/mood/MoodScan.jsx'
-import FollowList from '../features/social/FollowList.jsx'
-import Search from '../features/search/Search.jsx'
-import Playlists from '../features/playlists/Playlists.jsx'
-import Components from '../pages/components/Components.jsx'
-import PlaylistDetail from '../features/playlists/PlaylistDetail.jsx'
-import Albums from '../features/albums/Albums.jsx'
-import AlbumDetail from '../features/albums/AlbumDetail.jsx'
-import Artists from '../features/artists/Artists.jsx'
-import ArtistDetail from '../features/artists/ArtistDetail.jsx'
-import Populares from '../features/popular/Populares.jsx'
-import Notifications from '../features/notifications/Notifications.jsx'
+import AppLayout from '@/app/layout/AppLayout.jsx'
+import LandingPage from '@/pages/landing/LandingPage.jsx'
+import HomePage from '@/pages/home/HomePage.jsx'
+import LoginPage from '@/pages/auth/LoginPage.jsx'
+import RegisterPage from '@/pages/auth/RegisterPage.jsx'
+import ProfilePage from '@/pages/profile/ProfilePage.jsx'
+import PublicProfilePage from '@/pages/profile/PublicProfilePage.jsx'
+import RoomsPage from '@/pages/rooms/RoomsPage.jsx'
+import CreateRoomPage from '@/pages/rooms/CreateRoomPage.jsx'
+import RoomPage from '@/pages/rooms/RoomPage.jsx'
+import MoodPage from '@/pages/mood/MoodPage.jsx'
+import FollowListPage from '@/pages/profile/FollowListPage.jsx'
+import SearchPage from '@/pages/search/SearchPage.jsx'
+import PlaylistsPage from '@/pages/playlists/PlaylistsPage.jsx'
+import ComponentsPage from '@/pages/dev/ComponentsPage.jsx'
+import PlaylistDetailPage from '@/pages/playlists/PlaylistDetailPage.jsx'
+import AlbumsPage from '@/pages/catalog/AlbumsPage.jsx'
+import AlbumDetailPage from '@/pages/catalog/AlbumDetailPage.jsx'
+import ArtistsPage from '@/pages/catalog/ArtistsPage.jsx'
+import ArtistDetailPage from '@/pages/catalog/ArtistDetailPage.jsx'
+import PopularPage from '@/pages/catalog/PopularPage.jsx'
+import NotificationsPage from '@/pages/notifications/NotificationsPage.jsx'
 import PublicOnly from './PublicOnly.jsx'
 import RequireAuth from './RequireAuth.jsx'
 
@@ -35,13 +35,13 @@ function Protected({ children }) {
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={<LandingPage />} />
 
       <Route
         path="/login"
         element={
           <PublicOnly>
-            <Login />
+            <LoginPage />
           </PublicOnly>
         }
       />
@@ -49,91 +49,91 @@ export default function AppRoutes() {
         path="/register"
         element={
           <PublicOnly>
-            <Register />
+            <RegisterPage />
           </PublicOnly>
         }
       />
 
-      <Route path="/home" element={<Protected><Home /></Protected>} />
+      <Route path="/home" element={<Protected><HomePage /></Protected>} />
       <Route
         path="/perfil"
-        element={<Protected><ProfileView /></Protected>}
+        element={<Protected><ProfilePage /></Protected>}
       />
       <Route
         path="/populares"
-        element={<Protected><Populares /></Protected>}
+        element={<Protected><PopularPage /></Protected>}
       />
       <Route
         path="/notificaciones"
-        element={<Protected><Notifications /></Protected>}
+        element={<Protected><NotificationsPage /></Protected>}
       />
       {/* TS-09: biblioteca personal. react-router rankea los paths, así que el
           `/playlists/:id` no matchea el `/playlists` exacto sin importar el
           orden. */}
       <Route
         path="/playlists"
-        element={<Protected><Playlists /></Protected>}
+        element={<Protected><PlaylistsPage /></Protected>}
       />
       <Route
         path="/playlists/:id"
-        element={<Protected><PlaylistDetail /></Protected>}
+        element={<Protected><PlaylistDetailPage /></Protected>}
       />
       {/* Catálogo de discos: grilla paginada y detalle por id. */}
       <Route
         path="/albums"
-        element={<Protected><Albums /></Protected>}
+        element={<Protected><AlbumsPage /></Protected>}
       />
       <Route
         path="/albums/:id"
-        element={<Protected><AlbumDetail /></Protected>}
+        element={<Protected><AlbumDetailPage /></Protected>}
       />
       <Route
         path="/artistas"
-        element={<Protected><Artists /></Protected>}
+        element={<Protected><ArtistsPage /></Protected>}
       />
       <Route
         path="/artistas/:id"
-        element={<Protected><ArtistDetail /></Protected>}
+        element={<Protected><ArtistDetailPage /></Protected>}
       />
       {/* TS-17/TS-16: listado de salas con buscador y orden por calificación del
           anfitrión. TS-14 agrega crear la sala y su pantalla: ambas detrás de
           `Protected` porque el backend exige sesión hasta para leer el detalle. */}
-      <Route path="/salas" element={<Protected><Rooms /></Protected>} />
-      <Route path="/salas/crear" element={<Protected><CreateRoom /></Protected>} />
-      <Route path="/salas/:id" element={<Protected><RoomView /></Protected>} />
+      <Route path="/salas" element={<Protected><RoomsPage /></Protected>} />
+      <Route path="/salas/crear" element={<Protected><CreateRoomPage /></Protected>} />
+      <Route path="/salas/:id" element={<Protected><RoomPage /></Protected>} />
       {/* TS-20: recomendaciones por estado de ánimo. El detector se descarga
           cuando se entra a la pantalla, no al cargar la app. */}
-      <Route path="/animo" element={<Protected><MoodScan /></Protected>} />
-      <Route path="/buscar" element={<Protected><Search /></Protected>} />
+      <Route path="/animo" element={<Protected><MoodPage /></Protected>} />
+      <Route path="/buscar" element={<Protected><SearchPage /></Protected>} />
       {/* Listas de seguidores y seguidos (TS-10). Las del propio usuario van
           dentro de `Protected` porque dependen de la sesión; las de otra persona
           no, igual que el perfil público del que cuelgan. Cada ruta declara la
           relación como prop, así `/perfil/cualquiera` no matchea nada. */}
       <Route
         path="/perfil/seguidores"
-        element={<Protected><FollowList relation="seguidores" /></Protected>}
+        element={<Protected><FollowListPage relation="seguidores" /></Protected>}
       />
       <Route
         path="/perfil/siguiendo"
-        element={<Protected><FollowList relation="siguiendo" /></Protected>}
+        element={<Protected><FollowListPage relation="siguiendo" /></Protected>}
       />
       {/* `/profile/:id` es el perfil público de otra persona (TS-08). Va fuera de
           `Protected` a propósito: es una vista de lectura y no debería depender
           de que haya sesión. */}
       <Route
         path="/profile/:id"
-        element={<AppLayout><ProfilePublic /></AppLayout>}
+        element={<AppLayout><PublicProfilePage /></AppLayout>}
       />
       <Route
         path="/profile/:id/seguidores"
-        element={<AppLayout><FollowList relation="seguidores" /></AppLayout>}
+        element={<AppLayout><FollowListPage relation="seguidores" /></AppLayout>}
       />
       <Route
         path="/profile/:id/siguiendo"
-        element={<AppLayout><FollowList relation="siguiendo" /></AppLayout>}
+        element={<AppLayout><FollowListPage relation="siguiendo" /></AppLayout>}
       />
 
-      <Route path="/components" element={<Protected><Components /></Protected>} />
+      <Route path="/components" element={<Protected><ComponentsPage /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
