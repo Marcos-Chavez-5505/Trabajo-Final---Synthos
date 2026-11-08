@@ -77,6 +77,8 @@ export { default as useArtists } from "./features/artists/useArtists.js";
 export { default as useArtistDetail } from "./features/artists/useArtistDetail.js";
 export { default as usePlaylistList } from "./features/playlists/usePlaylistList.js";
 export { default as useSongPlaylists } from "./features/playlists/useSongPlaylists.js";
+export { usePlaylistCover } from "./features/playlists/usePlaylistCover.js";
+export { usePlaylistEdit } from "./features/playlists/usePlaylistEdit.js";
 export { resolvePlaylistCoverUrl } from "./features/playlists/playlistCover.js";
 export { default as useReorderSongs } from "./features/playlists/useReorderSongs.js";
 export {

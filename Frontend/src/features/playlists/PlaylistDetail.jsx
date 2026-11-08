@@ -14,9 +14,8 @@ import {
   AlertDialogTitle,
 } from '../../components/ui/alert-dialog.tsx'
 import Avatar from '../../components/ui/Avatar.jsx'
-import AvatarStack from '../../components/ui/AvatarStack.jsx'
 import { toastMessages } from '../../components/ui/toast-messages.js'
-import { getSongById, mapApiError, resolvePlaylistCoverUrl } from '@synthos/shared'
+import { getSongById, resolvePlaylistCoverUrl } from '@synthos/shared'
 import {
   getPlaylistById,
   listSentInvitations,
@@ -31,25 +30,19 @@ import {
   updateFavoritesOrder,
 } from '@synthos/shared'
 import { useReorderSongs, DRAG_SCALE, DRAG_SCALE_X, NEIGHBOR_SEPARATION, DRAG_SPRING, DRAG_SETTLE_SPRING } from '@synthos/shared'
-import cameraIcon from '@synthos/shared/assets/icons/camera.svg'
+import HeaderPlaylist from './HeaderPlaylist.jsx'
 import headphonesIcon from '@synthos/shared/assets/icons/headphones.svg'
 import musicNoteIcon from '@synthos/shared/assets/icons/music_note.svg'
-import pencilLineIcon from '@synthos/shared/assets/icons/pencil_line.svg'
-import playIcon from '@synthos/shared/assets/icons/play.svg'
 import trashIcon from '@synthos/shared/assets/icons/trash.svg'
-import userIcon from '@synthos/shared/assets/icons/user.svg'
-import userGroupIcon from '@synthos/shared/assets/icons/user_group.svg'
 import PlaylistSongRow from './PlaylistSongRow.jsx'
 import UserSearch from '../search/UserSearch.jsx'
 import useBreakpoint from '../../hooks/useBreakpoint.js'
-import { prepareProfileImage } from '../profile/profileImage.js'
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
 import { animate } from 'framer-motion'
 
 const MemoPlaylistSongRow = memo(PlaylistSongRow)
 const ROW_EXIT_MS = 150
 const EXIT_TIMEOUT_MS = 400
-const COVER_EDIT_TRANSITION = { duration: 0.18, ease: 'easeInOut' }
 
 export default function PlaylistDetail() {
   const { id } = useParams()
@@ -67,16 +60,7 @@ export default function PlaylistDetail() {
   const [hasExitingRow, setHasExitingRow] = useState(false)
   const [invitationsResponse, setInvitationsResponse] = useState({ key: null, items: [] })
   const [inviting, setInviting] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [draftName, setDraftName] = useState('')
-  const [draftDescription, setDraftDescription] = useState('')
-  const [savingEdit, setSavingEdit] = useState(false)
-  const [editError, setEditError] = useState('')
-  const [coverMenuOpen, setCoverMenuOpen] = useState(false)
-  const [coverBusy, setCoverBusy] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const coverMenuRef = useRef(null)
-  const coverInputRef = useRef(null)
 
   const playlist = playlistResponse.key === `${userId}:${id}` ? playlistResponse.playlist : null
   const loading = userId !== null && playlistResponse.key !== `${userId}:${id}`
@@ -204,7 +188,6 @@ export default function PlaylistDetail() {
     }) || headphonesIcon
   const hasCoverImage = Boolean(playlist?.coverUrl || firstOrderedCoverUrl)
   const canEditCover = Boolean(playlist) && isCreator && !playlist.isFavorites
-  const hasMembers = Boolean(playlist?.members.length)
 
   const playlistIds = new Set((playlist?.songIds ?? []).map(String))
   const orderedEntries = order
@@ -555,123 +538,33 @@ export default function PlaylistDetail() {
     }
   }
 
-  async function handleUpdate({ name, description }) {
-    const updated = await updatePlaylist(userId, id, { name, description })
+  const applyUpdatedPlaylist = useCallback(
+    (updated) => {
+      if (updated) setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
+    },
+    [userId, id]
+  )
 
-    if (updated) {
-      setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
-      setEditing(false)
-    }
-  }
+  const handleApplyEdit = useCallback(
+    async ({ name, description }) => {
+      const updated = await updatePlaylist(userId, id, { name, description })
+      applyUpdatedPlaylist(updated)
+    },
+    [userId, id, applyUpdatedPlaylist]
+  )
 
-  function handleStartEdit() {
-    setDraftName(playlist.name)
-    setDraftDescription(playlist.description ?? '')
-    setEditError('')
-    setEditing(true)
-  }
-
-  function handleCancelEdit() {
-    if (savingEdit) return
-    setEditError('')
-    setEditing(false)
-  }
-
-  async function handleSaveEdit(event) {
-    event.preventDefault()
-
-    if (savingEdit) return
-
-    const name = draftName.trim()
-    if (!name) return
-
-    setEditError('')
-    setSavingEdit(true)
-
-    try {
-      await handleUpdate({ name, description: draftDescription })
-    } catch (cause) {
-      setEditError(mapApiError(cause))
-    } finally {
-      setSavingEdit(false)
-    }
-  }
-
-  function handleEditKeyDown(event) {
-    if (event.key !== 'Escape' || savingEdit) return
-    event.preventDefault()
-    handleCancelEdit()
-  }
-
-  useEffect(() => {
-    if (!coverMenuOpen) return undefined
-
-    function onPointerDown(event) {
-      if (!coverMenuRef.current?.contains(event.target)) setCoverMenuOpen(false)
-    }
-
-    function onKeyDown(event) {
-      if (event.key === 'Escape') setCoverMenuOpen(false)
-    }
-
-    // Igual que los rieles de las filas: scrollear (o redimensionar) la cierra.
-    function onScrollAway() {
-      setCoverMenuOpen(false)
-    }
-
-    document.addEventListener('pointerdown', onPointerDown)
-    document.addEventListener('keydown', onKeyDown)
-    document.addEventListener('scroll', onScrollAway, true)
-    window.addEventListener('wheel', onScrollAway, { passive: true })
-    window.addEventListener('resize', onScrollAway)
-
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
-      document.removeEventListener('keydown', onKeyDown)
-      document.removeEventListener('scroll', onScrollAway, true)
-      window.removeEventListener('wheel', onScrollAway)
-      window.removeEventListener('resize', onScrollAway)
-    }
-  }, [coverMenuOpen])
-
-  async function handleCoverFileChange(event) {
-    const file = event.target.files?.[0]
-
-    event.target.value = ''
-
-    if (!file || coverBusy) return
-
-    setCoverMenuOpen(false)
-    setCoverBusy(true)
-
-    try {
-      const prepared = await prepareProfileImage(file)
+  const handleUploadCover = useCallback(
+    async (prepared) => {
       const updated = await uploadPlaylistCover(userId, id, prepared)
+      applyUpdatedPlaylist(updated)
+    },
+    [userId, id, applyUpdatedPlaylist]
+  )
 
-      if (updated) setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
-    } catch (cause) {
-      toastMessages.playlistCoverUploadError(cause)
-    } finally {
-      setCoverBusy(false)
-    }
-  }
-
-  async function handleRemoveCover() {
-    if (coverBusy || !playlist?.coverUrl) return
-
-    setCoverMenuOpen(false)
-    setCoverBusy(true)
-
-    try {
-      const updated = await removePlaylistCover(userId, id)
-
-      if (updated) setPlaylistResponse({ key: `${userId}:${id}`, playlist: updated })
-    } catch (cause) {
-      toastMessages.playlistCoverRemoveError(cause)
-    } finally {
-      setCoverBusy(false)
-    }
-  }
+  const handleRemoveCover = useCallback(async () => {
+    const updated = await removePlaylistCover(userId, id)
+    applyUpdatedPlaylist(updated)
+  }, [userId, id, applyUpdatedPlaylist])
 
   // Flush al desmontar y al ocultar la pestaña.
   useEffect(() => {
@@ -703,298 +596,30 @@ export default function PlaylistDetail() {
     return <NotFound />
   }
 
-  const deletePlaylistButton = (
-    <button
-      type="button"
-      onClick={() => setDeleteOpen(true)}
-      className={`flex items-center justify-center gap-2 whitespace-nowrap rounded px-4 bg-(--ds-volume)/60 Button hover:brightness-110 ${
-        isMobile ? 'mt-2 w-full py-2' : 'self-center py-2'
-      }`}
-    >
-      <img src={trashIcon} alt="" aria-hidden="true" className="h-5 w-5 shrink-0" />
-      <span className="flex flex-col items-start leading-tight">
-        <span>Eliminar</span>
-        <span>playlist</span>
-      </span>
-    </button>
-  )
-
   return (
     <section className="px-6 pt-8 pb-6 md:px-10">
-      <header
-        className={`-mx-6 flex px-6 md:-mx-10 md:px-10 py-10 ${
-          isMobile
-            ? 'flex-col items-start gap-6'
-            : 'flex-row flex-wrap items-start gap-6 md:gap-10'
-        } ${hasCoverImage ? 'HeaderGlow' : ''}`}
-        style={hasCoverImage ? { '--cover-url': `url(${coverSrc})` } : undefined}
-      >
-        <motion.div
-          ref={coverMenuRef}
-          layout={!prefersReduced}
-          transition={{ layout: { type: 'spring', stiffness: 500, damping: 45 } }}
-          className={`relative shrink-0 ${isMobile ? 'self-center' : ''}`}
-        >
-          <div
-            className={`CardRadius relative flex h-40 w-40 items-center justify-center sm:h-44 sm:w-44 ${
-              hasCoverImage ? 'CoverGlow' : 'Light'
-            }`}
-            style={hasCoverImage ? { '--cover-url': `url(${coverSrc})` } : undefined}
-          >
-            {hasCoverImage ? (
-              <img
-                src={coverSrc}
-                alt=""
-                aria-hidden="true"
-                className="CardRadius absolute inset-0 h-full w-full object-cover"
-              />
-            ) : (
-              <img
-                src={headphonesIcon}
-                alt=""
-                aria-hidden="true"
-                className="h-10 w-10 opacity-70"
-              />
-            )}
-          </div>
-
-          <AnimatePresence initial={false}>
-            {canEditCover && !coverMenuOpen && !coverBusy && (
-              <motion.button
-                key="cover-hit"
-                type="button"
-                onClick={() => setCoverMenuOpen(true)}
-                aria-label="Cambiar portada"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0, pointerEvents: 'none' }}
-                transition={prefersReduced ? { duration: 0 } : COVER_EDIT_TRANSITION}
-                className="CardRadius absolute inset-0 cursor-pointer motion-safe:transition-colors hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-              />
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence initial={false}>
-            {canEditCover && coverMenuOpen && !coverBusy && (
-              <motion.div
-                key="cover-menu"
-                initial={{ opacity: 0, scale: prefersReduced ? 1 : 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: prefersReduced ? 1 : 0.98 }}
-                transition={prefersReduced ? { duration: 0 } : COVER_EDIT_TRANSITION}
-                className="CardRadius absolute inset-0 flex items-center justify-center gap-2 bg-surface/70 backdrop-blur-sm"
-              >
-                <button
-                  type="button"
-                  autoFocus
-                  onClick={() => {
-                    setCoverMenuOpen(false)
-                    coverInputRef.current?.click()
-                  }}
-                  aria-label="Subir nueva portada"
-                  className="rounded-full p-2 text-foreground motion-safe:transition-colors hover:bg-foreground/10 focus-visible:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                  <img
-                    src={cameraIcon}
-                    alt=""
-                    aria-hidden="true"
-                    className="h-6 w-6"
-                  />
-                </button>
-
-                {playlist.coverUrl && (
-                  <button
-                    type="button"
-                    onClick={handleRemoveCover}
-                    aria-label="Quitar portada"
-                    className="rounded-full p-2 text-foreground motion-safe:transition-colors hover:bg-foreground/10 focus-visible:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                  >
-                    <img
-                      src={trashIcon}
-                      alt=""
-                      aria-hidden="true"
-                      className="h-6 w-6"
-                    />
-                  </button>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {coverBusy && (
-            <div
-              role="status"
-              aria-label="Actualizando portada"
-              className="CardRadius absolute inset-0 flex items-center justify-center bg-surface/70 backdrop-blur-sm"
-            >
-              <span className="size-6 animate-spin rounded-full border-2 border-current border-t-transparent text-foreground" />
-            </div>
-          )}
-
-          {canEditCover && (
-            <input
-              ref={coverInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handleCoverFileChange}
-              disabled={coverBusy}
-            />
-          )}
-        </motion.div>
-
-        <motion.div
-          layout={prefersReduced ? false : 'position'}
-          transition={{ layout: { type: 'spring', stiffness: 500, damping: 45 } }}
-          className={`relative z-10 min-w-0 ${isMobile ? 'w-full' : 'flex-1'}`}
-        >
-          {editing ? (
-            <form
-              onSubmit={handleSaveEdit}
-              onKeyDown={handleEditKeyDown}
-              className="max-w-3xl"
-            >
-              <div className="flex items-stretch gap-6">
-                <div className="min-w-0 flex-1">
-                  <input
-                    type="text"
-                    value={draftName}
-                    onChange={(event) => setDraftName(event.target.value)}
-                    aria-label="Nombre de la playlist"
-                    maxLength={60}
-                    autoFocus
-                    placeholder="Título"
-                    className="Header2 w-full min-w-0 rounded bg-(--ds-surface)/20 px-1 outline-none ring-0 ring-transparent focus-visible:ring-2 focus-visible:ring-ring placeholder:opacity-60"
-                  />
-
-                  <textarea
-                    value={draftDescription}
-                    onChange={(event) => setDraftDescription(event.target.value)}
-                    aria-label="Descripción de la playlist"
-                    rows={3}
-                    maxLength={200}
-                    placeholder="Descripción"
-                    className="TextRegluar mt-1 w-full rounded bg-(--ds-surface)/20 px-1 py-1 outline-none ring-0 ring-transparent focus-visible:ring-2 focus-visible:ring-ring resize-none placeholder:opacity-60"
-                  />
-                </div>
-
-                {!isMobile && !playlist.isFavorites && isCreator && deletePlaylistButton}
-              </div>
-
-              {editError && (
-                <p className="Salmon TextMedium mt-2 rounded px-3 py-2">{editError}</p>
-              )}
-
-              <div className="mt-2 flex gap-2">
-                <button
-                  type="submit"
-                  disabled={savingEdit || !draftName.trim()}
-                  className="rounded px-4 py-2 Fucsia Button hover:brightness-110 disabled:opacity-50 disabled:hover:brightness-100"
-                >
-                  {savingEdit ? 'Guardando…' : 'Guardar'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  disabled={savingEdit}
-                  className="rounded px-4 py-2 Volume Button hover:brightness-110 disabled:opacity-50"
-                >
-                  Cancelar
-                </button>
-              </div>
-
-              {isMobile && !playlist.isFavorites && isCreator && deletePlaylistButton}
-            </form>
-          ) : (
-            <>
-              <div className="flex items-start gap-2">
-                <h1 className="Header2 min-w-0 truncate">{playlist.name}</h1>
-
-                {isCreator && !playlist.isFavorites && (
-                  <button
-                    type="button"
-                    onClick={handleStartEdit}
-                    aria-label="Editar nombre y descripción"
-                    className="mt-1 shrink-0 rounded opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-                  >
-                    <img
-                      src={pencilLineIcon}
-                      alt=""
-                      aria-hidden="true"
-                      className="h-5 w-5"
-                    />
-                  </button>
-                )}
-              </div>
-
-              <div className="mt-3 flex items-center gap-2">
-                {hasMembers && (
-                  <AvatarStack
-                    members={playlist.members}
-                    onClick={
-                      isCreator && !playlist.isFavorites
-                        ? () => setInviting(true)
-                        : undefined
-                    }
-                    label="Ver participantes e invitar"
-                  />
-                )}
-
-                <img
-                  src={playlist.isCollaborative ? userGroupIcon : userIcon}
-                  alt={playlist.isCollaborative ? 'Playlist colaborativa' : 'Playlist personal'}
-                  className="ml-4 h-6 w-6 shrink-0"
-                />
-
-                <span aria-hidden="true" className="text-muted-foreground TextMedium">
-                  •
-                </span>
-                <p className="text-muted-foreground TextMedium font-bold">
-                  {visibleCount} {visibleCount === 1 ? 'canción' : 'canciones'}
-                </p>
-              </div>
-
-              <p className="text-muted-foreground TextRegluar mt-3 w-full max-w-md break-words md:max-w-xl">
-                {playlist.description}
-              </p>
-            </>
-          )}
-        </motion.div>
-
-        {!editing && (
-          <motion.div
-            layout={prefersReduced ? false : 'position'}
-            transition={{ layout: { type: 'spring', stiffness: 500, damping: 45 } }}
-            className={`relative z-10 flex flex-wrap items-center gap-2 ${isMobile ? 'w-full justify-end' : ''}`}
-          >
-            <button
-              type="button"
-              onClick={() =>
+      <HeaderPlaylist
+        playlist={playlist}
+        coverSrc={coverSrc}
+        hasCoverImage={hasCoverImage}
+        visibleCount={visibleCount}
+        canEditCover={canEditCover}
+        isMobile={isMobile}
+        onApplyEdit={handleApplyEdit}
+        onUploadCover={handleUploadCover}
+        onRemoveCover={handleRemoveCover}
+        onDelete={() => setDeleteOpen(true)}
+        onInvite={() => setInviting(true)}
+        onPlay={
+          playable.length > 0
+            ? () =>
                 playSongs(playable, 0, {
                   playlistId: id,
                   isFavorites: Boolean(playlist.isFavorites),
                 })
-              }
-              disabled={playable.length === 0}
-              aria-label={`Reproducir ${playlist.name}`}
-              className="Fucsia h-12 w-12 flex cursor-pointer items-center justify-center rounded-full transition duration-150 hover:brightness-80 active:scale-90 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <img src={playIcon} alt="" aria-hidden="true" className="h-6 w-6" />
-            </button>
-
-            {!hasMembers && isCreator && !playlist.isFavorites && (
-              <button
-                type="button"
-                onClick={() => setInviting(true)}
-                aria-label="Invitar personas"
-                className="Volume TextRegluar flex h-9 w-9 items-center justify-center rounded-full hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-              >
-                <span aria-hidden="true">+</span>
-              </button>
-            )}
-          </motion.div>
-        )}
-      </header>
+            : undefined
+        }
+      />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen} closeOnOutsideClick>
         <AlertDialogContent size="md">

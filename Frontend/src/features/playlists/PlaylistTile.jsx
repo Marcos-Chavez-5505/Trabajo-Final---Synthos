@@ -12,7 +12,7 @@ export default function PlaylistTile({ playlist }) {
   const ownerName = playlist.creator?.username || 'Usuario'
 
   return (
-    <article>
+    <article className="max-w-xs w-full">
       <Link
         to={`/playlists/${playlist.id}`}
         className="block bg-transparent hover:opacity-90"
