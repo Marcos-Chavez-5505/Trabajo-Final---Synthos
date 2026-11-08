@@ -4,7 +4,7 @@ Documento de onboarding: **dÃ³nde estÃ¡ cada cosa y quÃ© responsabilidad t
 No reemplaza a los demÃ¡s documentos del proyecto (ver [Â§7](#7-otros-documentos)).
 
 > **Actualizado post-reestructura:** el repo ahora es un monorepo con workspaces (`frontend`, `shared`, `mobile`; `backend` fuera).
-> La lógica de negocio vive en `shared/` y la UI web en `frontend/`. Ver `AGENTS.md` (sección "Estructura del monorepo") y `docs/plan/restructure-plan.md`.
+> La lógica de negocio vive en `shared/` y la UI web en `Frontend/`. Ver `AGENTS.md` y `docs/agents/monorepo-y-adaptadores.md`.
 
 
 ---
@@ -74,24 +74,30 @@ utils/errors.js         httpError(status, message, code): contrato de errores de
 
 ```
 src/
-  main.jsx            AuthProvider > PlayerProvider > BrowserRouter > App
-  App.jsx             SÃ³lo delega en AppRoutes
-  routes/             AppRoutes + guardas RequireAuth (sesiÃ³n obligatoria) y PublicOnly (sin sesiÃ³n)
-  context/            AuthContext.jsx / PlayerContext.jsx (estado) + authContext.js / playerContext.js (createContext)
-  hooks/              useAuth, usePlayer, useBreakpoint, useFavorites, useDebounce, use-mobile
-  services/           ÃšNICA capa que hace fetch. Un archivo por dominio
-  features/           LÃ³gica de negocio y pantallas, una carpeta por dominio
+  main.jsx            AuthProvider > PlayerProvider > NotificationsProvider > BrowserRouter > App
+  app/
+    App.jsx           Sólo delega en AppRoutes y monta usePlayerWebEffects
+    layout/           AppLayout, Sidebar, SidebarAutoCollapse, TopBar, BottomNav
+  routes/             AppRoutes + guardas RequireAuth (sesión obligatoria) y PublicOnly (sin sesión)
+  pages/              Una página por ruta, sufijo *Page
+    landing/ auth/ home/ profile/ playlists/ rooms/ catalog/ search/ notifications/ mood/
+    dev/              ComponentsPage + ejemplos del design system
+  features/           UI y lógica de un dominio (components/, hooks/, lib/)
+    home/ player/ playlists/ rooms/ search/ social/ profile/
+    notifications/ recommendation/ mood/
   components/
-    layout/           AppLayout (Sidebar vs BottomNav), Sidebar, SidebarAutoCollapse, TopBar, BottomNav, MiniPlayerBar
-    player/           PlayerBar (desktop), PlayerControls, ProgressBar
+    actions/          QueueActionButton, AddToQueueButton
     cards/            MediaCard, MiniMediaCard, RoomCard, UserRow, ArtistCard
+    motion/           combobox, SidebarAnimatedGroup
     ui/               Componentes shadcn/base-ui + Avatar y LoadingScreen propios
-  styles/             tokens.css (Ãºnica fuente de valores), utilities.css, base.css
-  assets/*.svg        Set de Ã­conos propio. Se importan como URL y se usan con <img>
-  lib/                utils.ts (cn), formatTime.js, pageRange.js
-  mocks/              Datos falsos. SÃ³lo `rooms.js` los consume (vÃ­a `roomsService`); ver Â§6
-  index.css           Entry point de Tailwind + puente semÃ¡ntico de shadcn
-  pages/Landing/      Landing pÃºblica
+    animate-ui/
+  hooks/              Sólo transversales: useBreakpoint, use-mobile
+  lib/                audioMotor, utils.ts, toastMessages
+    images/           prepareImage (recorte/compresión de imágenes)
+    motion/           sidebar.js, drag.js
+  styles/             tokens.css (única fuente de valores), utilities.css, base.css
+  fonts/              Tipografías propias
+  index.css           Entry point de Tailwind + puente semántico de shadcn
 ```
 
 ---
@@ -105,105 +111,125 @@ El orden de las capas va de la UI hacia la red. **Nunca se salta una capa**: los
 
 `routes/AppRoutes.jsx` declara todas las rutas. Hay tres envoltorios:
 
-- `<Protected>` = `RequireAuth` + `AppLayout` â†’ pide sesiÃ³n y dibuja la shell.
-- `PublicOnly` â†’ si hay sesiÃ³n, redirige a `/home` (login y register).
-- Rutas pÃºblicas de lectura (`/profile/:id`) van **fuera** de `Protected` a propÃ³sito: son un perfil
-  ajeno y no deberÃ­an depender de que haya sesiÃ³n.
+- `<Protected>` = `RequireAuth` + `AppLayout` → pide sesión y dibuja la shell.
+- `PublicOnly` → si hay sesión, redirige a `/home` (login y register).
+- Rutas públicas de lectura (`/profile/:id`) van **fuera** de `Protected` a propósito: son un perfil
+  ajeno y no deberían depender de que haya sesión.
 
 `RequireAuth` y `PublicOnly` miran `loading` de `useAuth` y muestran `LoadingScreen` mientras
 `AuthProvider` resuelve la sesiÃ³n.
 
 ### 3.2 Estado global (Context)
 
-SÃ³lo dos, y son transversales:
+Los contextos globales viven en `shared/src/context/` y se consumen desde `@synthos/shared`:
 
-- **`AuthProvider`** (`context/AuthContext.jsx`): `user`, `loading`, `register`, `login`, `logout`,
-  `updateProfile`, `uploadProfilePicture`. Al montar llama `getCurrentUser()` para rehidratar la sesiÃ³n. TambiÃ©n registra el
-  handler de 401: si un request autenticado recibe 401, limpia la sesiÃ³n y deja `user` en `null`; el
-  redirect lo hace `RequireAuth`, no el provider (que estÃ¡ fuera del Router).
-- **`PlayerProvider`** (`context/PlayerContext.jsx`): un Ãºnico `<audio>` HTML5 con `queue`, `index`,
-  `song`, `isPlaying`, `currentTime`, `duration`, `shuffle`, `repeat`, y los controles
+- **`AuthProvider`** (`shared/src/context/AuthContext.jsx` + `authContext.js`): `user`, `loading`,
+  `register`, `login`, `logout`, `updateProfile`, `uploadProfilePicture`. Al montar llama
+  `getCurrentUser()` para rehidratar la sesión. También registra el handler de 401: si un request
+  autenticado recibe 401, limpia la sesión y deja `user` en `null`; el redirect lo hace `RequireAuth`,
+  no el provider (que está fuera del Router).
+- **`PlayerProvider`** (`shared/src/context/PlayerContext.jsx` + `playerContext.js`): un único motor de
+  audio inyectado por la app web (`lib/audioMotor.js`) con `queue`, `index`, `song`, `isPlaying`,
+  `currentTime`, `duration`, `shuffle`, `repeat`, y los controles
   `play/pause/next/previous/seek/playSongs`.
+- **`NotificationsProvider`** (`shared/src/context/NotificationsContext.jsx`): contador y estado de
+  notificaciones.
 
-El `createContext` va en un `.js` aparte (`authContext.js`, `playerContext.js`) para que el `.jsx`
-exporte sÃ³lo el provider y no rompa el fast refresh.
+El `createContext` va en un `.js` aparte para que el `.jsx` exporte sólo el provider y no rompa el fast
+refresh.
+
+La app web sólo monta los providers en `main.jsx` y aporta los adaptadores de plataforma
+(almacenamiento y motor de audio). No define contextos propios.
 
 ### 3.3 Hooks
 
-| Hook | Para quÃ© |
+`Frontend/src/hooks/` sólo contiene hooks transversales de la UI web:
+
+| Hook | Para qué |
 |---|---|
-| `useAuth` / `usePlayer` | Leen el Context y fallan ruidosamente si faltan sus providers |
 | `useBreakpoint` | `'mobile'` \| `'desktop'` con 768px (coincide con `md:` de Tailwind) |
-| `useFavorites` | Favoritos del usuario. Cada consumidor tiene su instancia; se suscribe a `subscribeToPlaylists` para que todas coincidan |
-| `useDebounce` | Para inputs de bÃºsqueda |
+| `use-mobile` | Primitiva de shadcn para el sidebar (mismo breakpoint) |
 
-`useSongPlaylists` y `useFollow` viven en `features/playlists` y `features/social`: son lÃ³gica de una
-feature, no infraestructura.
+Los hooks de negocio viven en `shared/src/hooks/` (globales) o en
+`shared/src/features/<dominio>/` (de feature): `useAuth`, `usePlayer`, `useFavorites`, `useDebounce`,
+`useSongPlaylists`, `useFollow`, etc. La app web los importa desde `@synthos/shared`.
 
-### 3.4 Services â€” la Ãºnica capa con `fetch`
+### 3.4 Services — la única capa con `fetch`
 
-`services/api.js` es el Ãºnico lugar del Frontend que llama a la red. Expone
-`get/post/patch/put/del`, mÃ¡s:
+`shared/src/services/api.js` es el único lugar del repo que llama a la red. Expone
+`get/post/patch/put/del`, más:
 
 - `API_BASE_URL = '/api'` y las rutas siempre relativas.
-- `setAuthToken(token)`: acÃ¡ el token queda **en memoria** para que ningÃºn service lo maneje. Ojo que
-  no es el Ãºnico lugar donde existe: `authService` lo persiste en `localStorage["synthos_auth"]` (con
-  el usuario cacheado) para que la sesiÃ³n sobreviva al refresh.
+- `setAuthToken(token)`: acá el token queda **en memoria** para que ningún service lo maneje.
 - `setUnauthorizedHandler(fn)`: se dispara una sola vez ante un 401 **con token adjunto**.
-- `ApiError`: lleva `status` y `code` del backend, asÃ­ la UI puede mostrar el mensaje real.
+- `ApiError`: lleva `status` y `code` del backend, así la UI puede mostrar el mensaje real.
 - `postForm(path, formData)`: multipart. `request()` detecta que el body es un `FormData` y lo manda
   crudo, sin `Content-Type`, para que el browser ponga el `boundary` (subida de la foto de perfil).
 
-Los services de dominio (`authService`, `songsService`, `albumsService`, `artistsService`, `usersService`, `playlistsService`) son la
-capa que se edita al migrar un mÃ³dulo de mock a la API real; nada fuera de `services/` cambia.
+La app web inyecta los adaptadores con `configureApi({ baseUrl, storage })` en `main.jsx`; el
+almacenamiento del token es específico de cada plataforma (localStorage en web).
+
+Los services de dominio (`authService`, `songsService`, `albumsService`, `artistsService`,
+`usersService`, `playlistsService`, `roomsService`, `notificationsService`, `recommendationService`,
+`socketService`) viven en `shared/src/services/` y se reexportan desde `@synthos/shared`.
 
 ### 3.5 `features/`
 
-Una carpeta por dominio, con sus pantallas, componentes y hooks:
+Las pantallas ya no viven en `features/`: cada ruta tiene su archivo en `pages/`.
+`features/` contiene sólo UI y lógica reutilizable de un dominio:
 
 | Carpeta | Contenido |
 |---|---|
-| `auth/` | `Login`, `Register` |
-| `home/` | `Home` (elige `HomeDesktop`/`HomeMobile` por breakpoint) |
-| `profile/` | `ProfileView` (propio), `ProfilePublic` (ajeno), `ProfileEdit` + `profileImage.js` (recorte/compresiÃ³n de la foto antes de subirla) |
-| `mood/` | `MoodScan` (pantalla `/animo`), `moodDetection.js` (face-api bajo demanda + mapeo de expresiones a los 4 estados), `MoodPicker`, `MoodResults` |
-| `playlists/` | Biblioteca y detalle, formularios, `MisPlaylists` (sidebar), `FavoriteButton`, `AddToPlaylistPanel`, `useSongPlaylists` |
-| `search/` | `Search` + pestaÃ±as `SearchSongs` / `SearchAlbums` / `SearchPeople` / `SearchTabs` |
-| `social/` | `useFollow`, `FollowButton`, `FollowList`, `FollowStats`, `ProfileSummary` |
-| `rooms/` | `Rooms.jsx`: listado con `RoomCard` (hoy contra mocks; crear/administrar salas, pendiente) |
-| `popular/` | `Populares.jsx`: ranking semanal por favoritos (`GET /songs/popular`), reutiliza `MediaCard` |
-| `albums/` | `Albums` (grilla paginada del catÃ¡logo), `AlbumDetail` (cabecera + pistas) |
-| `artists/` | `Artists` (catÃ¡logo paginado con `?q=`/`?page=`) y `ArtistDetail` (cabecera + grilla de Ã¡lbumes) |
+| `home/` | `HomeDesktop`, `HomeSection` |
+| `player/` | `PlayerBar`, `ExpandedPlayer`, `PlayerControls`, `ProgressBar`, `TransportControls`, `ActionControls`, `UpNext`, `Parts` + `usePlayerWebEffects` |
+| `playlists/` | `PlaylistTile`, `PlaylistSongRow`, `PlaylistCreateForm`, `PlaylistInvitations`, `HeaderPlaylist`, `MisPlaylists`, `CollabPlaylists`, `FavoriteButton`, `AddToPlaylistPanel`; `index.js` público |
+| `rooms/` | `JoinRoomDialog`, `MyRooms`, `RoomSidebarList` + `lib/roomNotice.js` |
+| `search/` | `SearchSongs`, `SearchAlbums`, `SearchPeople`, `SearchTabs`, `SearchPersonRow`, `UserSearch`, `RecentSearchesCombobox` + `useRecentSearches` |
+| `social/` | `FollowButton`, `FollowStats`, `HostRatingBadge`; `index.js` público |
+| `profile/` | `ProfileEdit`, `ProfileSummary` |
+| `notifications/` | `NotificationRow` + `lib/formatRelativeTime.js` |
+| `recommendation/` | `RecommendationSection`, `RecommendSongModal`, `SongSearchStep` |
+| `mood/` | `MoodPicker`, `MoodResults` + `lib/moodDetection.js` |
+
+Las páginas del catálogo están en `pages/catalog/`: `AlbumsPage`, `AlbumDetailPage`,
+`ArtistsPage`, `ArtistDetailPage` y `PopularPage`.
 
 ### 3.6 `components/`
 
-PresentaciÃ³n pura. `components/ui/` es shadcn sobre `@base-ui/react` (Button, Input, Sidebar, Sheet,
-Tooltip, Pagination, Skeleton, Separator) y no se edita a mano salvo por el puente de tokens.
+Presentación pura. `components/` no importa de `features/` ni de `app/`:
 
-`AppLayout` es el que decide el shell: **desktop** = `Sidebar` + `TopBar` + `PlayerBar`;
-**mobile** = `BottomNav` + `MiniPlayerBar`. Ambos players consumen el mismo `PlayerContext`.
+- `ui/`: shadcn sobre `@base-ui/react` (Button, Input, Sidebar, Sheet, Tooltip, Pagination, Skeleton,
+  Separator) más `Avatar` y `LoadingScreen` propios.
+- `cards/`: `MediaCard`, `MiniMediaCard`, `RoomCard`, `UserRow`, `ArtistCard`.
+- `actions/`: `QueueActionButton` y `AddToQueueButton`.
+- `motion/`: primitivas de animación y `SidebarAnimatedGroup`.
+- `animate-ui/`: primitivas de toasts.
+
+`app/layout/AppLayout.jsx` compone el shell actual: `Sidebar` + `TopBar` + contenido + `PlayerBar`,
+más el overlay del reproductor expandido. `BottomNav` queda para la fase mobile. Los componentes del
+player consumen el mismo `PlayerContext` global de `shared/`.
 
 ### 3.7 Estilos
 
-`styles/tokens.css` es la **Ãºnica fuente de verdad** de los literales (color, tipografÃ­a, elevaciÃ³n).
-`styles/utilities.css` (`.Wall`, `.Fucsia`, `.TextRegluar`, â€¦) y `styles/base.css` se derivan con
-`var(--ds-*)`. `src/index.css` solo cablea las capas y traduce los tokens a las variables semÃ¡nticas de
+`styles/tokens.css` es la **única fuente de verdad** de los literales (color, tipografía, elevación).
+`styles/utilities.css` (`.Wall`, `.Fucsia`, `.TextRegluar`, …) y `styles/base.css` se derivan con
+`var(--ds-*)`. `src/index.css` solo cablea las capas y traduce los tokens a las variables semánticas de
 shadcn (`--background`, `--primary`, `--sidebar*`) para que las utilidades `bg-*`/`text-*` de Tailwind
-apunten al diseÃ±o del proyecto.
+apunten al diseño del proyecto.
 
 ### 3.8 Flujo de datos (ejemplo)
 
 ```
 Click en "seguir"
-  â†’ FollowButton.jsx
-  â†’ useFollow()                        (hook de la feature)
-  â†’ usersService.followUser()          (service)
-  â†’ api.js post('/users/:id/follow')   (Ãºnica capa con fetch)
-  â†’ Vite proxy /api â†’ localhost:3000
-  â†’ backend: routes â†’ controller â†’ service â†’ Prisma â†’ Postgres
-  â† respuesta
-  â†’ notifyFollowChanged()              (suscriptores: useFollow)
-  â†’ re-fetch de contadores y listas en todos los puntos que usan useFollow
+  → FollowButton.jsx                         (features/social)
+  → useFollow()                              (shared/src/features/social)
+  → usersService.followUser()                (shared/src/services)
+  → api.js post('/users/:id/follow')         (única capa con fetch)
+  → Vite proxy /api → localhost:3000
+  → backend: routes → controller → service → Prisma → Postgres
+  ← respuesta
+  → notifyFollowChanged()                    (suscriptores: useFollow)
+  → re-fetch de contadores y listas en todos los puntos que usan useFollow
 ```
 
 ---
@@ -319,13 +345,13 @@ El resto es pÃºblico. Errores: siempre `{ status: "error", message, code? }` (
 - **Favoritos**: la playlist de favoritos aparece reciÃ©n despuÃ©s del primer favorito, y editarla o
   borrarla devuelve 403.
 - **`/api/v1` no existe**: todo cuelga de `/api` (`app.js`). `src/const/baseUrl.js` es un resto sin uso.
-- **CÃ³digo muerto** que conviene no tomar como referencia: `Frontend/src/mocks/` (sÃ³lo `rooms.js` se
-  consume, vÃ­a `roomsService`; `users.js`, `songs.js` y `playlists.js` quedaron sin uso tras migrar),
-  `Backend/src/const/baseUrl.js`, `Backend/src/test.js` y la llamada a `ensureFavoritesPlaylist` que
-  quedÃ³ comentada en `favorite.service.js`.
-- **Vistas de una sola pÃ¡gina**: `/artistas` tiene catÃ¡logo y detalle (`features/artists/`), `/albums`
-  tiene grilla y detalle (`features/albums/`) y `/populares` tiene ranking semanal
-  (`features/popular/`). El chat de salas todavÃ­a no existe.
+- **Código muerto** que conviene no tomar como referencia: `Backend/src/const/baseUrl.js`,
+  `Backend/src/test.js` y la llamada a `ensureFavoritesPlaylist` que quedó comentada en
+  `favorite.service.js`. `Frontend/src/mocks/` ya no existe.
+- **Vistas de una sola página**: `/artistas` tiene catálogo y detalle (`pages/catalog/ArtistsPage` y
+  `ArtistDetailPage`), `/albums` tiene grilla y detalle (`pages/catalog/AlbumsPage` y
+  `AlbumDetailPage`) y `/populares` tiene ranking semanal (`pages/catalog/PopularPage`). El chat de
+  salas todavía no existe.
 
 ---
 

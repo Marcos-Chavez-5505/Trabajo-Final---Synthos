@@ -253,17 +253,16 @@ Guards: `RequireAuth` (si `loading` â†’ `LoadingScreen`; si no hay user â�
 
 ### 4.6 Layout
 
-> **Desactualizado (2026-10-11, pendiente):** el layout mobile ya no existe. `AppLayout` renderiza
-> **siempre** el de desktop y `Home` siempre `HomeDesktop`; `BottomNav`, `MiniPlayerBar`, `HomeMobile`
-> y `useBreakpoint.js` siguen en disco sin uso (ver `PENDIENTES.md` Â§8). Lo que sigue describe el
-> comportamiento anterior.
+> **Layout actual:** `AppLayout` renderiza el shell de desktop y `HomePage` siempre `HomeDesktop`.
+> `BottomNav` y `useBreakpoint.js` siguen en disco sin uso (ver `PENDIENTES.md` §8). `MiniPlayerBar` y
+> `HomeMobile` se eliminaron en la reestructuración de `Frontend/src`.
 
-`AppLayout` usaba `useBreakpoint()` (768px = `md` de Tailwind) para alternar:
+`AppLayout` (shell de desktop):
 
-- **Desktop**: `SidebarProvider` (shadcn) + `Sidebar` (colapsable a Ã­conos; header logo, nav Home/Populares/Salas/**Ãnimo**/Perfil, "Mi ColecciÃ³n" Playlists/Albums/Artistas, "Mis Salas" â† `features/rooms/MyRooms.jsx` (las salas del usuario, con las que administra marcadas), "Mis Playlists" â† `MisPlaylists` de la feature y "Playlists Colaborativas" â† `CollabPlaylists`, footer `ProfileSummary`) + `TopBar` + contenido + `PlayerBar`. `AppLayout` monta `SidebarAutoCollapse`, que colapsa/expande el sidebar al cruzar los 1280px sin pisar el trigger manual; el `SidebarTrigger` del `TopBar` (shadcn) es el botÃ³n que lo abre/cierra a mano.
-- **Mobile**: **ya no hay.** Era contenido + `MiniPlayerBar` + `BottomNav`; se desarmÃ³, ver `PENDIENTES.md` Â§8.
+- **Desktop**: `SidebarProvider` (shadcn) + `Sidebar` (colapsable a íconos; header logo, nav Home/Populares/Salas/**Ánimo**/Perfil, "Mi Colección" Playlists/Albums/Artistas, "Mis Salas" ← `features/rooms/components/MyRooms.jsx` (las salas del usuario, con las que administra marcadas), "Mis Playlists" ← `features/playlists/components/MisPlaylists.jsx` y "Playlists Colaborativas" ← `features/playlists/components/CollabPlaylists.jsx`, footer `features/profile/components/ProfileSummary.jsx`) + `TopBar` + contenido + `PlayerBar`. `AppLayout` monta `SidebarAutoCollapse`, que colapsa/expande el sidebar al cruzar los 1280px sin pisar el trigger manual; el `SidebarTrigger` del `TopBar` (shadcn) es el botón que lo abre/cierra a mano.
+- **Mobile**: **ya no hay.** Era contenido + `MiniPlayerBar` + `BottomNav`; se desarmó, ver `PENDIENTES.md` §8.
 
-`TopBar`: input controlado por la URL que navega a `/buscar?q=â€¦`; las flechas back/forward estÃ¡n `hidden` (sin handler). `Home` renderiza `HomeDesktop`.
+`TopBar`: input controlado por la URL que navega a `/buscar?q=…`; las flechas back/forward están `hidden` (sin handler). `HomePage` renderiza `HomeDesktop`.
 
 ### 4.7 Design system
 
@@ -302,7 +301,7 @@ npm run dev                 # localhost:5173, proxy /api â†’ :3000
 ## 7. Deudas y huecos conocidos (encontrados en el cÃ³digo)
 
 - `roomsService.USE_MOCK` ya no existe: `/salas` habla con la API real desde que el bloque de salas se entregÃ³ (2026-10-18). Ver `PENDIENTES.md` Â§5.6b para las deudas que dejÃ³.
-- Ya no quedan pantallas placeholder. Los archivos del layout mobile (`BottomNav`, `MiniPlayerBar`, `HomeMobile`, `hooks/useBreakpoint.js`) siguen en disco sin uso (`PENDIENTES.md` Â§8).
+- Ya no quedan pantallas placeholder. `BottomNav` y `hooks/useBreakpoint.js` siguen en disco sin uso (`PENDIENTES.md` §8); `MiniPlayerBar` y `HomeMobile` ya se eliminaron.
 - Campo inexistente en el esquema que la UI tolera con `null`: `source`. `album` ya existe (`Album`) y las canciones lo traen.
 - **Chat de salas**: la sincronizaciÃ³n de reproducciÃ³n ya usa WebSocket (`services/socketService.js` + Socket.IO), pero el chat no existe: no hay tabla `room_message` ni eventos que lo transmitan.
 - Salas: la barra de progreso es de solo lectura para los miembros (no hay endpoint para buscar dentro de la canciÃ³n, la posiciÃ³n es del servidor), y `joinRoom` no garantiza el tope de 10 ante dos ingresos simultÃ¡neos (la transacciÃ³n relee el cupo pero con el aislamiento por defecto de Postgres).
@@ -323,9 +322,9 @@ npm run dev                 # localhost:5173, proxy /api â†’ :3000
 
 1. El concepto es **Salas/`rooms`**, jamÃ¡s "Grupos".
 2. Reutilizar `MediaCard` y sus variantes (`MiniMediaCard`, `RoomCard`) â€” no variantes ad-hoc.
-3. Un solo `PlayerContext`; `PlayerBar`/`MiniPlayerBar` son presentaciÃ³n.
+3. Un solo `PlayerContext`; los componentes de `features/player/` son presentación.
 4. Breakpoints Tailwind para layouts; duplicar componentes solo cuando la interacciÃ³n cambia (Sidebar vs BottomNav).
-5. Toda red pasa por `services/`; los componentes nunca hacen fetch.
+5. Toda red pasa por `shared/src/services/`; los componentes nunca hacen fetch.
 6. `mocks/` ya no existe: la app no tiene datos falsos, todo habla con la API.
 7. Ãconos solo de `src/assets/*.svg` importados como URL (Â§4.8).
 8. Literales de estilo solo en `tokens.css`.
