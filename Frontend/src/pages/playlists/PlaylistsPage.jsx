@@ -124,7 +124,7 @@ function PlaylistGrid({ tab, items, loading }) {
   }
 
   return (
-    <ul className="mt-8 grid grid-cols-2 gap-4 min-[480px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+    <ul className="mt-8 grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-6">
       {items.map((playlist) => (
         <li key={playlist.id}>
           <PlaylistTile playlist={playlist} />
