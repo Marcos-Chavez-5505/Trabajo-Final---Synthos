@@ -22,9 +22,9 @@ Ver `AGENTS.md` (estructura del monorepo y adaptadores) y `docs/plan/restructure
 (MP3 de SoundHelix) y eventos del `<audio>` (`timeupdate`, `loadedmetadata`, `ended`), que solo
 se ejercitan a mano.
 
-> **Actualizado 2026-10-14:** el layout mobile ya no existe (ver Â§8), asÃ­ que las lÃ­neas que hablaban de
-> `MiniPlayerBar`, `BottomNav` y del responsive alternado quedaron sin sentido y se sacaron de la lista.
-> `CONTEXT.md` Â§4.6 sigue describiendo el layout viejo y hay que corregirlo cuando se retome mobile.
+> **Actualizado:** el layout mobile ya no existe (ver §8), así que las líneas que hablaban de
+> `MiniPlayerBar`, `BottomNav` y del responsive alternado se sacaron de la lista. `CONTEXT.md` §4.6 ya
+> refleja el layout actual.
 
 **QuÃ© verificar:**
 
@@ -335,34 +335,32 @@ Lo que sigue abierto:
 
 ## 8. Mobile desmantelado â€” se reharÃ¡ con React Native
 
-**Estado (2026-10-11):** se sacaron del cÃ³digo las piezas dedicadas a mobile. `AppLayout` ya no ramifica
-por breakpoint: renderiza siempre el layout de desktop (`SidebarProvider` + `Sidebar` + `TopBar` +
-contenido + `PlayerBar`). `Home` tambiÃ©n dejÃ³ de alternar y renderiza `HomeDesktop`. Se eliminaron todas
-las **importaciones** a: `components/layout/BottomNav.jsx`, `components/layout/MiniPlayerBar.jsx`,
-`features/home/HomeMobile.jsx` y el hook `hooks/useBreakpoint.js`.
+**Estado (2026-10-11, actualizado con la reestructuración):** `AppLayout` ya no ramifica por breakpoint:
+renderiza siempre el layout de desktop (`SidebarProvider` + `Sidebar` + `TopBar` + contenido +
+`PlayerBar`). `HomePage` renderiza `HomeDesktop`. `MiniPlayerBar.jsx` y `HomeMobile.jsx` se eliminaron;
+`BottomNav.jsx` sigue en `app/layout/` sin uso y `hooks/useBreakpoint.js` se mantiene porque
+`PlaylistDetailPage` lo usa para el layout mobile del detalle.
 
 **Contexto (por quÃ© se hizo):** mantener dos layouts en el mismo codebase web (desktop con shadcn + un
 shell mobile a mano) venÃ­a quedando a medias: `BottomNav` sin Ã­conos, `MiniPlayerBar` atado a la altura
 del `BottomNav`, `HomeMobile` como shell, breakpoints y padding duplicados (`pb-28` en el `main` mobile).
 Se decidiÃ³ dejar de parchar esa vÃ­a en lugar de seguir sumando excepciones.
 
-**QuÃ© queda a medias (a propÃ³sito):** la app web hoy no tiene experiencia mobile real. En un viewport
-chico muestra el layout de desktop, sin navegaciÃ³n inferior ni mini reproductor. Los archivos
-`BottomNav.jsx`, `MiniPlayerBar.jsx`, `HomeMobile.jsx` y `hooks/useBreakpoint.js` **siguen en disco,
-sin uso** (no se borraron para conservarlos como referencia histÃ³rica); `use-mobile.ts` de shadcn sigue
-siendo consumido internamente por `ui/sidebar.tsx`.
+**Qué queda a medias (a propósito):** la app web hoy no tiene experiencia mobile real. En un viewport
+chico muestra el layout de desktop, sin navegación inferior ni mini reproductor. `BottomNav.jsx` sigue
+en disco sin uso (se conserva como referencia histórica); `useBreakpoint.js` se usa en el detalle de
+playlist y `use-mobile.ts` de shadcn lo consume `ui/sidebar.tsx`.
 
 **QuÃ© hacer (decisiÃ³n):** rehacer mobile, cuando se retome, con **React Native** (app nativa/APK propia),
 no con soluciones a medias dentro de la web. El layout y la interacciÃ³n de mobile son distintos de los
 de desktop y merecen su propia base, en vez de duplicar componentes y parchear breakpoints en el
 codebase de Vite. Al encarar eso, revisar si conviene borrar los archivos mobile sin uso de arriba.
 
-**VerificaciÃ³n:** `npm run lint` + `npm run build` en verde sin las importaciones mobile; confirmar que
-ningÃºn mÃ³dulo referencia `BottomNav`, `MiniPlayerBar`, `HomeMobile` ni `useBreakpoint`.
+**Verificación:** `npm run lint` + `npm run build` en verde; confirmar que ningún módulo referencia
+`MiniPlayerBar` ni `HomeMobile`. `BottomNav` y `useBreakpoint` se mantienen a propósito.
 
-**Docs desactualizados por este cambio:** `CONTEXT.md` Â§4.6 (Layout) y `PENDIENTES.md` Â§1 (smoke test,
-lÃ­neas sobre `MiniPlayerBar`/`BottomNav`/responsive) todavÃ­a describen el mobile viejo; actualizar
-cuando se cierre la decisiÃ³n.
+**Docs actualizados:** `CONTEXT.md` §4.6 (Layout) y este §8 reflejan el estado actual. Los planes de
+sprint conservan el historial del mobile viejo.
 
 ---
 
