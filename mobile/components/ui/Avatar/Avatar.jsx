@@ -45,25 +45,27 @@ export function Avatar({
 }
 
 export function AvatarImage({ uri, name, style }) {
-	const [failed, setFailed] = useState(false);
+	const [imageFailed, setImageFailed] = useState(false);
+	const [blobatarFailed, setBlobatarFailed] = useState(false);
 
-	// foto subida
-	if (uri && !failed) {
+	if (uri && !imageFailed) {
 		return (
 			<Image
 				source={{ uri }}
 				style={[AVATAR_STYLES.image, AVATAR_STYLES.absoluteFill, style]}
-				onError={() => setFailed(true)}
+				onError={(e) => {
+					console.log("AvatarImage error:", uri, e.nativeEvent?.error);
+					setImageFailed(true);
+				}}
 				resizeMode="cover"
 			/>
 		);
 	}
 
-	// blobatar deterministico
 	const normalized = String(name ?? "")
 		.trim()
 		.toLowerCase();
-	if (normalized && !failed) {
+	if (normalized && !blobatarFailed) {
 		try {
 			const dataUri = blobatarUri(normalized);
 			const commaIndex = dataUri.indexOf(",");
@@ -76,7 +78,8 @@ export function AvatarImage({ uri, name, style }) {
 				</View>
 			);
 		} catch (e) {
-			setFailed(true);
+			console.log("Blobatar error:", e);
+			setBlobatarFailed(true);
 			return null;
 		}
 	}

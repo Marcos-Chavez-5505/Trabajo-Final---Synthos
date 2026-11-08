@@ -40,7 +40,12 @@ export const makeSvgIcon = (paths, viewBox = "0 0 24 24") =>
 							strokeLinejoin={path.strokeLinejoin}
 						/>
 					) : (
-						<Path key={index} d={path.d} fill={color} fillRule={path.fillRule} />
+						<Path
+							key={index}
+							d={path.d}
+							fill={color}
+							fillRule={path.fillRule}
+						/>
 					),
 				)}
 			</Svg>
@@ -91,6 +96,8 @@ export const UserIcon = fromCatalog("user");
 export const UserGroupIcon = fromCatalog("user_group");
 export const HamburgerMenuIcon = fromCatalog("hamburger_menu");
 export const EllipsisIcon = fromCatalog("ellipsis");
+export const MicrophoneIcon = fromCatalog("microphone");
+export const CloseIcon = fromCatalog("close");
 
 // ── Pendiente de migrar al catálogo ────────────────────────────────────────
 // `LibraryIcon` quedó como placeholder de carátula (MiniPlayerBar,
