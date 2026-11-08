@@ -4,12 +4,12 @@
 export {
   ComboboxContent,
   type ComboboxContentProps,
-} from "./combobox/content";
+} from "@/components/motion/combobox/content";
 export {
   Combobox,
   type ComboboxFilter,
   type ComboboxProps,
-} from "./combobox/context";
+} from "@/components/motion/combobox/context";
 export {
   ComboboxEmpty,
   type ComboboxEmptyProps,
@@ -23,7 +23,7 @@ export {
   type ComboboxListProps,
   ComboboxSeparator,
   type ComboboxSeparatorProps,
-} from "./combobox/list";
+} from "@/components/motion/combobox/list";
 export {
   ComboboxInput,
   type ComboboxInputProps,
@@ -31,4 +31,4 @@ export {
   type ComboboxTriggerProps,
   ComboboxValue,
   type ComboboxValueProps,
-} from "./combobox/trigger";
+} from "@/components/motion/combobox/trigger";

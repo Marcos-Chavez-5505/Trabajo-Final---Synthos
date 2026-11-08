@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom'
-import LoadingScreen from '../components/ui/LoadingScreen.jsx'
+import LoadingScreen from '@/components/ui/LoadingScreen.jsx'
 import { useAuth } from '@synthos/shared'
 
 export default function PublicOnly({ children }) {

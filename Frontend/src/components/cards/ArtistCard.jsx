@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import Avatar from "../ui/Avatar.jsx";
+import Avatar from "@/components/ui/Avatar.jsx";
 
 /**
  * Tarjeta de artista para `/artistas`: foto redonda, nombre y cantidad de

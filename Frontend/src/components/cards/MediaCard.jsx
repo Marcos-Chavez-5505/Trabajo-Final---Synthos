@@ -1,6 +1,6 @@
 import playIcon from '@synthos/shared/assets/icons/play.svg'
 import musicNoteIcon from '@synthos/shared/assets/icons/music_note.svg'
-import QueueActionButton from '../player/QueueActionButton.jsx'
+import QueueActionButton from '@/components/actions/QueueActionButton.jsx'
 
 /**
  * Tarjeta de canción con overlay inferior (label/título/artista) y botón play

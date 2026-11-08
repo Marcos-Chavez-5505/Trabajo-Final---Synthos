@@ -7,23 +7,23 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils";
 
 import { useIsMobile } from "@/hooks/use-mobile"
-import { SIDEBAR_SPRING } from '@synthos/shared'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
+import { SIDEBAR_SPRING } from '@/lib/motion/sidebar.js'
+import { Button } from "./button"
+import { Input } from "./input"
+import { Separator } from "./separator"
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet"
-import { Skeleton } from "@/components/ui/skeleton"
+} from "./sheet"
+import { Skeleton } from "./skeleton"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "./tooltip"
 import panelLeftOpenIcon from "@synthos/shared/assets/icons/panel_left_open.svg"
 import panelLeftCloseIcon from "@synthos/shared/assets/icons/panel_left_close.svg"
 import {
@@ -42,7 +42,7 @@ const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 // Valores del spring del ancho en rem, derivados de las constantes de arriba
 // para no tener dos fuentes de verdad (si cambia `SIDEBAR_WIDTH`, el spring lo
-// sigue). El spring en sí (`SIDEBAR_SPRING`) vive en `lib/sidebarMotion.js`,
+// sigue). El spring en sí (`SIDEBAR_SPRING`) vive en `lib/motion/sidebar.js`,
 // porque lo comparte `SidebarAnimatedGroup`.
 const SIDEBAR_EXPANDED_REM = parseFloat(SIDEBAR_WIDTH)
 const SIDEBAR_ICON_REM = parseFloat(SIDEBAR_WIDTH_ICON)
