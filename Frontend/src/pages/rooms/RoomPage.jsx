@@ -460,26 +460,26 @@ export default function RoomPage() {
 			/>
 
 			<footer className="mt-8 flex flex-wrap gap-2">
-				<button
-					type="button"
-					onClick={handleLeave}
-					disabled={Boolean(pending)}
-					className="rounded px-4 py-2 Volume Button hover:brightness-110 disabled:opacity-50"
-				>
-					{isHost ? "Salir y cerrar la sala" : "Salir de la sala"}
-				</button>
-
-				{isHost && (
-					<button
-						type="button"
-						onClick={handleCloseRoom}
-						disabled={Boolean(pending)}
-						className="rounded px-4 py-2 Salmon Button hover:brightness-110 disabled:opacity-50"
-					>
-						{pending === "close" ? "Cerrando…" : "Cerrar la sala"}
-					</button>
-				)}
-			</footer>
+                {!isHost ? (
+                    <button
+                        type="button"
+                        onClick={handleLeave}
+                        disabled={Boolean(pending)}
+                        className="rounded px-4 py-2 Volume Button hover:brightness-110 disabled:opacity-50"
+                    >
+                        Salir de la sala
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={handleCloseRoom}
+                        disabled={Boolean(pending)}
+                        className="rounded px-4 py-2 Salmon Button hover:brightness-110 disabled:opacity-50"
+                    >
+                        {pending === "close" ? "Cerrando…" : "Cerrar la sala"}
+                    </button>
+                )}
+            </footer>
 
 			<Dialog
 				open={Boolean(forcedExit)}
