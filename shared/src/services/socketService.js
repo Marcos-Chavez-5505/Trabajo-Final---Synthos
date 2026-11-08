@@ -1,5 +1,5 @@
 import { io } from 'socket.io-client'
-import { getAuthToken } from './api.js'
+import { getAuthToken, getApiBaseUrl } from './api.js'
 
 // Canal de tiempo real de las salas (B11).
 //
@@ -68,10 +68,14 @@ export function connectSocket() {
 
   // Sin URL: el cliente pega al mismo origen del frontend, que en dev lo
   // redirige el proxy de Vite a `localhost:3000` (por eso el `ws: true`).
-  socket = io({
+  const apiBase = getApiBaseUrl()
+    // baseUrl es ".../api"; el socket vive en el origen sin el path.
+    const socketUrl = apiBase.replace(/\/api\/?$/, '')
+
+    socket = io(socketUrl, {
     auth: { token },
     transports: ['websocket', 'polling'],
-  })
+    })
 
   // Los suscriptores que se registraron antes de que existiera la conexión
   // también tienen que escucharla.

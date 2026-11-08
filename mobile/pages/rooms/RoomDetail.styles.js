@@ -214,4 +214,81 @@ export const ROOM_DETAIL_STYLES = StyleSheet.create({
 		fontSize: fontSize.regular,
 		fontWeight: fontWeight.medium,
 	},
+    	nowPlayingRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.md,
+		marginBottom: spacing.md,
+	},
+	nowPlayingCover: {
+		width: 56,
+		height: 56,
+		borderRadius: radius.card,
+		backgroundColor: colors.light,
+		alignItems: "center",
+		justifyContent: "center",
+		overflow: "hidden",
+	},
+	nowPlayingCoverImage: {
+		width: "100%",
+		height: "100%",
+	},
+	nowPlayingText: {
+		flex: 1,
+		minWidth: 0,
+	},
+	nowPlayingTitle: {
+		color: colors.textPrimary,
+		fontSize: fontSize.regular,
+		lineHeight: lineHeight.regular,
+		fontWeight: fontWeight.medium,
+	},
+	nowPlayingArtist: {
+		color: colors.textMuted,
+		fontSize: fontSize.medium,
+		lineHeight: lineHeight.medium,
+		marginTop: 2,
+	},
+	progress: {
+		marginVertical: spacing.sm,
+	},
+	ratingRow: {
+		marginTop: spacing.md,
+		alignItems: "center",
+	},
+	ratingDone: {
+		color: colors.textMuted,
+		fontSize: fontSize.medium,
+	},
+	ratingStars: {
+		flexDirection: "row",
+		gap: spacing.sm,
+	},
+	modalBackdrop: {
+		flex: 1,
+		backgroundColor: "rgba(0,0,0,0.6)",
+		alignItems: "center",
+		justifyContent: "center",
+		padding: spacing.lg,
+	},
+	modalCard: {
+		backgroundColor: colors.surfaceLight,
+		borderRadius: radius.card,
+		padding: spacing.lg,
+		width: "100%",
+		maxWidth: 400,
+		gap: spacing.md,
+		...shadows.elevation1,
+	},
+	modalTitle: {
+		color: colors.textPrimary,
+		fontSize: fontSize.header4,
+		lineHeight: lineHeight.header4,
+		fontWeight: fontWeight.bold,
+	},
+	modalMessage: {
+		color: colors.textMuted,
+		fontSize: fontSize.regular,
+		lineHeight: lineHeight.regular,
+	},
 });
