@@ -4,6 +4,7 @@ import AvatarStack from '@/components/ui/AvatarStack.jsx'
 import { toastMessages } from '@/lib/toastMessages.js'
 import { prepareProfileImage } from '@/lib/images/prepareImage.js'
 import cameraIcon from '@synthos/shared/assets/icons/camera.svg'
+import fullHeartIcon from '@synthos/shared/assets/icons/full_heart.svg'
 import headphonesIcon from '@synthos/shared/assets/icons/headphones.svg'
 import pencilLineIcon from '@synthos/shared/assets/icons/pencil_line.svg'
 import playIcon from '@synthos/shared/assets/icons/play.svg'
@@ -118,6 +119,16 @@ export default function HeaderPlaylist({
   }, [coverMenuOpen, coverMenuRef, setCoverMenuOpen])
 
   const canDelete = canUserEdit && Boolean(onDelete)
+  const relationIcon = isFavorites
+    ? fullHeartIcon
+    : playlist?.isCollaborative
+      ? userGroupIcon
+      : userIcon
+  const relationLabel = isFavorites
+    ? 'Playlist de favoritos'
+    : playlist?.isCollaborative
+      ? 'Playlist colaborativa'
+      : 'Playlist personal'
 
   const deleteButton = (className) => (
     <button
@@ -222,6 +233,15 @@ export default function HeaderPlaylist({
               className="h-10 w-10 opacity-70"
             />
           )}
+
+          {isFavorites && (
+            <img
+              src={fullHeartIcon}
+              alt=""
+              aria-hidden="true"
+              className="relative z-10 h-16 w-16 opacity-60"
+            />
+          )}
         </div>
 
         <AnimatePresence initial={false}>
@@ -324,7 +344,7 @@ export default function HeaderPlaylist({
             </div>
 
             <div className="mt-3 flex items-center gap-2">
-              {hasMembers && (
+              {!isFavorites && hasMembers && (
                 <AvatarStack
                   members={playlist.members}
                   onClick={canUserEdit ? () => onInvite?.() : undefined}
@@ -333,9 +353,9 @@ export default function HeaderPlaylist({
               )}
 
               <img
-                src={playlist?.isCollaborative ? userGroupIcon : userIcon}
-                alt={playlist?.isCollaborative ? 'Playlist colaborativa' : 'Playlist personal'}
-                className="ml-4 h-6 w-6 shrink-0"
+                src={relationIcon}
+                alt={relationLabel}
+                className={`${isFavorites ? 'ml-0' : 'ml-4'} h-6 w-6 shrink-0 opacity-80`}
               />
 
               <span aria-hidden="true" className="text-muted-foreground TextMedium">
@@ -346,7 +366,7 @@ export default function HeaderPlaylist({
               </p>
             </div>
 
-            <p className="text-muted-foreground TextRegluar mt-3 w-full max-w-md break-words md:max-w-xl">
+            <p className="text-muted-foreground TextRegluar mt-3 w-full max-w-md wrap-break-word md:max-w-xl">
               {playlist?.description}
             </p>
           </>
