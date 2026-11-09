@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { resolvePlaylistCoverUrl } from '@synthos/shared'
+import fullHeartIcon from '@synthos/shared/assets/icons/full_heart.svg'
 import headphonesIcon from '@synthos/shared/assets/icons/headphones.svg'
 import userIcon from '@synthos/shared/assets/icons/user.svg'
 import userGroupIcon from '@synthos/shared/assets/icons/user_group.svg'
@@ -10,6 +11,7 @@ export default function PlaylistTile({ playlist }) {
   const [failedCoverUrl, setFailedCoverUrl] = useState(null)
   const showCover = Boolean(coverUrl) && failedCoverUrl !== coverUrl
   const ownerName = playlist.creator?.username || 'Usuario'
+  const isFavorites = Boolean(playlist.isFavorites)
 
   return (
     <article className="max-w-xs w-full">
@@ -17,7 +19,7 @@ export default function PlaylistTile({ playlist }) {
         to={`/playlists/${playlist.id}`}
         className="block bg-transparent hover:opacity-90"
       >
-        <div className="CardRadius flex aspect-square items-center justify-center overflow-hidden">
+        <div className="CardRadius relative flex aspect-square items-center justify-center overflow-hidden">
           {showCover ? (
             <img
               src={coverUrl}
@@ -35,6 +37,15 @@ export default function PlaylistTile({ playlist }) {
                 className="h-10 w-10 opacity-70"
               />
             </div>
+          )}
+
+          {isFavorites && (
+            <img
+              src={fullHeartIcon}
+              alt=""
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 m-auto h-16 w-16 opacity-60"
+            />
           )}
         </div>
 

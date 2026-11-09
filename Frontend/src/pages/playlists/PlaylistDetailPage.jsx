@@ -533,16 +533,12 @@ export default function PlaylistDetailPage() {
     await handleInvited(result)
   }
 
+  // Quien llama decide cómo avisar el error: el diálogo lo muestra inline y la
+  // sección de participantes lo pasa a toast.
   async function handleRemoveMember(memberId) {
-    if (!window.confirm('¿Sacar a esta persona de la playlist?')) return
-
-    try {
-      await removePlaylistMember(userId, id, memberId)
-      await loadPlaylist()
-      loadInvitations()
-    } catch (cause) {
-      toastMessages.playlistMemberRemoveError(cause)
-    }
+    await removePlaylistMember(userId, id, memberId)
+    await loadPlaylist()
+    loadInvitations()
   }
 
   const applyUpdatedPlaylist = useCallback(
@@ -660,7 +656,7 @@ export default function PlaylistDetailPage() {
             </AlertDialogCancel>
             <AlertDialogAction
               size="lg"
-              className="h-10 px-4 bg-[var(--ds-red)] text-[var(--ds-lighter)] hover:bg-[var(--ds-red)]/80"
+              className="h-10 px-4 bg-(--ds-red) text-(--ds-lighter) hover:bg-(--ds-red)/80"
               onClick={handleDelete}
             >
               Eliminar
@@ -675,18 +671,17 @@ export default function PlaylistDetailPage() {
           onOpenChange={setInviting}
           onSelect={handleInvite}
           userId={userId}
-          title="Invitar a la playlist"
           description={
             playlist.isCollaborative
               ? 'Buscá a quien quieras sumar. Van a poder agregar y quitar canciones.'
               : 'Buscá a quien quieras sumar. Al invitar a alguien, la playlist deja de ser privada y pasa a ser colaborativa.'
           }
           actionLabel="Invitar"
+          members={playlist.members}
+          canManageMembers={isCreator}
+          onRemoveMember={(member) => handleRemoveMember(member.id)}
           invitations={invitations}
-          excludeIds={[
-            ...playlist.members.map((member) => member.id),
-            ...invitations.map((invitation) => invitation.receiver.id),
-          ]}
+          excludeIds={playlist.members.map((member) => member.id)}
         />
       )}
 
@@ -777,7 +772,12 @@ export default function PlaylistDetailPage() {
                 <MemberRow
                   member={member}
                   canRemove={isCreator && member.role !== 'creator'}
-                  onRemove={() => handleRemoveMember(member.id)}
+                  onRemove={() => {
+                    if (!window.confirm('¿Sacar a esta persona de la playlist?')) return
+                    handleRemoveMember(member.id).catch((cause) =>
+                      toastMessages.playlistMemberRemoveError(cause)
+                    )
+                  }}
                 />
               </li>
             ))}
