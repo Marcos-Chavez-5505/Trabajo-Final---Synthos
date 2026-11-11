@@ -3,15 +3,13 @@ import GeneralRow from "../GeneralRow/GeneralRow";
 import RowCover from "../RowCover/RowCover";
 import { SONG_ROW_STYLES as styles } from "./SongRow.styles";
 
-/**
- * Fila de canción para listas y resultados de búsqueda.
- */
-export default function SongRow({ song, onPress, onAddToQueue }) {
+export default function SongRow({ song, label, onPress, onAddToQueue }) {
 	return (
 		<GeneralRow
 			leading={<RowCover coverUrl={song.coverUrl} />}
 			title={song.title}
 			subtitle={song.artist}
+			label={label}
 			action={
 				onAddToQueue ? (
 					<Pressable
