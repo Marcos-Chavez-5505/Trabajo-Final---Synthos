@@ -32,7 +32,10 @@ export default function BottomTabBar({ state, descriptors, navigation }) {
 			target: route.key,
 			canPreventDefault: true,
 		});
-		if (!event.defaultPrevented) navigation.navigate(route.name, route.params);
+		// No se reenvían `route.params`: la pestaña Buscar conserva el
+		// `{ screen: "Albums" }` que dejó HomePills y volvería a abrir el
+		// catálogo en vez del buscador.
+		if (!event.defaultPrevented) navigation.navigate(route.name);
 	};
 
 	return (

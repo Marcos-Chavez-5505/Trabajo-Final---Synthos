@@ -64,6 +64,7 @@ export { default as useLatestAlbums } from "./features/home/useHomeAlbums.jsx";
 export { default as useRoomsList } from "./features/rooms/useRoomsList.js";
 export { default as useMoodSongs } from "./features/mood/useMoodSongs.js";
 export { default as useAlbums } from "./features/albums/useAlbums.js";
+export { default as useAlbumDetail } from "./features/albums/useAlbumDetail.js";
 export { default as usePlaylistsPage } from "./features/playlists/usePlaylistsPage.js";
 export { default as useProfilePublic } from "./features/profile/useProfilePublic.js";
 export { default as useProfileEdit } from "./features/profile/useProfileEdit.js";
