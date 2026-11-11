@@ -5,7 +5,7 @@ import {
 	fontWeight,
 	radius,
 	spacing,
-} from "../../theme";
+} from "../../../theme";
 
 export const HOME_PILLS_STYLES = StyleSheet.create({
 	content: {

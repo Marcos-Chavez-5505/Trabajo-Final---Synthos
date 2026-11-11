@@ -18,6 +18,9 @@ export const ROOMS_STYLES = StyleSheet.create({
 		paddingHorizontal: spacing.lg,
 		paddingBottom: spacing.xxl,
 	},
+	topBar: {
+		paddingHorizontal: spacing.lg,
+	},
 	header: {
 		marginBottom: spacing.lg,
 	},

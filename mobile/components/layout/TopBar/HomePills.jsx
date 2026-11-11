@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import { Pressable, Text } from "react-native";
-import HorizontalScrollBar from "../../components/ui/HorizontalScrollBar/HorizontalScrollBar";
+import HorizontalScrollBar from "../../ui/HorizontalScrollBar/HorizontalScrollBar";
 import { HOME_PILLS_STYLES as styles } from "./HomePills.styles";
 
 const PILLS = [

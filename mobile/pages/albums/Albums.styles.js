@@ -6,6 +6,9 @@ export const ALBUMS_STYLES = StyleSheet.create({
 		backgroundColor: colors.background,
 		flex: 1,
 	},
+	topBar: {
+		paddingHorizontal: spacing.lg,
+	},
 	content: {
 		paddingBottom: spacing.xxl,
 		paddingHorizontal: spacing.lg,

@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
 import { useRoomsList, useDebounce, joinRoom } from "@synthos/shared";
 import RoomCard from "../../components/cards/RoomCard/RoomCard";
+import TopBar from "../../components/layout/TopBar/TopBar";
 import { HeadphonesIcon } from "../../components/icons";
 import { ROOMS_STYLES as styles } from "./Rooms.styles";
 import { colors } from "../../theme";
@@ -39,6 +40,8 @@ export default function RoomsScreen() {
 
 	return (
 		<View style={styles.container}>
+			<TopBar style={styles.topBar} />
+
 			<FlatList
 				data={rooms}
 				keyExtractor={(item) => String(item.id)}
