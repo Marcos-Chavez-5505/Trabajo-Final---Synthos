@@ -22,9 +22,6 @@ import { createAudioMotor } from "./lib/audioMotor";
 import ProfileEditScreen from "./pages/profile/ProfileEdit";
 import CreateRoomScreen from "./pages/rooms/CreateRoom";
 import RoomDetailScreen from "./pages/rooms/RoomDetail";
-import AlbumsScreen from "./pages/albums/Albums";
-import ArtistsScreen from "./pages/artists/Artists";
-import PopularScreen from "./pages/popular/Popular";
 import NotificationScreen from "./pages/notifications/Notifications";
 import MoodScreen from "./pages/mood/Mood";
 
@@ -76,17 +73,11 @@ function RootNavigator() {
 				<Stack.Screen name="Register" component={Register} />
 				<Stack.Screen name="Main" component={MainTabs} />
 				<Stack.Screen name="Profile" component={ProfileScreen} />
-				<Stack.Screen
-					name="ProfilePublic"
-					component={ProfilePublicScreen}
-				/>
+				<Stack.Screen name="ProfilePublic" component={ProfilePublicScreen} />
 				<Stack.Screen name="FollowList" component={FollowListScreen} />
 				<Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
 				<Stack.Screen name="CreateRoom" component={CreateRoomScreen} />
 				<Stack.Screen name="RoomDetail" component={RoomDetailScreen} />
-				<Stack.Screen name="Albums" component={AlbumsScreen} />
-				<Stack.Screen name="Artists" component={ArtistsScreen} />
-				<Stack.Screen name="Popular" component={PopularScreen} />
 				<Stack.Screen name="Notifications" component={NotificationScreen} />
 				<Stack.Screen name="Mood" component={MoodScreen} />
 			</Stack.Navigator>
