@@ -16,6 +16,7 @@ import {
 	CloseIcon,
 } from "../../components/icons/index";
 import { ScreenHeader } from "../../components/ui/ScreenHeader/ScreenHeader";
+import TopBar from "../../components/layout/TopBar/TopBar";
 import { EmptyState } from "../../components/ui/EmptyState/EmptyState";
 import Pagination from "../../components/ui/Pagination/Pagination";
 import AlbumCard from "../../components/cards/AlbumCard/AlbumCard";
@@ -67,6 +68,8 @@ export default function AlbumsPage() {
 				{ paddingTop: insets.top, paddingBottom: insets.bottom },
 			]}
 		>
+			<TopBar style={styles.topBar} />
+
 			<ScreenHeader
 				title="Álbumes"
 				subtitle="El catálogo completo. Abrí un álbum para ver sus canciones."

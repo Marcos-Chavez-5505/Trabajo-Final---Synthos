@@ -6,6 +6,9 @@ export const POPULAR_STYLES = StyleSheet.create({
 		backgroundColor: colors.background,
 		flex: 1,
 	},
+	topBar: {
+		paddingHorizontal: spacing.lg,
+	},
 	week: {
 		...text.medium,
 		color: colors.textMuted,

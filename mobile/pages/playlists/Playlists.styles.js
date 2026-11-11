@@ -12,6 +12,9 @@ export const PLAYLISTS_STYLES = StyleSheet.create({
 		flex: 1,
 		backgroundColor: colors.surface,
 	},
+	topBar: {
+		paddingHorizontal: spacing.lg,
+	},
 	header: {
 		paddingHorizontal: spacing.lg,
 	},

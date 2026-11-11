@@ -15,6 +15,7 @@ import {
 	CloseIcon,
 } from "../../components/icons/index";
 import { ScreenHeader } from "../../components/ui/ScreenHeader/ScreenHeader";
+import TopBar from "../../components/layout/TopBar/TopBar";
 import { EmptyState } from "../../components/ui/EmptyState/EmptyState";
 import Pagination from "../../components/ui/Pagination/Pagination";
 import ArtistCard from "../../components/cards/ArtistCard/ArtistCard";
@@ -57,6 +58,8 @@ export default function ArtistsPage() {
 
 	return (
 		<View style={[styles.container, { paddingTop: insets.top }]}>
+			<TopBar style={styles.topBar} />
+
 			<ScreenHeader
 				title="Artistas"
 				subtitle="El catálogo completo. Abrí un artista para ver sus álbumes."

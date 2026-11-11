@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePopularSongs } from "@synthos/shared";
 import { ScreenHeader } from "../../components/ui/ScreenHeader/ScreenHeader";
 import { EmptyState } from "../../components/ui/EmptyState/EmptyState";
+import TopBar from "../../components/layout/TopBar/TopBar";
 import SongRow from "../../components/cards/SongRow/SongRow";
 import { HeartIcon } from "../../components/icons";
 import { colors } from "../../theme";
@@ -20,6 +21,8 @@ export default function PopularScreen() {
 				{ paddingTop: insets.top, paddingBottom: insets.bottom },
 			]}
 		>
+			<TopBar style={styles.topBar} />
+
 			<ScreenHeader
 				title="Populares"
 				subtitle={`Las canciones que más personas distintas marcaron como favoritas esta semana. Entran las que reúnen al menos ${minimumFavorites} favoritos.`}

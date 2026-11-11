@@ -1,81 +1,17 @@
-import { ScrollView, Text, View, Pressable } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { ScrollView, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { useAuth, useHomeSongs } from "@synthos/shared";
+import { useHomeSongs } from "@synthos/shared";
 import MediaCard from "../../components/cards/MediaCard/MediaCard";
-import {
-	Avatar,
-	AvatarFallback,
-	AvatarImage,
-} from "../../components/ui/Avatar/Avatar";
-import HomePills from "./HomePills";
+import TopBar from "../../components/layout/TopBar/TopBar";
 import { HOME_STYLES } from "./Home.styles";
-import { BellIcon, CameraAIIcon } from "../../components/icons";
-import { colors } from "../../theme";
 
 export default function HomeScreen() {
-	const navigation = useNavigation();
-	const { user } = useAuth();
 	const { songs, error, playSongs, addToQueue } = useHomeSongs();
 
 	return (
 		<View style={HOME_STYLES.container}>
 			<ScrollView showsVerticalScrollIndicator={false}>
-				<View style={HOME_STYLES.header}>
-					<View
-						style={{
-							flexDirection: "row",
-							alignItems: "center",
-							gap: 12,
-							flex: 1,
-						}}
-					>
-						<Avatar
-							size={40}
-							onPress={() => navigation.navigate("Profile")}
-							accessibilityLabel="Ir a mi perfil"
-						>
-							<AvatarImage uri={user?.avatarUrl} name={user?.username} />
-							<AvatarFallback name={user?.username} />
-						</Avatar>
-						<HomePills />
-					</View>
-					<View
-						style={{
-							flexDirection: "row",
-							alignItems: "center",
-							gap: 10,
-							marginLeft: 24,
-						}}
-					>
-						<Pressable
-							onPress={() => navigation.navigate("Notifications")}
-							style={{
-								width: 40,
-								height: 40,
-								borderRadius: 20,
-								backgroundColor: colors.border,
-								alignItems: "center",
-								justifyContent: "center",
-							}}
-						>
-							<BellIcon size={22} color={colors.textPrimary} />
-						</Pressable>
-						<Pressable
-							onPress={() => navigation.navigate("Mood")}
-							style={{
-								width: 40,
-								height: 40,
-								borderRadius: 20,
-								backgroundColor: colors.border,
-								alignItems: "center",
-								justifyContent: "center",
-							}}
-						>
-							<CameraAIIcon size={22} color={colors.textPrimary} />
-						</Pressable>
-					</View>
-				</View>
+				<TopBar />
 
 				<Text style={HOME_STYLES.sectionTitle}>Novedades</Text>
 

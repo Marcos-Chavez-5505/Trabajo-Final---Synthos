@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, fontSize, fontWeight, spacing, radius } from "../../theme";
+import TopBar from "../../components/layout/TopBar/TopBar";
 import SearchSongs from "./SearchSongs";
 import SearchAlbums from "./SearchAlbums";
 import SearchPeople from "./SearchPeople";
@@ -19,6 +20,8 @@ export default function SearchScreen() {
 	return (
 		<SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
 			<View style={{ flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+				<TopBar />
+
 				<Text style={{ color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: fontWeight.bold, marginBottom: spacing.md }}>
 					Buscar
 				</Text>

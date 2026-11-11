@@ -6,6 +6,9 @@ export const ARTISTS_PAGE_STYLES = StyleSheet.create({
 		backgroundColor: colors.background,
 		flex: 1,
 	},
+	topBar: {
+		paddingHorizontal: spacing.lg,
+	},
 	header: {
 		paddingHorizontal: spacing.lg,
 		paddingTop: spacing.md,

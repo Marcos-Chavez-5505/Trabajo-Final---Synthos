@@ -11,6 +11,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePlaylistList, usePlaylistsPage } from "@synthos/shared";
 import PlaylistCard from "../../components/cards/PlaylistCard/PlaylistCard";
+import TopBar from "../../components/layout/TopBar/TopBar";
 import { PlaylistIcon } from "../../components/icons";
 import { colors, spacing } from "../../theme";
 import { showSuccess } from "../../lib/toastMessages";
@@ -45,6 +46,8 @@ export default function PlaylistsScreen() {
 
 	return (
 		<View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
+			<TopBar style={styles.topBar} />
+
 			<View style={styles.header}>
 				<View style={styles.titleRow}>
 					<Text style={styles.title}>Playlists</Text>
