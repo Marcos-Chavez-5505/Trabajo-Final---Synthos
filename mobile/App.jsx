@@ -8,6 +8,8 @@ import {
 } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Haptics from "expo-haptics";
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { PortalHost } from "@rn-primitives/portal";
 import { AuthProvider, PlayerProvider, useAuth } from "@synthos/shared";
 import { Toaster } from "./components/ui/Toast";
 import Landing from "./pages/landing/Landing";
@@ -92,18 +94,28 @@ export default function App() {
 
 	return (
 		<GestureHandlerRootView style={{ flex: 1 }}>
+			{/* SafeAreaProvider va por fuera del provider de los sheets: ese provider
+			    monta su contenedor (donde caen los BottomSheetModal) como hermano de
+			    los children, así que si queda afuera del árbol de safe area, el
+			    contenido de un modal no tiene insets y useSafeAreaInsets() lanza. */}
 			<SafeAreaProvider>
-				<AuthProvider>
-					<PlayerProvider motor={motor}>
-						<RootNavigator />
-						{/* Se monta una sola vez, después del navegador, para quedar por
-						    encima de las tabs. */}
-						<Toaster
-							topInset={initialWindowMetrics?.insets.top ?? 0}
-							onShow={handleToastShow}
-						/>
-					</PlayerProvider>
-				</AuthProvider>
+				{/* Los sheets modales viven acá: el provider tiene que quedar dentro
+				    de GestureHandlerRootView y por encima del navegador. */}
+				<BottomSheetModalProvider>
+					<AuthProvider>
+						<PlayerProvider motor={motor}>
+							<RootNavigator />
+							{/* Host de portales de los overlays (Dialog/AlertDialog). */}
+							<PortalHost />
+							{/* Se monta una sola vez, después del navegador, para quedar por
+							    encima de las tabs. */}
+							<Toaster
+								topInset={initialWindowMetrics?.insets.top ?? 0}
+								onShow={handleToastShow}
+							/>
+						</PlayerProvider>
+					</AuthProvider>
+				</BottomSheetModalProvider>
 			</SafeAreaProvider>
 		</GestureHandlerRootView>
 	);

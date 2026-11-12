@@ -42,6 +42,8 @@ export const colors = {
 	primary: str("--ds-fucsia"),
 	danger: str("--ds-red"),
 	dangerBg: str("--ds-danger-bg"),
+	scrim: str("--ds-scrim"),
+	scrimDark: str("--ds-scrim-dark"),
 };
 
 // Convierte un token hex a rgba con alpha. Para degradados hay que usar

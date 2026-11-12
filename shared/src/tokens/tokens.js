@@ -27,6 +27,8 @@ export const tokenSections = [
       ['--ds-placeholder', '#b0a4b5'],
       ['--ds-warning', '#f59e0b'],
       ['--ds-danger-bg', 'rgba(213, 22, 57, 0.16)'],
+      ['--ds-scrim', 'rgba(244, 240, 249, 0.85)'],
+      ['--ds-scrim-dark', 'rgba(0, 0, 0, 0.7)'],
     ],
   },
   {
