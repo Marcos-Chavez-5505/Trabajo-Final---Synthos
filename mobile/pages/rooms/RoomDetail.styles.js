@@ -291,4 +291,17 @@ export const ROOM_DETAIL_STYLES = StyleSheet.create({
 		fontSize: fontSize.regular,
 		lineHeight: lineHeight.regular,
 	},
+    memberAvatarWrap: { position: "relative" },
+    onlineDot: {
+        position: "absolute",
+        right: -1,
+        bottom: -1,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        borderWidth: 2,
+        borderColor: colors.surfaceLight,
+    },
+    onlineDotActive: { backgroundColor: colors.green ?? "#22c55e" },
+    onlineDotInactive: { backgroundColor: colors.textMuted },
 });

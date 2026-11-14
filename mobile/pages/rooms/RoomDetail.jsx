@@ -55,12 +55,11 @@ export default function RoomDetailScreen({ route }) {
 	const { user } = useAuth();
 	const viewerId = String(user?.id ?? "");
 
-	// Reproductor global (el mismo de MiniPlayerBar): la sala no tiene audio
-	// propio, solo aplica el estado que manda el servidor.
 	const { song: currentSong, isMuted, toggleMute, seek } = usePlayer();
 
 	const [room, setRoom] = useState(null);
 	const [votes, setVotes] = useState({ voters: [], required: 0, hasVoted: false });
+	const [onlineIds, setOnlineIds] = useState(() => new Set());
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
 	const [actionError, setActionError] = useState("");
@@ -74,7 +73,6 @@ export default function RoomDetailScreen({ route }) {
 	const isHost = membership?.role === "host";
 	const host = room?.members?.find((m) => m.role === "host");
 
-	// Fetch inicial de la sala.
 	useEffect(() => {
 		let active = true;
 		setLoading(true);
@@ -105,8 +103,6 @@ export default function RoomDetailScreen({ route }) {
 		};
 	}, [id]);
 
-	// Host: cuando termina una canción, pide el `next` al backend y el
-	// `room:playback` de vuelta mueve a todos. Sin esto el host no avanza solo.
 	const requestNext = useCallback(() => {
 		controlPlayback(id, "next").catch((cause) =>
 			setActionError(mapApiError(cause)),
@@ -121,13 +117,11 @@ export default function RoomDetailScreen({ route }) {
 			onEnded: isHost ? requestNext : null,
 		});
 
-	// Ref estable para syncPlayback.
 	const syncPlaybackRef = useRef(syncPlayback);
 	useEffect(() => {
 		syncPlaybackRef.current = syncPlayback;
 	}, [syncPlayback]);
 
-	// 1. Conexión al canal: solo depende del id.
 	useEffect(() => {
 		if (!id) return undefined;
 		connectSocket();
@@ -137,7 +131,6 @@ export default function RoomDetailScreen({ route }) {
 		};
 	}, [id]);
 
-	// 2. Suscripciones: no dependen de room ni de syncPlayback.
 	useEffect(() => {
 		if (!loaded) return undefined;
 
@@ -191,6 +184,12 @@ export default function RoomDetailScreen({ route }) {
 			});
 		});
 
+		const offOnline = subscribeToRoomEvent("room:online", (payload) => {
+			if (!active) return;
+			if (Number(payload?.roomId) !== Number(id)) return;
+			setOnlineIds(new Set((payload?.userIds ?? []).map(String)));
+		});
+
 		const offRating = subscribeToRoomEvent("room:rating", (payload) => {
 			if (!active) return;
 			const avg = Number(payload?.avgRating ?? 0);
@@ -223,6 +222,7 @@ export default function RoomDetailScreen({ route }) {
 			offMembers();
 			offPlayback();
 			offSkip();
+			offOnline();
 			offRating();
 			offKicked();
 			offClosed();
@@ -352,7 +352,6 @@ export default function RoomDetailScreen({ route }) {
 	const required =
 		votes.required > 0 ? votes.required : Math.floor(nonHostCount / 2) + 1;
 
-	// Miembros: host primero, luego alfabético (igual que web).
 	const orderedMembers = [...(room.members ?? [])].sort((a, b) => {
 		if (a.role === "host") return -1;
 		if (b.role === "host") return 1;
@@ -417,7 +416,6 @@ export default function RoomDetailScreen({ route }) {
 				<View style={styles.section}>
 					<Text style={styles.sectionTitle}>Reproducción</Text>
 
-					{/* Canción actual: portada + título + artista. */}
 					<View style={styles.nowPlayingRow}>
 						<View style={styles.nowPlayingCover}>
 							{currentSong?.coverUrl ? (
@@ -441,7 +439,6 @@ export default function RoomDetailScreen({ route }) {
 						</View>
 					</View>
 
-					{/* Seek: solo el host. La posición en una sala es del servidor. */}
 					<ProgressBar
 						onSeek={isHost ? seek : NOOP}
 						disabled={!isHost}
@@ -515,7 +512,6 @@ export default function RoomDetailScreen({ route }) {
 						</View>
 					)}
 
-					{/* Mute local: no viaja por el socket. */}
 					<Pressable
 						style={[
 							styles.controlButton,
@@ -529,7 +525,6 @@ export default function RoomDetailScreen({ route }) {
 						</Text>
 					</Pressable>
 
-					{/* Rating del anfitrión: solo no-host y solo si todavía no calificó. */}
 					{!isHost ? (
 						<View style={styles.ratingRow}>
 							{rated ? (
@@ -565,47 +560,59 @@ export default function RoomDetailScreen({ route }) {
 					<Text style={styles.sectionTitle}>
 						Personas ({room.members?.length ?? 0}/{room.maxCapacity ?? "—"})
 					</Text>
-					{orderedMembers.map((member) => (
-						<View key={member.userId} style={styles.memberRow}>
-							<Pressable
-								onPress={() => {
-									if (String(member.userId) === viewerId) {
-										navigation.navigate("Profile");
-										return;
-									}
-									navigation.navigate("ProfilePublic", {
-										userId: member.userId,
-									});
-								}}
-								style={styles.memberLink}
-								accessibilityRole="button"
-								accessibilityLabel={`Ver perfil de ${member.username || "usuario"}`}
-							>
-								<Avatar size={32}>
-									<AvatarImage uri={member.avatarUrl} name={member.username} />
-									<AvatarFallback name={member.username} />
-								</Avatar>
-								<View style={styles.memberInfo}>
-									<Text style={styles.memberName} numberOfLines={1}>
-										{member.username || "Usuario"}
-										{String(member.userId) === viewerId ? " (vos)" : ""}
-									</Text>
-									<Text style={styles.memberRole}>
-										{member.role === "host" ? "Anfitriona" : "Participante"}
-									</Text>
-								</View>
-							</Pressable>
-							{isHost && member.role !== "host" ? (
+					{orderedMembers.map((member) => {
+						const online = onlineIds.has(String(member.userId));
+						return (
+							<View key={member.userId} style={styles.memberRow}>
 								<Pressable
-									style={styles.kickButton}
-									onPress={() => handleKick(member.userId, member.username)}
-									disabled={Boolean(pending)}
+									onPress={() => {
+										if (String(member.userId) === viewerId) {
+											navigation.navigate("Profile");
+											return;
+										}
+										navigation.navigate("ProfilePublic", {
+											userId: member.userId,
+										});
+									}}
+									style={styles.memberLink}
+									accessibilityRole="button"
+									accessibilityLabel={`Ver perfil de ${member.username || "usuario"}`}
 								>
-									<Text style={styles.kickButtonText}>Sacar</Text>
+									<View style={styles.memberAvatarWrap}>
+										<Avatar size={32}>
+											<AvatarImage uri={member.avatarUrl} name={member.username} />
+											<AvatarFallback name={member.username} />
+										</Avatar>
+										<View
+											style={[
+												styles.onlineDot,
+												online ? styles.onlineDotActive : styles.onlineDotInactive,
+											]}
+										/>
+									</View>
+									<View style={styles.memberInfo}>
+										<Text style={styles.memberName} numberOfLines={1}>
+											{member.username || "Usuario"}
+											{String(member.userId) === viewerId ? " (vos)" : ""}
+										</Text>
+										<Text style={styles.memberRole}>
+											{member.role === "host" ? "Anfitriona" : "Participante"}
+											{online ? " · en línea" : ""}
+										</Text>
+									</View>
 								</Pressable>
-							) : null}
-						</View>
-					))}
+								{isHost && member.role !== "host" ? (
+									<Pressable
+										style={styles.kickButton}
+										onPress={() => handleKick(member.userId, member.username)}
+										disabled={Boolean(pending)}
+									>
+										<Text style={styles.kickButtonText}>Sacar</Text>
+									</Pressable>
+								) : null}
+							</View>
+						);
+					})}
 				</View>
 
 				<View style={styles.footer}>
@@ -629,7 +636,6 @@ export default function RoomDetailScreen({ route }) {
 				</View>
 			</ScrollView>
 
-			{/* Modal de expulsión / cierre. */}
 			<Modal
 				visible={Boolean(forcedExit)}
 				transparent

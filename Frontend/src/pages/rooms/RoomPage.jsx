@@ -48,25 +48,8 @@ const PLAYBACK_FALLBACK = {
 	updatedAt: 0,
 };
 
-// `ProgressBar` llama `onSeek` siempre, así que la barra de solo lectura necesita
-// una función: una que no haga nada.
 const NOOP = () => {};
 
-/**
- * `/salas/:id`: la sala (TS-14 + TS-15 + TS-18).
- *
- * El reproductor es el global del `PlayerContext`: la sala no tiene `<audio>`
- * propio (regla 3). Esta pantalla solo pide el estado y deja que
- * `useRoomPlayback` lo aplique.
- *
- * Dos papeles con permisos distintos:
- * - el **anfitrión** controla la reproducción, expulsa y cierra la sala;
- * - el resto **vota para saltar**, sin poder cambiar el estado.
- *
- * Todas las acciones van por REST y el resultado llega por el socket, así que no
- * hay dos caminos para el mismo cambio de estado: el cliente nunca actualiza el
- * estado de la sala por su cuenta.
- */
 export default function RoomPage() {
 	const { id } = useParams();
 	const navigate = useNavigate();
@@ -83,14 +66,14 @@ export default function RoomPage() {
 		required: 0,
 		hasVoted: false,
 	});
+
+	const [onlineIds, setOnlineIds] = useState(() => new Set());
 	const [rated, setRated] = useState(false);
 	const [ratedAtLoad, setRatedAtLoad] = useState(false);
 	const [ratingValue, setRatingValue] = useState(0);
 	const [actionError, setActionError] = useState("");
 	const [pending, setPending] = useState("");
-	// Modal para eventos forzados dentro de la sala (expulsión/cierre por otro).
-	// No se usa sessionStorage acá para evitar que el aviso quede pegado y se
-	// muestre en otra sala al navegar o al volver a entrar.
+
 	const [forcedExit, setForcedExit] = useState(null);
 
 	const membership =
@@ -109,9 +92,7 @@ export default function RoomPage() {
 		}
 	}, [id]);
 
-	// Va antes que el efecto de la sala de más abajo porque este es el que le pasa
-	// `syncPlayback`: si el efecto se registrara primero, cerraría sobre un hook
-	// que todavía no existía.
+
 	const {
 		playback,
 		isBlocked,
@@ -163,14 +144,7 @@ export default function RoomPage() {
 		};
 	}, [id, navigate]);
 
-	// Conexión al canal de la sala. El efecto depende de `loaded` y no de `room`: si
-	// dependiera del objeto entero, cada `room:members` volvería a dispararlo y a
-	// reconectar en bucle.
-	//
-	// `syncPlayback` es el mismo hook que atiende los eventos: el `GET` inicial se le
-	// pasa por ahí para no tener dos caminos hacia el reproductor (si el estado
-	// inicial solo se guardara en un state de la pantalla, entrar a una sala que ya
-	// está sonando no arrancaría hasta que llegara el próximo evento).
+
 	useEffect(() => {
 		if (!loaded) return undefined;
 
@@ -190,13 +164,7 @@ export default function RoomPage() {
 				if (active) setActionError(mapApiError(cause));
 			});
 
-		// El `room:playback` lo atiende `useRoomPlayback` (es el que mueve el
-		// reproductor), así que acá no hay una suscripción aparte al mismo evento.
 
-		// El servidor responde `joined-room` cada vez que el socket entra al canal, y
-		// eso pasa también en cada reconexión. Es el momento de volver a pedir el
-		// estado: si no, la sala quedaría mostrando lo último que se sabía antes de
-		// que se cortara la conexión.
 		const offJoined = subscribeToRoomEvent("joined-room", (payload) => {
 			if (!active || Number(payload?.roomId) !== Number(id)) return;
 
@@ -243,6 +211,12 @@ export default function RoomPage() {
 			});
 		});
 
+		const offOnline = subscribeToRoomEvent("room:online", (payload) => {
+			if (!active || Number(payload?.roomId) !== Number(id)) return;
+
+			setOnlineIds(new Set((payload?.userIds ?? []).map(String)));
+		});
+
 		const offRating = subscribeToRoomEvent("room:rating", (payload) => {
 			if (!active) return;
 
@@ -279,22 +253,16 @@ export default function RoomPage() {
 			offJoined();
 			offMembers();
 			offSkip();
+			offOnline();
 			offRating();
 			offKicked();
 			offClosed();
 		};
 	}, [id, loaded, navigate, viewerId, syncPlayback]);
 
-	// Hasta que el hook aplique el estado del `GET` inicial, se pinta el valor
-	// neutro (parado): es lo que muestra una sala recién creada.
 	const effectivePlayback = playback ?? PLAYBACK_FALLBACK;
 	const playing = effectivePlayback.status === "playing";
 
-	// Dos banderas distintas y no una:
-	// - `canPlay`: hay con qué reproducir. La fuente puede no tener canciones, y el
-	//   backend responde 400 en ese caso, así que no tiene sentido ofrecerlo.
-	// - `hasSong`: hay algo sonando **ahora**. En una sala recién creada todavía no
-	//   hay nada, y sin embargo es justo el estado en el que hay que poder arrancar.
 	const canPlay = (room?.songs.length ?? 0) > 0;
 	const hasSong =
 		Boolean(effectivePlayback.songId) && effectivePlayback.status !== "stopped";
@@ -402,9 +370,6 @@ export default function RoomPage() {
 	const nonHostCount = room.members.filter(
 		(member) => member.role !== "host",
 	).length;
-	// El servidor manda `required: 0` cuando limpia la votación (ya no hay nada que
-	// aprobar), así que en ese caso el umbral se recalcula acá con la misma regla
-	// de D17: más de la mitad de quienes no son anfitrión.
 	const required =
 		votes.required > 0 ? votes.required : Math.floor(nonHostCount / 2) + 1;
 
@@ -456,6 +421,7 @@ export default function RoomPage() {
 				room={room}
 				viewerId={viewerId}
 				isHost={isHost}
+				onlineIds={onlineIds}
 				onKick={handleKick}
 			/>
 
@@ -569,10 +535,6 @@ function RoomHeader({ room, host }) {
 
 /**
  * Reproductor de la sala.
- *
- * El nombre y la barra salen del reproductor global; el estado de la sala
- * (qué acción habilita cada botón) sale del servidor. Los controles de transporte
- * solo los tiene el anfitrión.
  */
 function RoomPlayer({
 	room,
@@ -631,9 +593,6 @@ function RoomPlayer({
 			</div>
 
 			<div className="mt-4">
-				{/* La posición en una sala es del servidor: no hay endpoint para buscar
-            dentro de la canción, así que solo el anfitrión puede arrastrar la
-            barra. Para el resto es de lectura. */}
 				<div className={isHost ? undefined : "pointer-events-none"}>
 					<ProgressBar
 						currentTime={currentTime}
@@ -737,16 +696,6 @@ function RoomPlayer({
 
 /**
  * Controles de reproducción del anfitrión.
- *
- * Cada botón se habilita por su cuenta, y esa es la parte que importa: una sala
- * recién creada está en `stopped` y ahí es exactamente cuando hay que poder
- * arrancar. Por eso "reproducir" y "siguiente" se disparan con `canPlay` (hay
- * canciones en la fuente) y no con "hay algo sonando", que en ese estado es
- * falso. "Detener" sí depende de que algo esté sonando.
- *
- * En el backend, `play` arranca la primera canción si estaba detenida y `next`
- * desde `songId: null` también cae en la primera, así que ambos arrancan la sala
- * desde cero.
  */
 function HostControls({ playing, canPlay, hasSong, disabled, onControl }) {
 	return (
@@ -801,10 +750,6 @@ function HostControls({ playing, canPlay, hasSong, disabled, onControl }) {
 
 /**
  * Votación para saltar (TS-18).
- *
- * La mayoría se cuenta sobre quienes **no** son anfitrión (D17), así que el
- * anfitrión no ve el botón, solo el contador. El botón queda deshabilitado hasta
- * que cambie la canción, porque los votos se limpian al cambiar.
  */
 function SkipVoteControl({
 	isHost,
@@ -838,7 +783,7 @@ function SkipVoteControl({
 	);
 }
 
-function RoomMembers({ room, viewerId, isHost, onKick }) {
+function RoomMembers({ room, viewerId, isHost, onlineIds, onKick }) {
 	const ordered = [...room.members].sort((a, b) => {
 		if (a.role === "host") return -1;
 		if (b.role === "host") return 1;
@@ -853,45 +798,59 @@ function RoomMembers({ room, viewerId, isHost, onKick }) {
 			</h2>
 
 			<ul className="mt-3 space-y-2">
-				{ordered.map((member) => (
-					<li
-						key={member.userId}
-						className="flex items-center gap-3 rounded-lg p-3 SurfaceLight Elevation1"
-					>
-						<Avatar
-							src={member.avatarUrl}
-							name={member.username || "?"}
-							to={`/profile/${member.userId}`}
-							className="h-8 w-8"
-						/>
+				{ordered.map((member) => {
+					const online = onlineIds.has(String(member.userId));
 
-						<div className="min-w-0 flex-1">
-							<p className="text-foreground TextRegluar truncate">
-								<Link to={`/profile/${member.userId}`} className="hover:underline">
-									{member.username || "Usuario"}
-								</Link>{" "}
-								{member.userId === viewerId && (
-									<span className="text-muted-foreground TextTiny">(vos)</span>
-								)}
-							</p>
-							<p className="text-muted-foreground TextTiny">
-								{member.role === "host"
-									? "Anfitriona · administra la sala"
-									: "Participante"}
-							</p>
-						</div>
+					return (
+						<li
+							key={member.userId}
+							className="flex items-center gap-3 rounded-lg p-3 SurfaceLight Elevation1"
+						>
+							<div className="relative">
+								<Avatar
+									src={member.avatarUrl}
+									name={member.username || "?"}
+									to={`/profile/${member.userId}`}
+									className="h-8 w-8"
+								/>
+								<span
+									className={`absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full border-2 border-SurfaceLight ${
+										online ? "bg-green-500" : "bg-muted-foreground"
+									}`}
+									aria-label={online ? "En línea" : "Desconectado"}
+									title={online ? "En línea" : "Desconectado"}
+								/>
+							</div>
 
-						{isHost && member.role !== "host" && (
-							<button
-								type="button"
-								onClick={() => onKick(member.userId, member.username)}
-								className="rounded px-3 py-1.5 Volume Button hover:brightness-110"
-							>
-								Sacar
-							</button>
-						)}
-					</li>
-				))}
+							<div className="min-w-0 flex-1">
+								<p className="text-foreground TextRegluar truncate">
+									<Link to={`/profile/${member.userId}`} className="hover:underline">
+										{member.username || "Usuario"}
+									</Link>{" "}
+									{member.userId === viewerId && (
+										<span className="text-muted-foreground TextTiny">(vos)</span>
+									)}
+								</p>
+								<p className="text-muted-foreground TextTiny">
+									{member.role === "host"
+										? "Anfitriona · administra la sala"
+										: "Participante"}
+									{online ? " · en línea" : ""}
+								</p>
+							</div>
+
+							{isHost && member.role !== "host" && (
+								<button
+									type="button"
+									onClick={() => onKick(member.userId, member.username)}
+									className="rounded px-3 py-1.5 Volume Button hover:brightness-110"
+								>
+									Sacar
+								</button>
+							)}
+						</li>
+					);
+				})}
 			</ul>
 		</div>
 	);
