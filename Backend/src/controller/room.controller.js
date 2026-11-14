@@ -75,7 +75,6 @@ async function createRoom(req, res, next) {
 			password,
 		});
 
-		// Emitir al room del socket (el usuario se une cuando interactúa con sockets)
 		const io = req.app.get("io");
 		if (io) {
 			io.to(`room:${room.id}`).emit("room:members", room.members);
@@ -265,16 +264,17 @@ async function postPlayback(req, res, next) {
 	try {
 		const userId = req.user.sub;
 		const roomId = Number(req.params.id);
-		const { action } = req.body || {};
+		const { action, songId } = req.body || {};
 
 		if (!Number.isInteger(roomId) || roomId <= 0) {
 			return res.status(400).json({ status: "error", message: "Id inválido." });
 		}
 
-		if (!["play", "pause", "next", "stop"].includes(action)) {
+		if (!["play", "pause", "next", "stop", "play-song"].includes(action)) {
 			return res.status(400).json({
 				status: "error",
-				message: "Acción inválida. Debe ser play, pause, next o stop.",
+				message:
+					"Acción inválida. Debe ser play, pause, next, stop o play-song.",
 			});
 		}
 
@@ -310,9 +310,6 @@ async function postPlayback(req, res, next) {
 				positionMs: current.positionMs,
 			};
 		} else if (action === "pause") {
-			// `positionMs` es la posición congelada en el último `updatedAt`: mientras
-			// suena, la posición real es esa más lo que pasó desde entonces. Sin
-			// sumarlo, pausar reiniciaría la canción para todo el mundo.
 			const elapsed =
 				current.status === "playing" ? Date.now() - current.updatedAt : 0;
 			next = {
@@ -326,24 +323,37 @@ async function postPlayback(req, res, next) {
 			const idx = songs.indexOf(current.songId);
 			const nextIdx = idx === -1 ? 0 : (idx + 1) % songs.length;
 			next = { songId: songs[nextIdx], status: "playing", positionMs: 0 };
+		} else if (action === "play-song") {
+			const target = Number(songId);
+			if (!Number.isInteger(target) || !songs.includes(target)) {
+				return res.status(400).json({
+					status: "error",
+					message: "La canción no pertenece a la playlist de la sala.",
+				});
+			}
+			next = { songId: target, status: "playing", positionMs: 0 };
 		}
 
 		const updated = roomState.updatePlayback(roomId, next);
 
-		if (action === "next" || action === "stop") {
+		if (
+			action === "next" ||
+			action === "stop" ||
+			action === "play-song"
+		) {
 			roomState.clearSkipVotes(roomId);
 		}
 
-		// `serverTime` es la hora del servidor en este instante. El cliente lo usa
-		// para medir su propio desvío de reloj: sin eso, interpolar la posición con
-		// `Date.now()` del cliente contra `updatedAt` del servidor mezcla dos
-		// relojes y la posición sale corrida.
 		const playback = { ...updated, serverTime: Date.now() };
 
 		const io = req.app.get("io");
 		if (io) {
 			io.to(`room:${roomId}`).emit("room:playback", playback);
-			if (action === "next" || action === "stop") {
+			if (
+				action === "next" ||
+				action === "stop" ||
+				action === "play-song"
+			) {
 				io.to(`room:${roomId}`).emit("room:skip-votes", {
 					voters: [],
 					required: 0,
@@ -522,8 +532,6 @@ async function rateHost(req, res, next) {
 
 		const created = await roomService.rateHost({ roomId, raterId, rating });
 
-		// El promedio vive en la vista `host_avg_rating`, así que se relee para
-		// mandarlo ya calculado: los clientes actualizan el cartel sin recargar.
 		const io = req.app.get("io");
 		if (io) {
 			const [avgRating, ratingsCount] = await Promise.all([
@@ -540,9 +548,6 @@ async function rateHost(req, res, next) {
 
 		return res.status(201).json({ status: "success", rating: created });
 	} catch (error) {
-		// Los errores de `rateHost` salen con `httpError`, así que no tienen
-		// `status`: van por el handler global, que respeta `httpStatus` y manda
-		// el `code` que el frontend traduce con `mapApiError`.
 		next(error);
 	}
 }

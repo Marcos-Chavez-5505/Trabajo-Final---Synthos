@@ -66,14 +66,12 @@ export default function RoomPage() {
 		required: 0,
 		hasVoted: false,
 	});
-
 	const [onlineIds, setOnlineIds] = useState(() => new Set());
 	const [rated, setRated] = useState(false);
 	const [ratedAtLoad, setRatedAtLoad] = useState(false);
 	const [ratingValue, setRatingValue] = useState(0);
 	const [actionError, setActionError] = useState("");
 	const [pending, setPending] = useState("");
-
 	const [forcedExit, setForcedExit] = useState(null);
 
 	const membership =
@@ -91,7 +89,6 @@ export default function RoomPage() {
 			setActionError(mapApiError(cause));
 		}
 	}, [id]);
-
 
 	const {
 		playback,
@@ -144,7 +141,6 @@ export default function RoomPage() {
 		};
 	}, [id, navigate]);
 
-
 	useEffect(() => {
 		if (!loaded) return undefined;
 
@@ -164,7 +160,6 @@ export default function RoomPage() {
 				if (active) setActionError(mapApiError(cause));
 			});
 
-
 		const offJoined = subscribeToRoomEvent("joined-room", (payload) => {
 			if (!active || Number(payload?.roomId) !== Number(id)) return;
 
@@ -175,16 +170,12 @@ export default function RoomPage() {
 					syncPlayback(data.playback);
 					setVotes(data.skipVotes);
 				})
-				.catch(() => {
-					// Si la sala se cerró mientras se estaba desconectado, el GET va a
-					// fallar; el evento `room:closed` ya lo habrá traído de vuelta.
-				});
+				.catch(() => {});
 		});
 
 		const offMembers = subscribeToRoomEvent("room:members", (members) => {
 			if (!active) return;
 
-			// Llega con las filas del backend, que traen `idUser` y el usuario anidado.
 			const parsed = members.map((raw) => ({
 				userId: String(raw.idUser ?? raw.id_user ?? raw.user?.id),
 				username: raw.user?.username ?? "",
@@ -267,7 +258,6 @@ export default function RoomPage() {
 	const hasSong =
 		Boolean(effectivePlayback.songId) && effectivePlayback.status !== "stopped";
 
-	/** Envuelve una acción: bloquea la pantalla, limpia el error y reporta fallos. */
 	const runAction = useCallback(async (name, action) => {
 		setPending(name);
 		setActionError("");
@@ -300,7 +290,6 @@ export default function RoomPage() {
 		runAction("close", async () => {
 			await closeRoom(id);
 
-			// Los demás reciben `room:closed`; quien la cerró ya está fuera.
 			navigate("/salas", { replace: true });
 		});
 	}
@@ -317,8 +306,6 @@ export default function RoomPage() {
 		if (!value || value < 1 || value > 5) return;
 
 		runAction("rate", async () => {
-			// `rateHost` devuelve `false` (sin tirar) si el backend rechazó la
-			// calificación por 403 o por 409, que es lo que deja el botón deshabilitado.
 			setRated(await rateHost(id, value));
 		});
 	}
@@ -338,6 +325,15 @@ export default function RoomPage() {
 						}
 					: current,
 			);
+		});
+	}
+
+	function handlePlaySong(songId) {
+		if (!isHost) return;
+
+		runAction("play-song", async () => {
+			const next = await controlPlayback(id, "play-song", songId);
+			syncPlayback(next);
 		});
 	}
 
@@ -417,6 +413,14 @@ export default function RoomPage() {
 				setRatingValue={setRatingValue}
 			/>
 
+			<RoomPlaylist
+				room={room}
+				currentSongId={effectivePlayback.songId}
+				isHost={isHost}
+				onPlaySong={handlePlaySong}
+				disabled={Boolean(pending)}
+			/>
+
 			<RoomMembers
 				room={room}
 				viewerId={viewerId}
@@ -426,26 +430,26 @@ export default function RoomPage() {
 			/>
 
 			<footer className="mt-8 flex flex-wrap gap-2">
-                {!isHost ? (
-                    <button
-                        type="button"
-                        onClick={handleLeave}
-                        disabled={Boolean(pending)}
-                        className="rounded px-4 py-2 Volume Button hover:brightness-110 disabled:opacity-50"
-                    >
-                        Salir de la sala
-                    </button>
-                ) : (
-                    <button
-                        type="button"
-                        onClick={handleCloseRoom}
-                        disabled={Boolean(pending)}
-                        className="rounded px-4 py-2 Salmon Button hover:brightness-110 disabled:opacity-50"
-                    >
-                        {pending === "close" ? "Cerrando…" : "Cerrar la sala"}
-                    </button>
-                )}
-            </footer>
+				{!isHost ? (
+					<button
+						type="button"
+						onClick={handleLeave}
+						disabled={Boolean(pending)}
+						className="rounded px-4 py-2 Volume Button hover:brightness-110 disabled:opacity-50"
+					>
+						Salir de la sala
+					</button>
+				) : (
+					<button
+						type="button"
+						onClick={handleCloseRoom}
+						disabled={Boolean(pending)}
+						className="rounded px-4 py-2 Salmon Button hover:brightness-110 disabled:opacity-50"
+					>
+						{pending === "close" ? "Cerrando…" : "Cerrar la sala"}
+					</button>
+				)}
+			</footer>
 
 			<Dialog
 				open={Boolean(forcedExit)}
@@ -533,9 +537,6 @@ function RoomHeader({ room, host }) {
 	);
 }
 
-/**
- * Reproductor de la sala.
- */
 function RoomPlayer({
 	room,
 	isHost,
@@ -624,8 +625,6 @@ function RoomPlayer({
 					pending={voting}
 				/>
 
-				{/* Silencio local de quien mira la sala, también para el anfitrión: no
-            viaja por el socket, así que no cambia el audio de los demás. */}
 				<button
 					type="button"
 					onClick={toggleMute}
@@ -694,9 +693,6 @@ function RoomPlayer({
 	);
 }
 
-/**
- * Controles de reproducción del anfitrión.
- */
 function HostControls({ playing, canPlay, hasSong, disabled, onControl }) {
 	return (
 		<div className="flex items-center gap-1.5">
@@ -748,9 +744,6 @@ function HostControls({ playing, canPlay, hasSong, disabled, onControl }) {
 	);
 }
 
-/**
- * Votación para saltar (TS-18).
- */
 function SkipVoteControl({
 	isHost,
 	votes,
@@ -780,6 +773,61 @@ function SkipVoteControl({
 				{votes}/{required}
 			</span>
 		</button>
+	);
+}
+
+function RoomPlaylist({ room, currentSongId, isHost, onPlaySong, disabled }) {
+	const songs = room.songs ?? [];
+
+	if (songs.length === 0) return null;
+
+	return (
+		<div className="mt-6 max-w-2xl rounded-lg p-6 SurfaceLight Elevation1">
+			<h2 className="text-foreground Header4">Canciones de la sala</h2>
+
+			<ul className="mt-3 divide-y divide-sidebar-border">
+				{songs.map((song, index) => {
+					const isCurrent = String(song.id) === String(currentSongId);
+
+					return (
+						<li key={song.id}>
+							<button
+								type="button"
+								onClick={() => onPlaySong(song.id)}
+								disabled={!isHost || disabled || isCurrent}
+								title={
+									isHost
+										? isCurrent
+											? "Ya está sonando"
+											: "Reproducir esta canción para todos"
+										: "Solo el anfitrión puede cambiar la canción"
+								}
+								className={`flex w-full items-center gap-3 rounded px-2 py-2 text-left transition ${
+									isCurrent
+										? "Fucsia"
+										: isHost
+											? "hover:bg-Light cursor-pointer"
+											: "cursor-default opacity-70"
+								} disabled:opacity-60`}
+							>
+								<span className="TextTiny text-muted-foreground w-6 shrink-0 text-right">
+									{isCurrent ? "▶" : index + 1}
+								</span>
+
+								<span className="min-w-0 flex-1">
+									<span className="TextRegluar block truncate">
+										{song.title ?? "Sin título"}
+									</span>
+									<span className="TextTiny text-muted-foreground block truncate">
+										{song.artist ?? "—"}
+									</span>
+								</span>
+							</button>
+						</li>
+					);
+				})}
+			</ul>
+		</div>
 	);
 }
 

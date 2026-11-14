@@ -248,6 +248,14 @@ export default function RoomDetailScreen({ route }) {
 		});
 	}
 
+	function handlePlaySong(songId) {
+		if (!isHost) return;
+		runAction("play-song", async () => {
+			const result = await controlPlayback(id, "play-song", songId);
+			if (result) syncPlaybackRef.current(result);
+		});
+	}
+
 	function handleVoteSkip() {
 		runAction("vote", async () => {
 			const result = await voteSkip(id);
@@ -361,6 +369,7 @@ export default function RoomDetailScreen({ route }) {
 	});
 
 	const hostRating = room.hostRating ?? 0;
+	const songs = room.songs ?? [];
 
 	return (
 		<View style={styles.container}>
@@ -555,6 +564,55 @@ export default function RoomDetailScreen({ route }) {
 						</View>
 					) : null}
 				</View>
+
+				{songs.length > 0 ? (
+					<View style={styles.section}>
+						<Text style={styles.sectionTitle}>Canciones de la sala</Text>
+						{songs.map((song, index) => {
+							const isCurrent =
+								String(song.id) === String(effectivePlayback.songId);
+							const disabled = !isHost || Boolean(pending) || isCurrent;
+
+							return (
+								<Pressable
+									key={song.id}
+									onPress={() => handlePlaySong(song.id)}
+									disabled={disabled}
+									style={[
+										styles.playlistRow,
+										isCurrent && styles.playlistRowCurrent,
+										!isHost && styles.playlistRowReadOnly,
+									]}
+									accessibilityRole="button"
+									accessibilityLabel={
+										isHost
+											? `Reproducir ${song.title ?? "canción"}`
+											: `${song.title ?? "Canción"}`
+									}
+									accessibilityState={{ disabled }}
+								>
+									<Text style={styles.playlistIndex}>
+										{isCurrent ? "▶" : index + 1}
+									</Text>
+									<View style={styles.playlistTextWrap}>
+										<Text
+											style={[
+												styles.playlistTitle,
+												isCurrent && styles.playlistTitleCurrent,
+											]}
+											numberOfLines={1}
+										>
+											{song.title ?? "Sin título"}
+										</Text>
+										<Text style={styles.playlistArtist} numberOfLines={1}>
+											{song.artist ?? "—"}
+										</Text>
+									</View>
+								</Pressable>
+							);
+						})}
+					</View>
+				) : null}
 
 				<View style={styles.section}>
 					<Text style={styles.sectionTitle}>
