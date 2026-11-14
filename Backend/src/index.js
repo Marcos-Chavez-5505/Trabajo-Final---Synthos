@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 
 const app = require("./app");
 const roomService = require("./services/room.service");
+const presence = require("./realtime/presence");
 
 const PORT = process.env.PORT || 3000;
 
@@ -45,6 +46,7 @@ io.use((socket, next) => {
 // Cuando un usuario se conecta, se une automáticamente a su "sala personal"
 io.on("connection", (socket) => {
 	const userId = socket.user.sub;
+	socket.data.rooms = new Set();
 	socket.join(`user:${userId}`);
 	console.log(`[Socket] Usuario ${userId} conectado (socket ${socket.id})`);
 
@@ -66,6 +68,7 @@ io.on("connection", (socket) => {
 			socket.join(`room:${id}`);
 			console.log(`[Socket] Usuario ${userId} se unió a room:${id}`);
 			socket.emit("joined-room", { roomId: id });
+			presence.addPresence(io, socket, id);
 		} catch (error) {
 			socket.emit("error", { message: "Error al unirse a la sala." });
 		}
@@ -76,10 +79,12 @@ io.on("connection", (socket) => {
 		if (!Number.isInteger(id) || id <= 0) return;
 		socket.leave(`room:${id}`);
 		console.log(`[Socket] Usuario ${userId} salió de room:${id}`);
+		presence.removePresence(io, socket, id);
 	});
 
 	socket.on("disconnect", () => {
 		console.log(`[Socket] Usuario ${userId} desconectado (socket ${socket.id})`);
+		presence.removeAllPresence(io, socket);
 	});
 });
 

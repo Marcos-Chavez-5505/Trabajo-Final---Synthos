@@ -9,3 +9,4 @@ build/
 skills-lock.json
 .agents/skills/find-skills/SKILL.md
 PR-DESCRIPTION.md
+package-lock.json
