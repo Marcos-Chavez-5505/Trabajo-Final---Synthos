@@ -5,10 +5,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { navigationBarStyle, sizes } from "../../../theme";
 import { BOTTOM_NAV_STYLES as styles, NAV_COLORS } from "./Bottomnav.styles";
 
-// Animación (equivale a CustomNavigationBarItem del prototipo):
-//  - entrada del indicador: fade + scale con resorte (rebote)
-//  - salida: fade + scale con tween corto
-//  - ícono: escala 1 -> 1.1 con resorte
 const ENTER_SPRING = { friction: 5, tension: 120 };
 const EXIT_MS = 150;
 
@@ -28,7 +24,6 @@ function NavItem({ item, selected, onPress }) {
 		return () => animation.stop();
 	}, [selected, progress]);
 
-	// El resorte puede pasarse de 1: la opacidad se limita, la escala rebota.
 	const indicatorOpacity = progress.interpolate({
 		inputRange: [0, 1],
 		outputRange: [0, 1],
@@ -59,6 +54,11 @@ function NavItem({ item, selected, onPress }) {
 						size={sizes.navIcon}
 						color={selected ? NAV_COLORS.iconSelected : NAV_COLORS.iconDefault}
 					/>
+					{item.badge ? (
+						<View style={styles.badge}>
+							<Text style={styles.badgeText}>{item.badge}</Text>
+						</View>
+					) : null}
 				</Animated.View>
 			</View>
 			<Text style={[styles.label, selected && styles.labelSelected]}>{item.label}</Text>
@@ -66,24 +66,11 @@ function NavItem({ item, selected, onPress }) {
 	);
 }
 
-/**
- * Barra de navegación inferior (mobile).
- * Es presentacional: no depende de ninguna librería de navegación.
- *
- * @param {{ key: string, label: string, Icon: React.ComponentType<{size:number,color:string}> }[]} items
- * @param {string} selectedKey  key del ítem activo
- * @param {(key: string) => void} onSelect
- */
 export default function BottomNav({ items, selectedKey, onSelect }) {
 	const insets = useSafeAreaInsets();
 
-	// Android: los íconos de la barra del sistema se dibujan sobre el fondo de
-	// esta barra, así que el estilo sale del mismo token que la pinta.
-	// `setBackgroundColorAsync` no sirve: con edge-to-edge el sistema ignora el
-	// color y el área la pinta la app con `paddingBottom: insets.bottom`.
 	useEffect(() => {
 		if (Platform.OS !== "android") return;
-
 		NavigationBar.setStyle(navigationBarStyle);
 	}, []);
 

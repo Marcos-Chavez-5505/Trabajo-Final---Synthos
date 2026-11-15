@@ -1,11 +1,6 @@
 import { StyleSheet } from "react-native";
 import { colors, spacing, text, sizes, borderWidth, fontWeight } from "../../../theme";
 
-// Colores del navbar en un solo lugar. Mapeo desde el prototipo:
-//   --primary / --on-primary         -> fucsia / surface  (mismo par que --primary
-//                                       y --primary-foreground del puente shadcn)
-//   --on-surface(-variant)           -> textPrimary / textMuted
-//   --card                           -> surfaceLight
 export const NAV_COLORS = {
 	bar: colors.surfaceLight,
 	barBorder: colors.border,
@@ -27,7 +22,7 @@ export const BOTTOM_NAV_STYLES = StyleSheet.create({
 		flex: 1,
 		alignItems: "center",
 		gap: spacing.xs,
-		paddingVertical: spacing.sm, // el prototipo usa 6px; no hay token intermedio
+		paddingVertical: spacing.sm,
 	},
 	indicatorSlot: {
 		width: sizes.navIndicatorWidth,
@@ -51,5 +46,22 @@ export const BOTTOM_NAV_STYLES = StyleSheet.create({
 	labelSelected: {
 		color: NAV_COLORS.labelSelected,
 		fontWeight: fontWeight.medium,
+	},
+	badge: {
+		position: "absolute",
+		top: -4,
+		right: -8,
+		minWidth: 14,
+		height: 14,
+		borderRadius: 7,
+		backgroundColor: colors.fucsia,
+		alignItems: "center",
+		justifyContent: "center",
+		paddingHorizontal: 2,
+	},
+	badgeText: {
+		color: "#fff",
+		fontSize: 9,
+		fontWeight: "700",
 	},
 });

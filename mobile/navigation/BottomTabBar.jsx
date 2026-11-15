@@ -1,27 +1,24 @@
 import { View } from "react-native";
 import { colors } from "../theme";
+import { useUnreadNotificationsCount } from "@synthos/shared";
 import BottomNav from "../components/layout/BottomNav/BottomNav";
 import MiniPlayerBar from "../components/layout/MiniPlayerBar/MiniPlayerBar";
 
-// Adaptador entre @react-navigation/bottom-tabs y BottomNav.
-// No conoce nombres de rutas: cada pantalla declara su etiqueta e ícono en sus
-// `options`, por ejemplo:
-//
-//   <Tab.Screen
-//     name="Home"
-//     component={Home}
-//     options={{ tabBarLabel: "Inicio", tabBarIcon: HomeIcon }}
-//   />
-//
-// - tabBarLabel debe ser un string (si falta, se usa `title` y luego el nombre de la ruta).
-// - tabBarIcon puede ser cualquier ícono de components/icons: recibe { size, color }.
 export default function BottomTabBar({ state, descriptors, navigation }) {
+	const unreadCount = useUnreadNotificationsCount();
+
 	const items = state.routes.map((route) => {
 		const { options } = descriptors[route.key];
 		return {
 			key: route.key,
 			label: options.tabBarLabel ?? options.title ?? route.name,
 			Icon: options.tabBarIcon,
+			badge:
+				route.name === "Notifications" && unreadCount > 0
+					? unreadCount > 9
+						? "9+"
+						: String(unreadCount)
+					: null,
 		};
 	});
 
@@ -32,16 +29,10 @@ export default function BottomTabBar({ state, descriptors, navigation }) {
 			target: route.key,
 			canPreventDefault: true,
 		});
-		// No se reenvían `route.params`: la pestaña Buscar conserva el
-		// `{ screen: "Albums" }` que dejó HomePills y volvería a abrir el
-		// catálogo en vez del buscador.
 		if (!event.defaultPrevented) navigation.navigate(route.name);
 	};
 
 	return (
-		// El mini reproductor flota sobre la navegación inferior. El wrapper pinta
-		// el fondo de la app: sin esto, las esquinas redondeadas y los márgenes del
-		// mini dejaban ver el fondo claro por defecto del contenedor de navegación.
 		<View style={{ backgroundColor: colors.surface }}>
 			<MiniPlayerBar />
 			<BottomNav

@@ -10,7 +10,12 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Haptics from "expo-haptics";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { PortalHost } from "@rn-primitives/portal";
-import { AuthProvider, PlayerProvider, useAuth } from "@synthos/shared";
+import {
+	AuthProvider,
+	PlayerProvider,
+	NotificationsProvider,
+	useAuth,
+} from "@synthos/shared";
 import { Toaster } from "./components/ui/Toast";
 import Landing from "./pages/landing/Landing";
 import Login from "./pages/login/Login";
@@ -24,15 +29,12 @@ import { createAudioMotor } from "./lib/audioMotor";
 import ProfileEditScreen from "./pages/profile/ProfileEdit";
 import CreateRoomScreen from "./pages/rooms/CreateRoom";
 import RoomDetailScreen from "./pages/rooms/RoomDetail";
-import NotificationScreen from "./pages/notifications/Notifications";
 import MoodScreen from "./pages/mood/Mood";
 
 initApi();
 
 const Stack = createNativeStackNavigator();
 
-// El Toaster avisa cada toast nuevo o cambio de estado para que el teléfono
-// dé el háptico correspondiente (error duro, éxito suave).
 function handleToastShow(item) {
 	if (item.status === "error") {
 		Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(
@@ -64,7 +66,6 @@ function RootNavigator() {
 	}
 
 	return (
-		// Inicia directamente si la sesion sigue iniciada
 		<NavigationContainer>
 			<Stack.Navigator
 				initialRouteName={user ? "Main" : "Landing"}
@@ -80,7 +81,6 @@ function RootNavigator() {
 				<Stack.Screen name="ProfileEdit" component={ProfileEditScreen} />
 				<Stack.Screen name="CreateRoom" component={CreateRoomScreen} />
 				<Stack.Screen name="RoomDetail" component={RoomDetailScreen} />
-				<Stack.Screen name="Notifications" component={NotificationScreen} />
 				<Stack.Screen name="Mood" component={MoodScreen} />
 			</Stack.Navigator>
 		</NavigationContainer>
@@ -88,31 +88,22 @@ function RootNavigator() {
 }
 
 export default function App() {
-	// El motor de audio se inyecta por configuración: shared/ no conoce
-	// expo-audio ni la plataforma (AGENTS.md, regla 14).
 	const motor = useMemo(() => createAudioMotor(), []);
 
 	return (
 		<GestureHandlerRootView style={{ flex: 1 }}>
-			{/* SafeAreaProvider va por fuera del provider de los sheets: ese provider
-			    monta su contenedor (donde caen los BottomSheetModal) como hermano de
-			    los children, así que si queda afuera del árbol de safe area, el
-			    contenido de un modal no tiene insets y useSafeAreaInsets() lanza. */}
 			<SafeAreaProvider>
-				{/* Los sheets modales viven acá: el provider tiene que quedar dentro
-				    de GestureHandlerRootView y por encima del navegador. */}
 				<BottomSheetModalProvider>
 					<AuthProvider>
 						<PlayerProvider motor={motor}>
-							<RootNavigator />
-							{/* Host de portales de los overlays (Dialog/AlertDialog). */}
-							<PortalHost />
-							{/* Se monta una sola vez, después del navegador, para quedar por
-							    encima de las tabs. */}
-							<Toaster
-								topInset={initialWindowMetrics?.insets.top ?? 0}
-								onShow={handleToastShow}
-							/>
+							<NotificationsProvider>
+								<RootNavigator />
+								<PortalHost />
+								<Toaster
+									topInset={initialWindowMetrics?.insets.top ?? 0}
+									onShow={handleToastShow}
+								/>
+							</NotificationsProvider>
 						</PlayerProvider>
 					</AuthProvider>
 				</BottomSheetModalProvider>
