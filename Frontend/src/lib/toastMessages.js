@@ -58,4 +58,73 @@ export const toastMessages = {
   playlistCoverRemoveError(cause) {
     showApiError("No se pudo quitar la portada", cause, "playlist-cover-remove-error")
   },
+
+  roomActionError(cause) {
+    showApiError("No se pudo completar la acción", cause, "room-action-error")
+  },
+
+  roomLoadError(cause) {
+    showApiError("No se pudo cargar la sala", cause, "room-load-error")
+  },
+
+  roomPlaybackError(cause) {
+    showApiError("No se pudo sincronizar la reproducción", cause, "room-playback-error")
+  },
+
+  roomControlError(cause) {
+    showApiError("No se pudo controlar la reproducción", cause, "room-control-error")
+  },
+
+  roomPlaySongError(cause) {
+    showApiError("No se pudo reproducir la canción", cause, "room-play-song-error")
+  },
+
+  roomLeaveError(cause) {
+    showApiError("No se pudo salir de la sala", cause, "room-leave-error")
+  },
+
+  roomCloseError(cause) {
+    showApiError("No se pudo cerrar la sala", cause, "room-close-error")
+  },
+
+  roomKickError(cause) {
+    showApiError("No se pudo sacar al participante", cause, "room-kick-error")
+  },
+
+  roomVoteError(cause) {
+    showApiError("No se pudo votar para saltar", cause, "room-vote-error")
+  },
+
+  roomRateError(cause) {
+    showApiError("No se pudo enviar la calificación", cause, "room-rate-error")
+  },
+
+  roomLeft(isHost) {
+    toast.add({
+      id: "room-left",
+      type: "success",
+      title: isHost ? "Cerraste la sala" : "Saliste de la sala",
+      description: isHost
+        ? "Saliste y la sala dejó de estar disponible para el resto."
+        : "Podés volver a entrar con el código.",
+    })
+  },
+
+  roomClosed() {
+    toast.add({
+      id: "room-closed",
+      type: "success",
+      title: "Cerraste la sala",
+      description: "La sala ya no está disponible para el resto.",
+    })
+  },
+
+  roomMemberKicked(username) {
+    toast.add({
+      id: "room-member-kicked",
+      type: "success",
+      title: "Sacaste a un participante",
+      description: `${username || "El participante"} ya no está en la sala.`,
+    })
+  },
 }
