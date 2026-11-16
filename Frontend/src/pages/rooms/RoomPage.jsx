@@ -23,13 +23,16 @@ import { useRoomPlayback } from "@synthos/shared";
 import Avatar from "@/components/ui/Avatar.jsx";
 import ProgressBar from '@/features/player/components/ProgressBar.jsx';
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog.tsx";
+import { toastMessages } from "@/lib/toastMessages.js";
 import roomIcon from "@synthos/shared/assets/icons/headphones.svg";
 import nextTrackIcon from "@synthos/shared/assets/icons/next_track.svg";
 import playIcon from "@synthos/shared/assets/icons/play.svg";
@@ -38,8 +41,6 @@ import fullHeartIcon from "@synthos/shared/assets/icons/full_heart.svg";
 import emptyHeartIcon from "@synthos/shared/assets/icons/empty_heart.svg";
 import volumeOnIcon from "@synthos/shared/assets/icons/volume_on.svg";
 import volumeOffIcon from "@synthos/shared/assets/icons/volume_off.svg";
-import { mapApiError } from "@synthos/shared";
-import { clearRoomNotice, writeRoomNotice } from '@/features/rooms/lib/roomNotice.js';
 
 const PLAYBACK_FALLBACK = {
 	songId: null,
@@ -59,7 +60,7 @@ export default function RoomPage() {
 	const [room, setRoom] = useState(null);
 	const [loaded, setLoaded] = useState(false);
 	const [loading, setLoading] = useState(true);
-	const [loadError, setLoadError] = useState("");
+	const [loadFailed, setLoadFailed] = useState(false);
 
 	const [votes, setVotes] = useState({
 		voters: [],
@@ -70,8 +71,12 @@ export default function RoomPage() {
 	const [rated, setRated] = useState(false);
 	const [ratedAtLoad, setRatedAtLoad] = useState(false);
 	const [ratingValue, setRatingValue] = useState(0);
-	const [actionError, setActionError] = useState("");
 	const [pending, setPending] = useState("");
+	// `confirm` conserva el contenido mientras el diálogo se desvanece y
+	// `confirmOpen` controla la visibilidad. Si se limpiaran juntos, durante la
+	// animación de cierre se vería el fallback "Confirmar acción".
+	const [confirm, setConfirm] = useState(null);
+	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [forcedExit, setForcedExit] = useState(null);
 
 	const membership =
@@ -86,7 +91,7 @@ export default function RoomPage() {
 			const next = await controlPlayback(id, "next");
 			syncPlaybackRef.current?.(next);
 		} catch (cause) {
-			setActionError(mapApiError(cause));
+			toastMessages.roomControlError(cause);
 		}
 	}, [id]);
 
@@ -105,7 +110,6 @@ export default function RoomPage() {
 	syncPlaybackRef.current = syncPlayback;
 
 	function goToRooms() {
-		clearRoomNotice();
 		navigate("/salas", { replace: true });
 	}
 
@@ -113,7 +117,7 @@ export default function RoomPage() {
 		let active = true;
 
 		setLoading(true);
-		setLoadError("");
+		setLoadFailed(false);
 
 		getRoomById(id)
 			.then((found) => {
@@ -132,7 +136,8 @@ export default function RoomPage() {
 			.catch((cause) => {
 				if (!active) return;
 
-				setLoadError(mapApiError(cause));
+				toastMessages.roomLoadError(cause);
+				setLoadFailed(true);
 				setLoading(false);
 			});
 
@@ -157,7 +162,7 @@ export default function RoomPage() {
 				setVotes(data.skipVotes);
 			})
 			.catch((cause) => {
-				if (active) setActionError(mapApiError(cause));
+				if (active) toastMessages.roomPlaybackError(cause);
 			});
 
 		const offJoined = subscribeToRoomEvent("joined-room", (payload) => {
@@ -220,7 +225,6 @@ export default function RoomPage() {
 
 		const offKicked = subscribeToRoomEvent("room:kicked", () => {
 			if (!active) return;
-			clearRoomNotice();
 			setForcedExit({
 				title: "Te sacaron de la sala",
 				message:
@@ -230,7 +234,6 @@ export default function RoomPage() {
 
 		const offClosed = subscribeToRoomEvent("room:closed", () => {
 			if (!active) return;
-			clearRoomNotice();
 			setForcedExit({
 				title: "La sala se cerró",
 				message:
@@ -258,83 +261,132 @@ export default function RoomPage() {
 	const hasSong =
 		Boolean(effectivePlayback.songId) && effectivePlayback.status !== "stopped";
 
-	const runAction = useCallback(async (name, action) => {
-		setPending(name);
-		setActionError("");
+	const runAction = useCallback(
+		async (name, action, onError = toastMessages.roomActionError) => {
+			setPending(name);
 
-		try {
-			await action();
-		} catch (cause) {
-			setActionError(mapApiError(cause));
-		} finally {
-			setPending("");
-		}
-	}, []);
+			try {
+				await action();
+			} catch (cause) {
+				onError(cause);
+			} finally {
+				setPending("");
+			}
+		},
+		[],
+	);
 
 	function handleLeave() {
-		if (!window.confirm("¿Salís de la sala?")) return;
+		setConfirm({
+			title: "¿Salir de la sala?",
+			description: isHost
+				? "Sos la anfitriona: al salir, la sala se cierra para todos."
+				: "Dejás de escuchar con el resto. Podés volver a entrar con el código.",
+			actionLabel: isHost ? "Cerrar y salir" : "Salir",
+			destructive: isHost,
+			onConfirm: () =>
+				runAction(
+					"leave",
+					async () => {
+						await leaveRoom(id);
 
-		runAction("leave", async () => {
-			await leaveRoom(id);
-
-			writeRoomNotice(
-				isHost ? "Cerraste la sala al salir." : "Saliste de la sala.",
-			);
-			navigate("/salas", { replace: true });
+						toastMessages.roomLeft(isHost);
+						navigate("/salas", { replace: true });
+					},
+					toastMessages.roomLeaveError,
+				),
 		});
+		setConfirmOpen(true);
 	}
 
 	function handleCloseRoom() {
-		if (!window.confirm("¿Cerrás la sala? Se termina para todos.")) return;
+		setConfirm({
+			title: "¿Cerrar la sala?",
+			description: "Se termina para todos. Esta acción no se puede deshacer.",
+			actionLabel: "Cerrar la sala",
+			destructive: true,
+			onConfirm: () =>
+				runAction(
+					"close",
+					async () => {
+						await closeRoom(id);
 
-		runAction("close", async () => {
-			await closeRoom(id);
-
-			navigate("/salas", { replace: true });
+						toastMessages.roomClosed();
+						navigate("/salas", { replace: true });
+					},
+					toastMessages.roomCloseError,
+				),
 		});
+		setConfirmOpen(true);
 	}
 
 	function handleVoteSkip() {
-		runAction("vote", async () => {
-			const result = await voteSkip(id);
+		runAction(
+			"vote",
+			async () => {
+				const result = await voteSkip(id);
 
-			setVotes(result.skipVotes);
-		});
+				setVotes(result.skipVotes);
+			},
+			toastMessages.roomVoteError,
+		);
 	}
 
 	function handleRate(value) {
 		if (!value || value < 1 || value > 5) return;
 
-		runAction("rate", async () => {
-			setRated(await rateHost(id, value));
-		});
+		runAction(
+			"rate",
+			async () => {
+				setRated(await rateHost(id, value));
+			},
+			toastMessages.roomRateError,
+		);
 	}
 
 	function handleKick(targetUserId, username) {
-		if (!window.confirm(`¿Sacá a ${username} de la sala?`)) return;
+		setConfirm({
+			title: `¿Sacar a ${username} de la sala?`,
+			description:
+				"Va a salir de la sala y dejará de escuchar con el resto.",
+			actionLabel: "Sacar",
+			destructive: true,
+			onConfirm: () =>
+				runAction(
+					`kick:${targetUserId}`,
+					async () => {
+						await kickMember(id, targetUserId);
 
-		runAction(`kick:${targetUserId}`, async () => {
-			await kickMember(id, targetUserId);
-
-			setRoom((current) =>
-				current
-					? {
-							...current,
-							members: current.members.filter((m) => m.userId !== targetUserId),
-							membersCount: current.members.length - 1,
-						}
-					: current,
-			);
+						setRoom((current) =>
+							current
+								? {
+										...current,
+										members: current.members.filter(
+											(m) => m.userId !== targetUserId,
+										),
+										membersCount: current.members.length - 1,
+									}
+								: current,
+						);
+						toastMessages.roomMemberKicked(username);
+					},
+					toastMessages.roomKickError,
+				),
 		});
+		setConfirmOpen(true);
 	}
 
 	function handlePlaySong(songId) {
 		if (!isHost) return;
 
-		runAction("play-song", async () => {
-			const next = await controlPlayback(id, "play-song", songId);
-			syncPlayback(next);
-		});
+		runAction(
+			"play-song",
+			async () => {
+				const next = await controlPlayback(id, "play-song", songId);
+				syncPlayback(next);
+			},
+			toastMessages.roomPlaySongError,
+		);
 	}
 
 	if (loading) {
@@ -345,17 +397,12 @@ export default function RoomPage() {
 		);
 	}
 
-	if (loadError || !room) {
+	if (loadFailed || !room) {
 		return (
 			<section className="px-6 py-4 md:px-10">
-				{loadError && (
-					<p className="max-w-md rounded px-3 py-2 Salmon TextMedium">
-						{loadError}
-					</p>
-				)}
 				<Link
 					to="/salas"
-					className="mt-4 inline-block rounded px-4 py-2 Volume Button hover:brightness-110"
+					className="inline-block rounded px-4 py-2 Volume Button hover:brightness-110"
 				>
 					Volver a las salas
 				</Link>
@@ -380,12 +427,6 @@ export default function RoomPage() {
 
 			<RoomHeader room={room} host={host} />
 
-			{actionError && (
-				<p className="mt-4 max-w-2xl rounded px-3 py-2 Salmon TextMedium">
-					{actionError}
-				</p>
-			)}
-
 			<RoomPlayer
 				room={room}
 				isHost={isHost}
@@ -395,10 +436,14 @@ export default function RoomPage() {
 				isBlocked={isBlocked}
 				onResume={resume}
 				onControl={(action) =>
-					runAction(action, async () => {
-						const next = await controlPlayback(id, action);
-						syncPlayback(next);
-					})
+					runAction(
+						action,
+						async () => {
+							const next = await controlPlayback(id, action);
+							syncPlayback(next);
+						},
+						toastMessages.roomControlError,
+					)
 				}
 				controlPending={Boolean(pending)}
 				votes={votes.voters.length}
@@ -451,30 +496,69 @@ export default function RoomPage() {
 				)}
 			</footer>
 
-			<Dialog
+			<AlertDialog
+				open={confirmOpen}
+				onOpenChange={setConfirmOpen}
+			>
+				<AlertDialogContent size="sm">
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							{confirm?.title ?? "Confirmar acción"}
+						</AlertDialogTitle>
+						<AlertDialogDescription>
+							{confirm?.description ?? ""}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel size="lg" className="h-10 px-4">
+							Cancelar
+						</AlertDialogCancel>
+						<AlertDialogAction
+							size="lg"
+							className={`h-10 px-4 text-(--ds-lighter) ${
+								confirm?.destructive
+									? "bg-(--ds-salmon) hover:bg-(--ds-salmon)/80"
+									: "bg-(--ds-fucsia) hover:bg-(--ds-fucsia)/80"
+							}`}
+							onClick={() => {
+								const action = confirm?.onConfirm;
+
+								setConfirmOpen(false);
+								action?.();
+							}}
+						>
+							{confirm?.actionLabel ?? "Confirmar"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			<AlertDialog
 				open={Boolean(forcedExit)}
 				onOpenChange={(open) => {
 					if (!open) goToRooms();
 				}}
 			>
-				<DialogContent showCloseButton={false}>
-					<DialogHeader>
-						<DialogTitle>{forcedExit?.title ?? "Sala no disponible"}</DialogTitle>
-						<DialogDescription>
+				<AlertDialogContent size="sm">
+					<AlertDialogHeader>
+						<AlertDialogTitle>
+							{forcedExit?.title ?? "Sala no disponible"}
+						</AlertDialogTitle>
+						<AlertDialogDescription>
 							{forcedExit?.message ?? "Volvé al listado para continuar."}
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<button
-							type="button"
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogAction
+							size="lg"
+							className="h-10 px-4 bg-(--ds-fucsia) text-(--ds-lighter) hover:bg-(--ds-fucsia)/80"
 							onClick={goToRooms}
-							className="rounded px-4 py-2 Fucsia Button hover:brightness-110"
 						>
 							Ir a Salas
-						</button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</section>
 	);
 }

@@ -22,7 +22,6 @@ import roomIcon from '@synthos/shared/assets/icons/headphones.svg'
 import searchIcon from '@synthos/shared/assets/icons/search.svg'
 import threeDotsIcon from '@synthos/shared/assets/icons/three_dots.svg'
 import { mapApiError } from '@synthos/shared'
-import { clearRoomNotice, readRoomNotice } from '@/features/rooms/lib/roomNotice.js'
 
 const DEBOUNCE_MS = 300
 
@@ -38,11 +37,6 @@ export default function RoomsPage() {
 
   const [input, setInput] = useState(query)
   const [joinOpen, setJoinOpen] = useState(false)
-  const [roomNotice] = useState(() => {
-    const message = readRoomNotice()
-    if (message) clearRoomNotice()
-    return message
-  })
 
   const debounced = useDebounce(input, DEBOUNCE_MS)
 
@@ -139,12 +133,6 @@ export default function RoomsPage() {
         </div>
       </div>
 
-      {roomNotice && (
-        <p className="mt-6 max-w-2xl rounded px-3 py-2 Volume TextMedium" role="status">
-          {roomNotice}
-        </p>
-      )}
-
       {error && <p className="mt-6 rounded px-3 py-2 Salmon TextMedium">{error}</p>}
 
       {!isCurrent ? (
@@ -169,24 +157,16 @@ export default function RoomsPage() {
 function RoomCardAction({ room }) {
   const full = room.maxCapacity !== null && room.membersCount >= room.maxCapacity
 
-  if (full) {
-    return (
-      <span className="text-muted-foreground TextTiny self-center">
-        Sala llena ({room.membersCount}/{room.maxCapacity})
-      </span>
-    )
-  }
-
-  return <JoinRoomButton room={room} />
+  return <JoinRoomButton room={room} full={full} />
 }
 
-function JoinRoomButton({ room }) {
+function JoinRoomButton({ room, full }) {
   const navigate = useNavigate()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
 
   async function handleJoin() {
-    if (pending) return
+    if (pending || full) return
 
     setPending(true)
     setError('')
@@ -202,16 +182,21 @@ function JoinRoomButton({ room }) {
   }
 
   return (
-    <span className="flex flex-1 flex-col">
+    <span className="flex flex-col items-end">
       <button
         type="button"
         onClick={handleJoin}
-        disabled={pending}
-        className="rounded px-3 py-2 Fucsia Button hover:brightness-110 disabled:opacity-50"
+        disabled={pending || full}
+        aria-label={full ? 'Sala llena' : undefined}
+        className="rounded-full px-6 py-2.5 Fucsia Button text-surface font-bold hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
       >
-        {pending ? 'Uniéndote…' : 'Unirme'}
+        {full ? 'Llena' : pending ? 'Uniéndote…' : 'Unirme'}
       </button>
-      {error && <span className="text-muted-foreground TextTiny mt-1">{error}</span>}
+      {error && (
+        <span className="text-muted-foreground TextTiny mt-1 max-w-40 text-right">
+          {error}
+        </span>
+      )}
     </span>
   )
 }
