@@ -35,21 +35,23 @@ export default function RoomCard({ room: rawRoom, action }) {
   const genres = Array.isArray(room.genres) ? room.genres.slice(0, MAX_GENRES) : [];
 
   return (
-    <article className="SurfaceLight flex h-full flex-col gap-3 rounded-3xl p-5">
+    <article className="@container SurfaceLight flex h-full flex-col gap-3 rounded-3xl p-5">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-nowrap items-center gap-2">
-          <LiveChip isLive={Boolean(room.isLive)} />
+        <div className="flex min-w-0 flex-col items-start gap-2 @min-[360px]:flex-row @min-[360px]:items-center">
+          <div className="flex shrink-0 items-center gap-2">
+            <LiveChip isLive={Boolean(room.isLive)} />
+
+            {room.isPrivate && (
+              <span className="Surface text-muted-foreground TextMedium shrink-0 rounded-xl px-3 py-1.5">
+                Privada
+              </span>
+            )}
+          </div>
 
           {genres.length > 0 && (
-            <span className="Surface TextFucsia TextTiny font-bold flex min-w-0 items-center gap-2 rounded-xl px-3 py-1.5 h-8">
+            <span className="Surface TextFucsia TextTiny font-bold flex max-w-full min-w-0 items-center gap-2 rounded-xl px-3 py-1.5 h-8">
               <MaskIcon src={userGroupIcon} className="h-5 w-5 shrink-0" />
               <span className="truncate">{genres.join(" · ")}</span>
-            </span>
-          )}
-
-          {room.isPrivate && (
-            <span className="Surface text-muted-foreground TextMedium shrink-0 rounded-xl px-3 py-1.5">
-              Privada
             </span>
           )}
         </div>
@@ -69,32 +71,18 @@ export default function RoomCard({ room: rawRoom, action }) {
 
         {room.hostUsername && (
           <div className="flex min-w-0 items-center gap-3">
-            <div className="relative shrink-0">
-              <Avatar
-                src={room.hostAvatarUrl}
-                name={room.hostUsername}
-                className="h-10 w-10"
-              />
-              <span
-                aria-hidden="true"
-                className="Salmon border-(--ds-surface-light) absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2"
-              >
-                <img src={crownIcon} alt="" aria-hidden="true" className="h-3 w-3" />
-              </span>
-            </div>
+            <HostAvatar room={room} hostId={hostId} />
 
             <div className="flex min-w-0 flex-col">
               {hostId ? (
                 <Link
                   to={`/profile/${hostId}`}
-                  className="text-foreground TextMedium truncate hover:underline"
+                  className={`${HOST_NAME_CLASS} hover:underline`}
                 >
                   {room.hostUsername}
                 </Link>
               ) : (
-                <span className="text-foreground TextMedium truncate">
-                  {room.hostUsername}
-                </span>
+                <span className={HOST_NAME_CLASS}>{room.hostUsername}</span>
               )}
               <Hearts rating={room.hostRating} count={room.ratingsCount} />
             </div>
@@ -102,6 +90,38 @@ export default function RoomCard({ room: rawRoom, action }) {
         )}
       </div>
     </article>
+  );
+}
+
+function HostAvatar({ room, hostId }) {
+  const content = (
+    <>
+      <Avatar
+        src={room.hostAvatarUrl}
+        name={room.hostUsername}
+        className="h-10 w-10"
+      />
+      <span
+        aria-hidden="true"
+        className="Salmon border-(--ds-surface-light) absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2"
+      >
+        <img src={crownIcon} alt="" aria-hidden="true" className="h-3 w-3" />
+      </span>
+    </>
+  );
+
+  if (!hostId) {
+    return <div className="relative shrink-0">{content}</div>;
+  }
+
+  return (
+    <Link
+      to={`/profile/${hostId}`}
+      aria-label={`Ir al perfil de ${room.hostUsername}`}
+      className="relative block shrink-0 rounded-full"
+    >
+      {content}
+    </Link>
   );
 }
 
@@ -162,14 +182,19 @@ function MembersTray({ room }) {
   );
 }
 
+const HOST_NAME_CLASS =
+  "text-foreground TextMedium hidden truncate @min-[298px]:block";
+
 const HEARTS_ROW_VARS = {
-  "--size": "clamp(10px, calc((100cqw - 8px) / 5), 14px)",
-  "--overlap": "calc(max(0px, 5 * var(--size) + 8px - 100cqw) / 4)",
+  "--size": "clamp(10px, calc((100cqw - 248px) / 5), 14px)",
 };
 
 function Hearts({ rating, count }) {
-  const rounded = Math.max(0, Math.min(HEARTS, Math.round(Number(rating) || 0)));
-  const label = count
+  const hasRating = count > 0;
+  const rounded = hasRating
+    ? Math.max(0, Math.min(HEARTS, Math.round(Number(rating) || 0)))
+    : 0;
+  const label = hasRating
     ? `${Number(rating).toFixed(2)} de 5, ${count} ${
         count === 1 ? "persona calificó" : "personas calificaron"
       }`
@@ -180,18 +205,39 @@ function Hearts({ rating, count }) {
       role="img"
       aria-label={label}
       title={label}
-      className="@container text-(--ds-salmon) mt-0.5 block w-19.5 max-w-full"
+      className="text-(--ds-salmon) mt-0.5 block"
     >
-      <span className="flex h-3.5 items-center" style={HEARTS_ROW_VARS}>
+      <span
+        aria-hidden="true"
+        className="hidden h-3.5 items-center gap-0.5 @min-[298px]:flex"
+        style={HEARTS_ROW_VARS}
+      >
         {Array.from({ length: HEARTS }, (_, index) => (
-          <HeartIcon
-            key={index}
-            filled={count > 0 && index < rounded}
-            first={index === 0}
-          />
+          <HeartIcon key={index} filled={index < rounded} />
         ))}
       </span>
+
+      <span
+        aria-hidden="true"
+        className="TextMedium flex h-3.5 items-center gap-1 leading-none font-bold @min-[298px]:hidden"
+      >
+        {rounded}
+        <MaskIcon
+          src={rounded > 0 ? fullHeartIcon : emptyHeartIcon}
+          className="h-3.5 w-3.5 shrink-0"
+        />
+      </span>
     </span>
+  );
+}
+
+function HeartIcon({ filled }) {
+  return (
+    <MaskIcon
+      src={filled ? fullHeartIcon : emptyHeartIcon}
+      className="aspect-square shrink-0"
+      style={{ width: "var(--size)" }}
+    />
   );
 }
 
@@ -214,19 +260,6 @@ function MaskIcon({ src, className = "", style }) {
       aria-hidden="true"
       style={mask}
       className={`inline-block bg-current ${className}`}
-    />
-  );
-}
-
-function HeartIcon({ filled, first }) {
-  return (
-    <MaskIcon
-      src={filled ? fullHeartIcon : emptyHeartIcon}
-      className="aspect-square shrink-0"
-      style={{
-        width: "var(--size)",
-        marginLeft: first ? 0 : "calc(2px - var(--overlap))",
-      }}
     />
   );
 }
