@@ -154,22 +154,37 @@ function MembersTray({ guests, emptySlots, label }) {
 function HostBlock({ room, hostId, onHostPress, heartsFilled, ratingLabel }) {
 	const canOpenProfile = Boolean(hostId && onHostPress);
 
+	const avatar = (
+		<>
+			<Avatar size={roomCard.host}>
+				<AvatarImage uri={room.hostAvatarUrl} name={room.hostUsername} />
+				<AvatarFallback name={room.hostUsername} />
+			</Avatar>
+
+			<View
+				accessibilityElementsHidden
+				importantForAccessibility="no-hide-descendants"
+				style={styles.badge}
+			>
+				<CrownIcon size={roomCard.crown} color={colors.lighter} />
+			</View>
+		</>
+	);
+
 	return (
 		<View style={styles.host}>
-			<View style={styles.hostAvatar}>
-				<Avatar size={roomCard.host}>
-					<AvatarImage uri={room.hostAvatarUrl} name={room.hostUsername} />
-					<AvatarFallback name={room.hostUsername} />
-				</Avatar>
-
-				<View
-					accessibilityElementsHidden
-					importantForAccessibility="no-hide-descendants"
-					style={styles.badge}
+			{canOpenProfile ? (
+				<Pressable
+					onPress={onHostPress}
+					accessibilityRole="button"
+					accessibilityLabel={`Ver perfil de ${room.hostUsername}`}
+					style={styles.hostAvatar}
 				>
-					<CrownIcon size={roomCard.crown} color={colors.lighter} />
-				</View>
-			</View>
+					{avatar}
+				</Pressable>
+			) : (
+				<View style={styles.hostAvatar}>{avatar}</View>
+			)}
 
 			<View style={styles.hostText}>
 				{canOpenProfile ? (
