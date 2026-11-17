@@ -87,6 +87,7 @@ const BY_CODE = {
 	ROOM_CODE_REQUIRED: "Escribí el código de la sala.",
 	ROOM_CODE_NOT_FOUND: "No hay ninguna sala con ese código.",
 	ROOM_NOT_MEMBER: "No sos miembro de esta sala.",
+    ROOM_KICKED: "Te expulsaron de esta sala. No podés volver a entrar.",
 	ROOM_ALREADY_MEMBER: "Ya sos parte de esta sala.",
 	NOT_ROOM_HOST: "Solo el anfitrión puede hacer eso.",
 	INVALID_PLAYBACK_ACTION: "Esa acción de reproducción no existe.",
