@@ -87,3 +87,7 @@ export { default as useMyRooms } from "./features/rooms/useMyRooms.js";
 export { default as useRoomPlayback } from "./features/rooms/useRoomPlayback.js";
 export { default as useFollow } from "./features/social/useFollow.js";
 export { default as useNotifications } from "./features/notifications/useNotifications.js";
+
+// modelo de la tarjeta de sala (compartido web/mobile)
+export { withRoomMock } from "./features/rooms/roomMock.js";
+export { getRoomCardModel } from "./features/rooms/roomCardModel.js";
