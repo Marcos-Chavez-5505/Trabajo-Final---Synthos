@@ -2,81 +2,179 @@ import { StyleSheet } from "react-native";
 import {
 	colors,
 	spacing,
-	fontSize,
-	lineHeight,
-	fontWeight,
 	radius,
-	shadows,
+	borderWidth,
+	lineHeight,
+	text,
+	fontWeight,
+	roomCard,
 } from "../../../theme";
 
+// Cinco corazones: se repite acá y en el componente a través del export.
+const HEARTS = 5;
+export const ROOM_CARD_HEARTS = HEARTS;
+
 export const ROOM_CARD_STYLES = StyleSheet.create({
+	// Sin sombra de elevación: se quitó en el rediseño de web.
 	container: {
 		backgroundColor: colors.surfaceLight,
-		borderRadius: radius.card,
-		padding: spacing.lg,
-		...shadows.elevation1,
+		borderRadius: radius.xl,
+		padding: roomCard.padding,
+		gap: spacing.md,
+		justifyContent: "space-between",
 	},
-	header: {
+
+	// ── Fila superior ────────────────────────────────────────────────────────
+	topRow: {
 		flexDirection: "row",
 		alignItems: "flex-start",
+		justifyContent: "space-between",
 		gap: spacing.md,
 	},
-	iconWrapper: {
-		width: 48,
-		height: 48,
-		borderRadius: radius.card,
-		backgroundColor: colors.light,
+	chips: {
+		flexDirection: "row",
 		alignItems: "center",
-		justifyContent: "center",
-		flexShrink: 0,
-	},
-	headerText: {
-		flex: 1,
+		gap: spacing.sm,
+		flexShrink: 1,
 		minWidth: 0,
 	},
-	name: {
-		color: colors.textPrimary,
-		fontSize: fontSize.regular,
-		lineHeight: lineHeight.regular,
-		fontWeight: fontWeight.regular,
-	},
-	host: {
-		color: colors.textMuted,
-		fontSize: fontSize.medium,
-		lineHeight: lineHeight.medium,
-		marginTop: 2,
-	},
-	description: {
-		color: colors.textMuted,
-		fontSize: fontSize.medium,
-		lineHeight: lineHeight.medium,
-		marginTop: spacing.md,
-	},
-	ratingRow: {
-		marginTop: spacing.lg,
-	},
-	ratingText: {
-		color: colors.textPrimary,
-		fontSize: fontSize.medium,
-		lineHeight: lineHeight.medium,
-	},
-	ratingMuted: {
-		color: colors.textMuted,
-	},
-	metaRow: {
+	chip: {
+		height: roomCard.chipHeight,
+		paddingHorizontal: spacing.md,
+		borderRadius: radius.lg,
+		backgroundColor: colors.surface,
 		flexDirection: "row",
-		flexWrap: "wrap",
-		gap: spacing.md,
-		marginTop: spacing.lg,
-	},
-	metaText: {
-		color: colors.textMuted,
-		fontSize: fontSize.tiny,
-		lineHeight: lineHeight.tiny,
-	},
-	actionRow: {
-		flexDirection: "row",
+		alignItems: "center",
 		gap: spacing.sm,
-		marginTop: spacing.md,
+		flexShrink: 0,
+	},
+	liveDot: {
+		width: roomCard.dot,
+		height: roomCard.dot,
+		borderRadius: radius.full,
+		borderWidth: borderWidth.md,
+		borderColor: colors.fucsia,
+	},
+	liveDotOn: {
+		backgroundColor: colors.fucsia,
+	},
+	chipText: {
+		...text.tiny,
+		color: colors.fucsia,
+		fontWeight: fontWeight.bold,
+	},
+	// El chip de géneros es el único que cede espacio.
+	genresChip: {
+		flexShrink: 1,
+		minWidth: 0,
+	},
+	genresText: {
+		...text.tiny,
+		color: colors.fucsia,
+		fontWeight: fontWeight.bold,
+		flexShrink: 1,
+	},
+	privateText: {
+		...text.medium,
+		color: colors.textMuted,
+	},
+	action: {
+		flexShrink: 0,
+	},
+
+	// ── Título y descripción ─────────────────────────────────────────────────
+	titleBlock: {
+		minWidth: 0,
+	},
+	title: {
+		...text.header3,
+		color: colors.textPrimary,
+	},
+	// Reserva siempre dos líneas para que todas las tarjetas midan lo mismo.
+	description: {
+		...text.regular,
+		color: colors.textMuted,
+		marginTop: spacing.xs,
+		minHeight: lineHeight.regular * 2,
+	},
+
+	// ── Fila inferior ────────────────────────────────────────────────────────
+	footer: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: spacing.md,
+	},
+
+	// Bandeja de invitados
+	tray: {
+		backgroundColor: colors.volume,
+		borderRadius: radius.full,
+		padding: spacing.sm,
+		flexDirection: "row",
+		alignItems: "center",
+		flexShrink: 0,
+	},
+	overlap: {
+		marginLeft: -roomCard.guestOverlap,
+	},
+	// Entre el último avatar y el primer hueco el solape se reduce 4px.
+	emptyFirstGap: {
+		marginLeft: -(roomCard.guestOverlap - spacing.xs),
+	},
+	guestAvatar: {
+		borderWidth: borderWidth.md,
+		borderColor: colors.volume,
+	},
+	emptySlot: {
+		width: roomCard.guest,
+		height: roomCard.guest,
+		borderRadius: radius.full,
+		backgroundColor: colors.wall,
+		borderWidth: borderWidth.md,
+		borderColor: colors.volume,
+	},
+
+	// Anfitriona + corazones
+	host: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.md,
+		flexShrink: 1,
+		minWidth: 0,
+	},
+	hostAvatar: {
+		flexShrink: 0,
+	},
+	badge: {
+		position: "absolute",
+		top: -spacing.xs,
+		right: -spacing.xs,
+		width: roomCard.badge,
+		height: roomCard.badge,
+		borderRadius: radius.full,
+		backgroundColor: colors.salmon,
+		borderWidth: borderWidth.md,
+		borderColor: colors.surfaceLight,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	hostText: {
+		flexShrink: 1,
+		minWidth: 0,
+	},
+	hostName: {
+		...text.medium,
+		color: colors.textPrimary,
+	},
+	hearts: {
+		// Ancho preferido: 5 corazones con 4 separaciones. maxWidth lo encoge
+		// con la columna y onLayout mide el ancho real.
+		width: roomCard.heart * HEARTS + roomCard.heartGap * (HEARTS - 1),
+		maxWidth: "100%",
+		height: roomCard.heart,
+		flexDirection: "row",
+		alignItems: "center",
+		alignSelf: "flex-start",
 	},
 });
