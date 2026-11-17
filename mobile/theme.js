@@ -125,11 +125,13 @@ export const radius = {
 	sm: num("--ds-radius-sm"),
 	md: num("--ds-radius-md"),
 	lg: num("--ds-radius-lg"),
+	xl: num("--ds-radius-xl"),
 	full: num("--ds-radius-full"),
 };
 
 export const borderWidth = {
 	sm: num("--ds-border-width-sm"),
+	md: num("--ds-border-width-md"),
 };
 
 export const opacity = {
@@ -141,6 +143,7 @@ export const opacity = {
 // ── Tamaños de componentes ─────────────────────────────────────────────────
 export const sizes = {
 	buttonHeight: num("--ds-height-button"),
+	buttonPaddingY: num("--ds-button-padding-y"),
 	cardMaxWidth: num("--ds-width-card-max"),
 	avatar: num("--ds-size-avatar"),
 	navIndicatorWidth: num("--ds-width-nav-indicator"),
@@ -149,6 +152,24 @@ export const sizes = {
 	mediaCard: num("--ds-size-media-card"),
 	miniMediaCard: num("--ds-size-mini-media-card"),
 	mediaCardPlay: num("--ds-size-media-card-play"),
+};
+
+// ── Tarjeta de sala ────────────────────────────────────────────────────────
+// Medidas propias de RoomCard (bloque "Tarjeta de sala" de tokens.js). Viven
+// acá para que el componente no tenga literales.
+export const roomCard = {
+	padding: num("--ds-room-card-padding"),
+	chipHeight: num("--ds-room-card-chip-height"),
+	chipIcon: num("--ds-room-card-chip-icon"),
+	dot: num("--ds-room-card-dot"),
+	guest: num("--ds-room-card-guest"),
+	guestOverlap: num("--ds-room-card-guest-overlap"),
+	host: num("--ds-room-card-host"),
+	badge: num("--ds-room-card-badge"),
+	crown: num("--ds-room-card-crown"),
+	heart: num("--ds-room-card-heart"),
+	heartMin: num("--ds-room-card-heart-min"),
+	heartGap: num("--ds-room-card-heart-gap"),
 };
 
 // ── Sombras ────────────────────────────────────────────────────────────────
