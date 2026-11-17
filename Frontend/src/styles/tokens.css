@@ -29,7 +29,7 @@
   --ds-warning: #f59e0b;
   --ds-danger-bg: rgba(213, 22, 57, 0.16);
   --ds-scrim: rgba(244, 240, 249, 0.85);
-  --ds-scrim-dark: rgba(0, 0, 0, 0.6);
+  --ds-scrim-dark: rgba(0, 0, 0, 0.7);
 
   /* Tipografía */
   --ds-font: Roboto, sans-serif;
@@ -76,7 +76,9 @@
   --ds-radius-sm: 6px;
   --ds-radius-md: 8px;
   --ds-radius-lg: 12px;
+  --ds-radius-xl: 24px;
   --ds-border-width-sm: 1px;
+  --ds-border-width-md: 2px;
   --ds-opacity-subtle: 0.8;
   --ds-opacity-muted: 0.7;
   --ds-opacity-disabled: 0.6;
@@ -88,9 +90,24 @@
   --ds-size-mini-media-card: 150px;
   --ds-size-media-card-play: 36px;
   --ds-height-button: 40px;
+  --ds-button-padding-y: 10px;
   --ds-width-card-max: 448px;
   --ds-size-avatar: 32px;
   --ds-width-nav-indicator: 64px;
   --ds-height-nav-indicator: 32px;
   --ds-size-nav-icon: 24px;
+
+  /* Tarjeta de sala */
+  --ds-room-card-padding: 20px;
+  --ds-room-card-chip-height: 32px;
+  --ds-room-card-chip-icon: 20px;
+  --ds-room-card-dot: 14px;
+  --ds-room-card-guest: 28px;
+  --ds-room-card-guest-overlap: 12px;
+  --ds-room-card-host: 40px;
+  --ds-room-card-badge: 20px;
+  --ds-room-card-crown: 12px;
+  --ds-room-card-heart: 14px;
+  --ds-room-card-heart-min: 10px;
+  --ds-room-card-heart-gap: 2px;
 }

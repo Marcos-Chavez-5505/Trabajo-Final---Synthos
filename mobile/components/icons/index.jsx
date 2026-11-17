@@ -94,6 +94,7 @@ export const PencilLineIcon = fromCatalog("pencil_line");
 export const TrashIcon = fromCatalog("trash");
 export const UserIcon = fromCatalog("user");
 export const UserGroupIcon = fromCatalog("user_group");
+export const CrownIcon = fromCatalog("crown");
 export const HamburgerMenuIcon = fromCatalog("hamburger_menu");
 export const EllipsisIcon = fromCatalog("ellipsis");
 export const MicrophoneIcon = fromCatalog("microphone");

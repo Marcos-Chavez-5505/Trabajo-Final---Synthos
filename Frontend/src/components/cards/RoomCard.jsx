@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import Avatar from "@/components/ui/Avatar.jsx";
-import { withRoomMock } from "@/lib/roomMock.js"; // TODO: quitar al integrar con el backend
+import { withRoomMock } from "@synthos/shared"; // TODO: quitar al integrar con el backend
 import crownIcon from "@synthos/shared/assets/icons/crown.svg";
 import emptyHeartIcon from "@synthos/shared/assets/icons/empty_heart.svg";
 import fullHeartIcon from "@synthos/shared/assets/icons/full_heart.svg";

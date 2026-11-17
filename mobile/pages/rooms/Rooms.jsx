@@ -96,20 +96,16 @@ function JoinButton({ room, navigation }) {
 	const [pending, setPending] = useState(false);
 
 	const full = room.maxCapacity !== null && room.membersCount >= room.maxCapacity;
-
-	if (full) {
-		return (
-			<Text style={styles.joinError}>
-				Sala llena ({room.membersCount}/{room.maxCapacity})
-			</Text>
-		);
-	}
+	const disabled = pending || full;
 
 	async function handleJoin() {
-		if (pending) return;
+		if (disabled) return;
+
 		setPending(true);
+
 		try {
 			const joined = await joinRoom(room.code);
+
 			navigation.navigate("RoomDetail", { id: joined.id });
 		} catch (cause) {
 			showActionError(cause, "room:join");
@@ -120,12 +116,15 @@ function JoinButton({ room, navigation }) {
 
 	return (
 		<Pressable
-			style={[styles.joinButton, pending && styles.joinButtonDisabled]}
+			style={[styles.joinButton, disabled && styles.joinButtonDisabled]}
 			onPress={handleJoin}
-			disabled={pending}
+			disabled={disabled}
+			accessibilityRole="button"
+			accessibilityState={{ disabled }}
+			accessibilityLabel={full ? "Sala llena" : undefined}
 		>
 			<Text style={styles.joinButtonText}>
-				{pending ? "Uniéndote…" : "Unirme"}
+				{full ? "Llena" : pending ? "Uniéndote…" : "Unirme"}
 			</Text>
 		</Pressable>
 	);

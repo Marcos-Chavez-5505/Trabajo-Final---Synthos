@@ -6,6 +6,9 @@ import {
 	lineHeight,
 	fontWeight,
 	radius,
+	opacity,
+	sizes,
+	text,
 } from "../../theme";
 
 export const ROOMS_STYLES = StyleSheet.create({
@@ -81,23 +84,18 @@ export const ROOMS_STYLES = StyleSheet.create({
 	},
 	joinButton: {
 		backgroundColor: colors.fucsia,
-		paddingVertical: spacing.sm,
-		paddingHorizontal: spacing.lg,
-		borderRadius: 8,
+		paddingVertical: sizes.buttonPaddingY,
+		paddingHorizontal: spacing.xl,
+		borderRadius: radius.full,
 		alignItems: "center",
 	},
 	joinButtonText: {
-		color: colors.textPrimary,
-		fontSize: fontSize.regular,
-		fontWeight: fontWeight.medium,
+		...text.button,
+		color: colors.surface,
+		fontWeight: fontWeight.bold,
 	},
 	joinButtonDisabled: {
-		opacity: 0.5,
-	},
-	joinError: {
-		color: colors.textMuted,
-		fontSize: fontSize.tiny,
-		marginTop: spacing.xs,
+		opacity: opacity.disabled,
 	},
     createButton: {
         backgroundColor: colors.fucsia,

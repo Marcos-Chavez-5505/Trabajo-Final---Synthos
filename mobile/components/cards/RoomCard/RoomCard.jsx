@@ -1,87 +1,243 @@
+import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { ROOM_CARD_STYLES as styles } from "./RoomCard.styles";
-import { colors } from "../../../theme";
-import { HeadphonesIcon } from "../../icons";
+import { getRoomCardModel } from "@synthos/shared";
+import {
+	Avatar,
+	AvatarFallback,
+	AvatarImage,
+} from "../../ui/Avatar/Avatar";
+import {
+	CrownIcon,
+	HeartIcon,
+	HeartOutlineIcon,
+	UserGroupIcon,
+} from "../../icons";
+import { colors, roomCard } from "../../../theme";
+import {
+	ROOM_CARD_STYLES as styles,
+	ROOM_CARD_HEARTS as HEARTS,
+} from "./RoomCard.styles";
 
 /**
- * Tarjeta de una sala en la grilla de `/salas`.
+ * Tarjeta de una sala en la grilla de `/salas` (rediseño equivalente a la
+ * versión web según Objetivo.png).
  *
- * Muestra el nombre, quién la anfitriona, su calificación promedio, cuántas
- * personas están y cuántas caben. El botón va en el slot `action`, fuera del
- * contenido clickeable, para que la tarjeta sea presentacional y la pantalla
- * decida qué acción ofrecer.
+ * Estructura:
+ *   [LIVE] [géneros]                         [action]
+ *   Nombre de la sala
+ *   Descripción (2 líneas)
+ *   [bandeja de asistentes]            anfitriona + corazones
  *
- * `isPrivate` casi nunca se ve acá: el listado público no trae salas privadas,
- * pero la tarjeta también se usa en "Mis Salas", donde sí puede aparecer una
- * privada.
+ * Es presentacional: la pantalla decide qué botón ofrecer (`action`) y qué
+ * hacer al tocar a la anfitriona (`onHostPress`). Los datos calculados salen de
+ * `getRoomCardModel`, compartido con web.
  */
-export default function RoomCard({ room, action, onHostPress }) {
-	const full = room.membersCount >= room.maxCapacity && room.maxCapacity !== null;
+export default function RoomCard({ room: rawRoom, action, onHostPress }) {
+	const model = getRoomCardModel(rawRoom);
+	const room = model.room;
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.header}>
-				<View style={styles.iconWrapper}>
-					<HeadphonesIcon size={24} color={colors.textPrimary} />
+			<View style={styles.topRow}>
+				<View style={styles.chips}>
+					<LiveChip isLive={model.isLive} />
+
+					{model.genres.length > 0 && <GenresChip genres={model.genres} />}
+
+					{room.isPrivate && (
+						<View style={styles.chip}>
+							<Text style={styles.privateText}>Privada</Text>
+						</View>
+					)}
 				</View>
 
-				<View style={styles.headerText}>
-					<Text style={styles.name} numberOfLines={1}>
-						{room.name}
-					</Text>
-
-					{room.hostUsername ? (
-						<Pressable
-							onPress={onHostPress}
-							disabled={!onHostPress}
-							accessibilityRole={onHostPress ? "button" : undefined}
-							accessibilityLabel={
-								onHostPress
-									? `Ver perfil de ${room.hostUsername}`
-									: undefined
-							}
-						>
-							<Text style={styles.host} numberOfLines={1}>
-								Anfitriona: {room.hostUsername}
-							</Text>
-						</Pressable>
-					) : null}
-				</View>
+				{action ? <View style={styles.action}>{action}</View> : null}
 			</View>
 
-			{room.description ? (
+			<View style={styles.titleBlock}>
+				<Text style={styles.title} numberOfLines={1}>
+					{room.name}
+				</Text>
+
+				{/* Se renderiza siempre: el alto mínimo reserva las dos líneas. */}
 				<Text style={styles.description} numberOfLines={2}>
 					{room.description}
 				</Text>
-			) : null}
+			</View>
 
-			<View style={styles.ratingRow}>
-				{room.hostRating === null ? (
-					<Text style={[styles.ratingText, styles.ratingMuted]}>
-						Sin calificaciones
-					</Text>
+			<View style={styles.footer}>
+				<MembersTray
+					guests={model.guests}
+					emptySlots={model.emptySlots}
+					label={model.membersLabel}
+				/>
+
+				{room.hostUsername ? (
+					<HostBlock
+						room={room}
+						hostId={model.hostId}
+						onHostPress={onHostPress}
+						heartsFilled={model.heartsFilled}
+						ratingLabel={model.ratingLabel}
+					/>
+				) : null}
+			</View>
+		</View>
+	);
+}
+
+function LiveChip({ isLive }) {
+	return (
+		<View style={styles.chip}>
+			<View
+				accessibilityElementsHidden
+				importantForAccessibility="no-hide-descendants"
+				style={[styles.liveDot, isLive && styles.liveDotOn]}
+			/>
+			<Text style={styles.chipText}>{isLive ? "LIVE" : "OFF"}</Text>
+		</View>
+	);
+}
+
+function GenresChip({ genres }) {
+	return (
+		<View style={[styles.chip, styles.genresChip]}>
+			<UserGroupIcon size={roomCard.chipIcon} color={colors.fucsia} />
+			<Text
+				style={styles.genresText}
+				numberOfLines={1}
+				ellipsizeMode="tail"
+			>
+				{genres.join(" · ")}
+			</Text>
+		</View>
+	);
+}
+
+function MembersTray({ guests, emptySlots, label }) {
+	const slots = guests.length + emptySlots;
+
+	if (slots === 0) return null;
+
+	return (
+		<View style={styles.tray} accessible accessibilityLabel={label}>
+			{guests.map((member, index) => (
+				<View
+					key={member.id ?? member.username}
+					style={[index > 0 && styles.overlap, { zIndex: slots - index }]}
+				>
+					<Avatar size={roomCard.guest} style={styles.guestAvatar}>
+						<AvatarImage uri={member.avatarUrl} name={member.username} />
+						<AvatarFallback name={member.username} />
+					</Avatar>
+				</View>
+			))}
+
+			{Array.from({ length: emptySlots }, (_, index) => (
+				<View
+					key={`empty-${index}`}
+					accessibilityElementsHidden
+					importantForAccessibility="no-hide-descendants"
+					style={[
+						styles.emptySlot,
+						index === 0 && guests.length > 0
+							? styles.emptyFirstGap
+							: index > 0 && styles.overlap,
+						{ zIndex: emptySlots - index },
+					]}
+				/>
+			))}
+		</View>
+	);
+}
+
+function HostBlock({ room, hostId, onHostPress, heartsFilled, ratingLabel }) {
+	const canOpenProfile = Boolean(hostId && onHostPress);
+
+	return (
+		<View style={styles.host}>
+			<View style={styles.hostAvatar}>
+				<Avatar size={roomCard.host}>
+					<AvatarImage uri={room.hostAvatarUrl} name={room.hostUsername} />
+					<AvatarFallback name={room.hostUsername} />
+				</Avatar>
+
+				<View
+					accessibilityElementsHidden
+					importantForAccessibility="no-hide-descendants"
+					style={styles.badge}
+				>
+					<CrownIcon size={roomCard.crown} color={colors.lighter} />
+				</View>
+			</View>
+
+			<View style={styles.hostText}>
+				{canOpenProfile ? (
+					<Pressable
+						onPress={onHostPress}
+						accessibilityRole="button"
+						accessibilityLabel={`Ver perfil de ${room.hostUsername}`}
+					>
+						<Text style={styles.hostName} numberOfLines={1}>
+							{room.hostUsername}
+						</Text>
+					</Pressable>
 				) : (
-					<Text style={styles.ratingText}>
-						{room.hostRating.toFixed(2)}
-						<Text style={styles.ratingMuted}> / 5</Text>
+					<Text style={styles.hostName} numberOfLines={1}>
+						{room.hostUsername}
 					</Text>
 				)}
-			</View>
 
-			<View style={styles.metaRow}>
-				<Text style={styles.metaText}>
-					{room.membersCount}
-					{room.maxCapacity !== null ? `/${room.maxCapacity}` : ""}
-					{room.membersCount === 1 ? " persona" : " personas"}
-				</Text>
-				<Text style={styles.metaText}>
-					{room.songsCount} {room.songsCount === 1 ? "canción" : "canciones"}
-				</Text>
-				{room.isPrivate ? <Text style={styles.metaText}>Privada</Text> : null}
-				{full ? <Text style={styles.metaText}>Llena</Text> : null}
+				<Hearts filled={heartsFilled} label={ratingLabel} />
 			</View>
+		</View>
+	);
+}
 
-			{action ? <View style={styles.actionRow}>{action}</View> : null}
+function Hearts({ filled, label }) {
+	const [measuredWidth, setMeasuredWidth] = useState(
+		roomCard.heart * HEARTS + roomCard.heartGap * (HEARTS - 1),
+	);
+
+	// Reproduce las container queries de web midiendo el ancho real de la fila.
+	const gaps = roomCard.heartGap * (HEARTS - 1);
+	const size = Math.min(
+		roomCard.heart,
+		Math.max(roomCard.heartMin, (measuredWidth - gaps) / HEARTS),
+	);
+	const overlap =
+		Math.max(0, HEARTS * size + gaps - measuredWidth) / (HEARTS - 1);
+
+	function handleLayout(event) {
+		const width = event.nativeEvent.layout.width;
+
+		if (Math.abs(width - measuredWidth) > 0.5) setMeasuredWidth(width);
+	}
+
+	return (
+		<View
+			accessible
+			accessibilityRole="image"
+			accessibilityLabel={label}
+			style={styles.hearts}
+			onLayout={handleLayout}
+		>
+			{Array.from({ length: HEARTS }, (_, index) => {
+				const Icon = index < filled ? HeartIcon : HeartOutlineIcon;
+
+				return (
+					<View
+						key={index}
+						style={{
+							width: size,
+							height: size,
+							marginLeft: index === 0 ? 0 : roomCard.heartGap - overlap,
+						}}
+					>
+						<Icon size={size} color={colors.salmon} />
+					</View>
+				);
+			})}
 		</View>
 	);
 }

@@ -2,7 +2,7 @@
  * MOCK TEMPORAL — datos que el backend todavía no envía (genres, members, isLive).
  *
  * Se borra cuando exista el plan de integración: bastará con quitar la llamada a
- * `withRoomMock` en RoomCard, porque la tarjeta ya lee `room.genres`,
+ * `withRoomMock` en el modelo, porque la tarjeta ya lee `room.genres`,
  * `room.members` y `room.isLive` tal como llegarán del backend.
  *
  * Los valores son deterministas (salen del id de la sala): la misma sala se ve
