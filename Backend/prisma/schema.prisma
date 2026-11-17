@@ -28,6 +28,7 @@ model User {
   invitationsSent     PlaylistInvitation[] @relation("InvitationSender")
   invitationsReceived PlaylistInvitation[] @relation("InvitationReceiver")
   roomMemberships     RoomMember[]
+  roomKicksReceived   RoomKicked[]         @relation("KickedUser")
   notificationsReceived Notification[] @relation("NotificationReceiver")
   notificationsSent     Notification[] @relation("NotificationActor")
   reorderEvents         ReorderEvent[]
@@ -254,6 +255,7 @@ model Room {
   ratings          HostRating[]
   playlistSource   Playlist     @relation(fields: [idPlaylistSource], references: [id])
   members          RoomMember[]
+  kickedUsers      RoomKicked[]
 
   @@index([status])
   @@index([isPrivate])
@@ -271,6 +273,18 @@ model RoomMember {
 
   @@id([idRoom, idUser])
   @@map("room_member")
+}
+
+
+model RoomKicked {
+  idRoom   Int      @map("id_room")
+  idUser   Int      @map("id_user")
+  kickedAt DateTime @default(now()) @map("kicked_at") @db.Timestamp(6)
+  room     Room     @relation(fields: [idRoom], references: [id], onDelete: Cascade)
+  user     User     @relation("KickedUser", fields: [idUser], references: [id], onDelete: Cascade)
+
+  @@id([idRoom, idUser])
+  @@map("room_kicked")
 }
 
 model HostRating {

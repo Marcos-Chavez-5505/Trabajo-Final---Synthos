@@ -5,24 +5,12 @@ const crypto = require("node:crypto");
 const { Prisma } = require("@prisma/client");
 const { httpError } = require("../utils/errors");
 
-// Caracteres que en `ILIKE` son comodines. Se escapan para que buscar "%"
-//no devuelva todas las salas.
 const LIKE_WILDCARDS = /[\\%_]/g;
 
 function toLikePattern(query) {
 	return `%${String(query).replace(LIKE_WILDCARDS, (char) => `\\${char}`)}%`;
 }
 
-/**
- * Query del listado de salas, compartida por `GET /api/rooms` y
- * `GET /api/rooms/mine`.
- *
- * Las columnas se nombran una por una a propósito: con `room.*` el endpoint
- * público devolvía también `password_hash`. El anfitrión y el conteo de
- * miembros van como `LATERAL` para que un `JOIN` no duplique la fila de la sala
- * (nada impide dos anfitriones en la misma) ni multiplicar el `COUNT` por el
- * fan-out de las calificaciones.
- */
 function buildRoomListQuery({ query, sort, order, onlyMine, userId }) {
 	const direction = order === "desc" ? Prisma.raw("DESC") : Prisma.raw("ASC");
 	const orderBy =
@@ -30,7 +18,6 @@ function buildRoomListQuery({ query, sort, order, onlyMine, userId }) {
 			? Prisma.sql`avg_rating ${direction}, room.name ASC`
 			: Prisma.sql`room.name ${direction}`;
 
-	// El filtro por texto busca por nombre de sala o por nombre del anfitrión.
 	const textFilter = query
 		? Prisma.sql`AND (
 			room.name ILIKE ${toLikePattern(query)} ESCAPE '\\'
@@ -38,8 +25,6 @@ function buildRoomListQuery({ query, sort, order, onlyMine, userId }) {
 		)`
 		: Prisma.empty;
 
-	// El listado público nunca muestra privadas ni cerradas: a las privadas se
-	// entra con el código (D14) y a las cerradas ya no se entra.
 	const visibility = onlyMine
 		? Prisma.sql`room.status = 'activa' AND EXISTS (
 			SELECT 1 FROM room_member mine WHERE mine.id_room = room.id AND mine.id_user = ${userId}
@@ -100,11 +85,6 @@ async function listRooms({ query = "", sort = "name", order = "asc" } = {}) {
 	);
 }
 
-/**
- * Salas de las que el usuario es miembro (grupo "Mis Salas"). A diferencia del
- * listado público, acá entran también las privadas: son las que puede haber
- * creado o aceptado con un código.
- */
 async function listMyRooms(userId, { query = "" } = {}) {
 	return prisma.$queryRaw(
 		buildRoomListQuery({
@@ -146,21 +126,6 @@ function generateRoomCode() {
 	return crypto.randomBytes(4).toString("hex").slice(0, 6).toUpperCase();
 }
 
-/**
- * Crea una sala a partir de una playlist (B12).
- *
- * La fuente puede ser cualquier playlist a la que el usuario tenga acceso: una
- * personal propia o una colaborativa de la que participe (D19). Solo se exige que
- * tenga al menos una canción, porque la sala arranca reproduciéndola.
- */
-/**
- * Saca `passwordHash` de una sala antes de devolverla.
- *
- * `ROOM_INCLUDE` trae la fila completa de `room` y con ella el hash de bcrypt de
- * las salas privadas. El listado ya proyecta columnas explícitas, pero los
- * endpoints que devuelven la sala entera (crear, unirse, detalle) pasaban por
- * acá sin filtrar nada.
- */
 function safeRoom(room) {
 	if (!room) return room;
 
@@ -214,7 +179,6 @@ async function createRoom(
 		passwordHash = await bcrypt.hash(password, 10);
 	}
 
-	// Generar código único (reintenta si colisiona)
 	let code;
 	let attempts = 0;
 	do {
@@ -301,6 +265,19 @@ async function joinRoom(userId, { code, password }) {
 		throw err;
 	}
 
+	// Expulsión persistente: si el usuario fue sacado de esta sala, no puede
+	// volver a entrar con el código, ni siquiera reconectándose.
+	const wasKicked = await prisma.roomKicked.findUnique({
+		where: { idRoom_idUser: { idRoom: room.id, idUser: userId } },
+		select: { idUser: true },
+	});
+
+	if (wasKicked) {
+		const err = new Error("Te expulsaron de esta sala. No podés volver a entrar.");
+		err.status = 403;
+		throw err;
+	}
+
 	const alreadyMember = room.members.some((m) => m.idUser === userId);
 
 	if (room.isPrivate && !alreadyMember) {
@@ -318,7 +295,6 @@ async function joinRoom(userId, { code, password }) {
 	}
 
 	return prisma.$transaction(async (tx) => {
-		// Releer dentro de la transacción para evitar race conditions
 		const currentRoom = await tx.room.findUnique({
 			where: { id: room.id },
 			include: { members: { select: { idUser: true } } },
@@ -377,7 +353,6 @@ async function leaveRoom(userId, roomId) {
 		throw err;
 	}
 
-	// Si sale el anfitrión, se cierra la sala (decisión de diseño)
 	if (member.role === "host") {
 		await prisma.room.update({
 			where: { id: roomId },
@@ -428,13 +403,8 @@ async function getRoomByIdForMember(roomId, userId) {
 	const isMember = room.members.some((m) => m.idUser === userId);
 	if (!isMember) return { forbidden: true };
 
-	// El promedio del anfitrión no viene en el include: se pega aparte para que
-	// la pantalla de la sala muestre la calificación sin pedir el listado.
 	const hostId = room.members.find((m) => m.role === "host")?.idUser ?? null;
 
-	// Si quien mira ya calificó esta sala, el botón tiene que venir deshabilitado.
-	// Sin esto el frontend solo puede acordarse de lo que él mismo hizo en esta
-	// sesión, y al recargar volvería a ofrecerlo.
 	const ownRating = hostId
 		? await prisma.hostRating.findUnique({
 				where: {
@@ -493,9 +463,19 @@ async function kickMember(hostId, roomId, targetUserId) {
 		throw err;
 	}
 
-	await prisma.roomMember.delete({
-		where: { idRoom_idUser: { idRoom: roomId, idUser: targetUserId } },
-	});
+	// Borrar de miembros e insertar en la lista negra de la sala en una sola
+	// transacción: si el proceso muere entre medio, no queda un expulsado que
+	// puede volver a entrar.
+	await prisma.$transaction([
+		prisma.roomMember.delete({
+			where: { idRoom_idUser: { idRoom: roomId, idUser: targetUserId } },
+		}),
+		prisma.roomKicked.upsert({
+			where: { idRoom_idUser: { idRoom: roomId, idUser: targetUserId } },
+			create: { idRoom: roomId, idUser: targetUserId },
+			update: {},
+		}),
+	]);
 
 	return { kicked: targetUserId };
 }
@@ -572,14 +552,6 @@ async function getRoomStatus(roomId) {
 	return room;
 }
 
-/**
- * Califica al anfitrión de una sala (TS-11).
- *
- * Solo quien participa en la sala puede calificar, y una sola vez por sala: lo
- * garantiza la PK `[id_room, id_rater, id_host]` de `host_rating`, que el
- * `P2002` traduce a `409`. El anfitrión no califica a nadie, ni siquiera a
- * sí mismo.
- */
 async function rateHost({ roomId, raterId, rating }) {
 	if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
 		throw httpError(
@@ -652,10 +624,6 @@ async function rateHost({ roomId, raterId, rating }) {
 	}
 }
 
-/**
- * Promedio de calificación de un anfitrión, leído de la vista `host_avg_rating`
- * (la misma que usa el listado). Viene como Decimal de Postgres, o sea string.
- */
 async function getHostAvgRating(hostId) {
 	const rows = await prisma.$queryRaw`
 		SELECT avg_rating FROM host_avg_rating WHERE id_host = ${hostId}
