@@ -1,4 +1,5 @@
 import { View } from "react-native";
+import { StackActions } from "@react-navigation/native";
 import { colors } from "../theme";
 import BottomNav from "../components/layout/BottomNav/BottomNav";
 import MiniPlayerBar from "../components/layout/MiniPlayerBar/MiniPlayerBar";
@@ -25,8 +26,27 @@ export default function BottomTabBar({ state, descriptors, navigation }) {
 			type: "tabPress",
 			target: route.key,
 			canPreventDefault: true,
+			// El native stack ya hace popToTop solo al recibir tabPress. Lo
+			// desactivamos para que no compita con la navegación explícita.
+			data: { behavior: { popToTop: false } },
 		});
-		if (!event.defaultPrevented) navigation.navigate(route.name);
+		if (event.defaultPrevented) return;
+
+		if (route.name === "Search") {
+			// Las pills de Inicio dejan `screen: "Albums"` en los parámetros del
+			// tab. Navegar sin parámetros los limpia; el popToTop targeting el
+			// stack anidado vuelve a SearchHome (misma acción que popToTopOnBlur).
+			navigation.navigate("Search");
+			const nested = state.routes.find((r) => r.name === "Search")?.state;
+			if (nested?.type === "stack" && nested.key && (nested.index ?? 0) > 0) {
+				navigation.dispatch({
+					...StackActions.popToTop(),
+					target: nested.key,
+				});
+			}
+			return;
+		}
+		navigation.navigate(route.name);
 	};
 
 	return (

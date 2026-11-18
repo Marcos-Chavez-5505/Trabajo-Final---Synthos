@@ -15,9 +15,11 @@ export default function HomePills() {
 	return (
 		<HorizontalScrollBar contentContainerStyle={styles.content}>
 			{PILLS.map(({ label, screen }) => (
+				// `initial: false` evita que el stack anidado se inicialice con esta
+				// pantalla como raíz: SearchHome debe quedar siempre abajo.
 				<Pressable
 					key={screen}
-					onPress={() => navigation.navigate("Search", { screen })}
+					onPress={() => navigation.navigate("Search", { screen, initial: false })}
 					style={styles.pill}
 				>
 					<Text style={styles.pillText}>{label}</Text>
