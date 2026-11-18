@@ -28,7 +28,9 @@
           "recordAudioAndroid": false,
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-status-bar"
     ]
   }
 }

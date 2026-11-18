@@ -7,7 +7,7 @@ import {
 	View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePlaylistList, usePlaylistsPage } from "@synthos/shared";
 import PlaylistCard from "../../components/cards/PlaylistCard/PlaylistCard";
@@ -30,7 +30,14 @@ export default function PlaylistsScreen() {
 	const insets = useSafeAreaInsets();
 	const { playlists, error, loading } = usePlaylistList();
 	const { creating, setCreating, handleCreate } = usePlaylistsPage();
-	const [tab, setTab] = useState("mis");
+	const route = useRoute();
+	const [selectedTab, setSelectedTab] = useState("mis");
+	const tab = route.params?.tab ?? selectedTab;
+
+	function handleTabPress(key) {
+		setSelectedTab(key);
+		if (route.params?.tab) navigation.setParams({ tab: undefined });
+	}
 
 	const mine = playlists.filter((playlist) => playlist.role === "creator");
 	const collaborative = playlists.filter(
@@ -72,7 +79,7 @@ export default function PlaylistsScreen() {
 					{TABS.map((item) => (
 						<Pressable
 							key={item.key}
-							onPress={() => setTab(item.key)}
+							onPress={() => handleTabPress(item.key)}
 							style={[styles.tab, tab === item.key && styles.tabActive]}
 							accessibilityRole="button"
 							accessibilityState={{ selected: tab === item.key }}

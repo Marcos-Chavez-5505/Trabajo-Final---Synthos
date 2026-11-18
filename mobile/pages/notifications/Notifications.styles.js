@@ -9,6 +9,8 @@ import {
 	shadows,
 } from "../../theme";
 
+// `header` y `empty` solo neutralizan el padding horizontal que ya da `scroll`,
+// porque ScreenHeader y EmptyState lo traen propio.
 export const NOTIFICATIONS_STYLES = StyleSheet.create({
 	safe: {
 		flex: 1,
@@ -19,32 +21,9 @@ export const NOTIFICATIONS_STYLES = StyleSheet.create({
 		paddingVertical: spacing.md,
 		paddingBottom: spacing.xxl,
 	},
-	loading: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-	},
 	header: {
-		flexDirection: "row",
-		alignItems: "flex-end",
-		justifyContent: "space-between",
-		gap: spacing.md,
+		paddingHorizontal: 0,
 		marginBottom: spacing.lg,
-	},
-	headerText: {
-		flex: 1,
-	},
-	title: {
-		color: colors.textPrimary,
-		fontSize: fontSize.header3,
-		lineHeight: lineHeight.header3,
-		fontWeight: fontWeight.bold,
-	},
-	subtitle: {
-		color: colors.textMuted,
-		fontSize: fontSize.regular,
-		lineHeight: lineHeight.regular,
-		marginTop: spacing.xs,
 	},
 	markAllButton: {
 		backgroundColor: colors.volume,
@@ -56,6 +35,14 @@ export const NOTIFICATIONS_STYLES = StyleSheet.create({
 		color: colors.textPrimary,
 		fontSize: fontSize.medium,
 		fontWeight: fontWeight.medium,
+	},
+	loading: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	empty: {
+		paddingHorizontal: 0,
 	},
 	list: {
 		gap: spacing.sm,
@@ -125,23 +112,5 @@ export const NOTIFICATIONS_STYLES = StyleSheet.create({
 		fontSize: fontSize.tiny,
 		lineHeight: lineHeight.tiny,
 		marginTop: spacing.xs,
-	},
-	empty: {
-		alignItems: "center",
-		paddingVertical: spacing.xxl,
-		gap: spacing.sm,
-	},
-	emptyTitle: {
-		color: colors.textPrimary,
-		fontSize: fontSize.header4,
-		fontWeight: fontWeight.bold,
-		marginTop: spacing.md,
-	},
-	emptyText: {
-		color: colors.textMuted,
-		fontSize: fontSize.regular,
-		lineHeight: lineHeight.regular,
-		textAlign: "center",
-		maxWidth: 320,
 	},
 });

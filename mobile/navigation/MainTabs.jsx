@@ -7,7 +7,6 @@ import ExpandedPlayer from "../components/player/ExpandedPlayer/ExpandedPlayer";
 import {
 	HeadphonesIcon,
 	HomeIcon,
-	NotificationIcon,
 	PlaylistIcon,
 	SearchIcon,
 } from "../components/icons";
@@ -55,14 +54,7 @@ export default function MainTabs() {
 						},
 					})}
 				/>
-				<Tab.Screen
-					name="Notifications"
-					component={NotificationsScreen}
-					options={{
-						tabBarLabel: "Notificaciones",
-						tabBarIcon: NotificationIcon,
-					}}
-				/>
+				<Tab.Screen name="Notifications" component={NotificationsScreen} />
 				<Tab.Screen
 					name="Playlists"
 					component={PlaylistsStack}
