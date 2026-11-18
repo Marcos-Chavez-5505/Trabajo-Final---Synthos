@@ -33,11 +33,24 @@ export default function BottomTabBar({ state, descriptors, navigation }) {
 		if (event.defaultPrevented) return;
 
 		if (route.name === "Search") {
-			// Las pills de Inicio dejan `screen: "Albums"` en los parámetros del
-			// tab. Navegar sin parámetros los limpia; el popToTop targeting el
-			// stack anidado vuelve a SearchHome (misma acción que popToTopOnBlur).
-			navigation.navigate("Search");
 			const nested = state.routes.find((r) => r.name === "Search")?.state;
+			const currentScreen = nested?.routes?.[nested.index ?? 0]?.name;
+			const isSearchFocused = state.routes[state.index]?.name === "Search";
+
+			// Si ya estamos viendo un catálogo dentro del tab, el toque no hace
+			// nada: respetamos Álbumes/Artistas.
+			if (
+				isSearchFocused &&
+				(currentScreen === "Albums" || currentScreen === "Artists")
+			) {
+				return;
+			}
+
+			// Desde cualquier otro origen (otro tab, SearchHome, Populares,
+			// detalles...) se vuelve a la búsqueda global. `navigate` sin params
+			// limpia el `screen` que dejaron las pills; el popToTop apunta al
+			// stack anidado (misma acción que popToTopOnBlur).
+			navigation.navigate("Search");
 			if (nested?.type === "stack" && nested.key && (nested.index ?? 0) > 0) {
 				navigation.dispatch({
 					...StackActions.popToTop(),
