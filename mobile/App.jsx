@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer, DarkTheme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, View } from "react-native";
 import {
@@ -30,10 +30,26 @@ import ProfileEditScreen from "./pages/profile/ProfileEdit";
 import CreateRoomScreen from "./pages/rooms/CreateRoom";
 import RoomDetailScreen from "./pages/rooms/RoomDetail";
 import MoodScreen from "./pages/mood/Mood";
+import { colors } from "./theme";
 
 initApi();
 
 const Stack = createNativeStackNavigator();
+
+// El native stack pinta el fondo de cada escena con `colors.background` del
+// tema de NavigationContainer. Sin esto usa el tema claro y se ve un flash
+// blanco durante las transiciones (especialmente al hacer popToTop).
+const navigationTheme = {
+	...DarkTheme,
+	colors: {
+		...DarkTheme.colors,
+		background: colors.background,
+		card: colors.surface,
+		text: colors.textPrimary,
+		border: colors.border,
+		primary: colors.primary,
+	},
+};
 
 function handleToastShow(item) {
 	if (item.status === "error") {
@@ -66,7 +82,7 @@ function RootNavigator() {
 	}
 
 	return (
-		<NavigationContainer>
+		<NavigationContainer theme={navigationTheme}>
 			<Stack.Navigator
 				initialRouteName={user ? "Main" : "Landing"}
 				screenOptions={{ headerShown: false }}

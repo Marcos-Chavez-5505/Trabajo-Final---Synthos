@@ -1,26 +1,24 @@
 import { View } from "react-native";
+import { StackActions } from "@react-navigation/native";
 import { colors } from "../theme";
-import { useUnreadNotificationsCount } from "@synthos/shared";
 import BottomNav from "../components/layout/BottomNav/BottomNav";
 import MiniPlayerBar from "../components/layout/MiniPlayerBar/MiniPlayerBar";
 
-export default function BottomTabBar({ state, descriptors, navigation }) {
-	const unreadCount = useUnreadNotificationsCount();
+// Notificaciones se abre desde el TopBar: la ruta sigue en el navigator pero no
+// se muestra como pestaña.
+const HIDDEN_TABS = new Set(["Notifications"]);
 
-	const items = state.routes.map((route) => {
-		const { options } = descriptors[route.key];
-		return {
-			key: route.key,
-			label: options.tabBarLabel ?? options.title ?? route.name,
-			Icon: options.tabBarIcon,
-			badge:
-				route.name === "Notifications" && unreadCount > 0
-					? unreadCount > 9
-						? "9+"
-						: String(unreadCount)
-					: null,
-		};
-	});
+export default function BottomTabBar({ state, descriptors, navigation }) {
+	const items = state.routes
+		.filter((route) => !HIDDEN_TABS.has(route.name))
+		.map((route) => {
+			const { options } = descriptors[route.key];
+			return {
+				key: route.key,
+				label: options.tabBarLabel ?? options.title ?? route.name,
+				Icon: options.tabBarIcon,
+			};
+		});
 
 	const onSelect = (key) => {
 		const route = state.routes.find((r) => r.key === key);
@@ -28,8 +26,40 @@ export default function BottomTabBar({ state, descriptors, navigation }) {
 			type: "tabPress",
 			target: route.key,
 			canPreventDefault: true,
+			// El native stack ya hace popToTop solo al recibir tabPress. Lo
+			// desactivamos para que no compita con la navegación explícita.
+			data: { behavior: { popToTop: false } },
 		});
-		if (!event.defaultPrevented) navigation.navigate(route.name);
+		if (event.defaultPrevented) return;
+
+		if (route.name === "Search") {
+			const nested = state.routes.find((r) => r.name === "Search")?.state;
+			const currentScreen = nested?.routes?.[nested.index ?? 0]?.name;
+			const isSearchFocused = state.routes[state.index]?.name === "Search";
+
+			// Si ya estamos viendo un catálogo dentro del tab, el toque no hace
+			// nada: respetamos Álbumes/Artistas.
+			if (
+				isSearchFocused &&
+				(currentScreen === "Albums" || currentScreen === "Artists")
+			) {
+				return;
+			}
+
+			// Desde cualquier otro origen (otro tab, SearchHome, Populares,
+			// detalles...) se vuelve a la búsqueda global. `navigate` sin params
+			// limpia el `screen` que dejaron las pills; el popToTop apunta al
+			// stack anidado (misma acción que popToTopOnBlur).
+			navigation.navigate("Search");
+			if (nested?.type === "stack" && nested.key && (nested.index ?? 0) > 0) {
+				navigation.dispatch({
+					...StackActions.popToTop(),
+					target: nested.key,
+				});
+			}
+			return;
+		}
+		navigation.navigate(route.name);
 	};
 
 	return (

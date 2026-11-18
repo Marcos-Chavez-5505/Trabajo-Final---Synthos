@@ -1,6 +1,6 @@
-import { Pressable, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { useAuth } from "@synthos/shared";
+import { useAuth, useUnreadNotificationsCount } from "@synthos/shared";
 import { Avatar, AvatarFallback, AvatarImage } from "../../ui/Avatar/Avatar";
 import { BellIcon, CameraAIIcon } from "../../icons";
 import { colors } from "../../../theme";
@@ -17,6 +17,7 @@ import { TOP_BAR_STYLES as styles } from "./TopBar.styles";
 export default function TopBar({ style }) {
 	const navigation = useNavigation();
 	const { user } = useAuth();
+	const unreadCount = useUnreadNotificationsCount();
 
 	return (
 		<View style={[styles.container, style]}>
@@ -36,8 +37,20 @@ export default function TopBar({ style }) {
 				<Pressable
 					onPress={() => navigation.navigate("Notifications")}
 					style={styles.actionButton}
+					accessibilityLabel={
+						unreadCount > 0
+							? `Notificaciones, ${unreadCount} sin leer`
+							: "Notificaciones"
+					}
 				>
 					<BellIcon size={22} color={colors.textPrimary} />
+					{unreadCount > 0 ? (
+						<View style={styles.badge}>
+							<Text style={styles.badgeText}>
+								{unreadCount > 9 ? "9+" : String(unreadCount)}
+							</Text>
+						</View>
+					) : null}
 				</Pressable>
 				<Pressable
 					onPress={() => navigation.navigate("Mood")}

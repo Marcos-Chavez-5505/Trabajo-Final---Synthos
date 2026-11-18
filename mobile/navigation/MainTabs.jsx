@@ -1,5 +1,4 @@
 import { View } from "react-native";
-import { StackActions } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import BottomTabBar from "./BottomTabBar";
 import HomeScreen from "../pages/home/Home";
@@ -7,7 +6,6 @@ import ExpandedPlayer from "../components/player/ExpandedPlayer/ExpandedPlayer";
 import {
 	HeadphonesIcon,
 	HomeIcon,
-	NotificationIcon,
 	PlaylistIcon,
 	SearchIcon,
 } from "../components/icons";
@@ -43,26 +41,8 @@ export default function MainTabs() {
 						tabBarIcon: SearchIcon,
 						popToTopOnBlur: true,
 					}}
-					listeners={({ navigation, route }) => ({
-						tabPress: () => {
-							const stack = route.state;
-							if (stack?.type === "stack" && stack.key && stack.index > 0) {
-								navigation.dispatch({
-									...StackActions.popToTop(),
-									target: stack.key,
-								});
-							}
-						},
-					})}
 				/>
-				<Tab.Screen
-					name="Notifications"
-					component={NotificationsScreen}
-					options={{
-						tabBarLabel: "Notificaciones",
-						tabBarIcon: NotificationIcon,
-					}}
-				/>
+				<Tab.Screen name="Notifications" component={NotificationsScreen} />
 				<Tab.Screen
 					name="Playlists"
 					component={PlaylistsStack}
