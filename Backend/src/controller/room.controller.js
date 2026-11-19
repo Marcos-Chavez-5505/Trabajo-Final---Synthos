@@ -5,6 +5,8 @@ const {
 	getId,
 } = require("../utils/validation");
 const roomState = require("../realtime/roomState");
+const roomLive = require("../realtime/roomLive");
+const roomCards = require("../realtime/roomCards");
 
 async function getSortedRoom(req, res, next) {
 	try {
@@ -13,7 +15,13 @@ async function getSortedRoom(req, res, next) {
 		const query =
 			typeof req.query.query === "string" ? req.query.query.trim() : "";
 
-		const result = await roomService.listRooms({ query, sort, order });
+		const result = await roomService.listRooms({
+			query,
+			sort,
+			order,
+			// Los avatares de los presentes solo se devuelven con sesión.
+			includeMembers: Boolean(req.user),
+		});
 
 		res.status(200).json(result);
 	} catch (error) {
@@ -112,6 +120,8 @@ async function joinRoom(req, res, next) {
 			io.to(`room:${result.room.id}`).emit("room:members", result.room.members);
 		}
 
+		roomCards.notifyRoomCardChanged(result.room.id);
+
 		const status = result.alreadyMember ? 200 : 201;
 		return res.status(status).json({ status: "success", room: result.room });
 	} catch (error) {
@@ -145,6 +155,10 @@ async function leaveRoom(req, res, next) {
 				io.to(`room:${roomId}`).emit("room:members", room?.members ?? []);
 			}
 		}
+
+		// Si era la anfitriona, la sala se cerró y la tarjeta se retira; si era
+		// un invitado, baja `membersCount`.
+		roomCards.notifyRoomCardChanged(roomId);
 
 		return res.status(204).send();
 	} catch (error) {
@@ -217,6 +231,8 @@ async function kickMember(req, res, next) {
 			io.to(`user:${targetUserId}`).emit("room:kicked", { roomId });
 		}
 
+		roomCards.notifyRoomCardChanged(roomId);
+
 		return res.status(204).send();
 	} catch (error) {
 		if (error.status) {
@@ -244,6 +260,8 @@ async function closeRoom(req, res, next) {
 			roomState.deleteRoomState(roomId);
 			io.to(`room:${roomId}`).emit("room:closed", { roomId });
 		}
+
+		roomCards.notifyRoomCardChanged(roomId);
 
 		return res.status(204).send();
 	} catch (error) {
@@ -310,13 +328,7 @@ async function postPlayback(req, res, next) {
 				positionMs: current.positionMs,
 			};
 		} else if (action === "pause") {
-			const elapsed =
-				current.status === "playing" ? Date.now() - current.updatedAt : 0;
-			next = {
-				...current,
-				positionMs: current.positionMs + elapsed,
-				status: "paused",
-			};
+			next = roomState.pausedPatch(current);
 		} else if (action === "stop") {
 			next = { songId: null, status: "stopped", positionMs: 0 };
 		} else if (action === "next") {
@@ -335,6 +347,10 @@ async function postPlayback(req, res, next) {
 		}
 
 		const updated = roomState.updatePlayback(roomId, next);
+
+		// La anfitriona acaba de controlar la reproducción: si sigue conectada,
+		// play vuelve a LIVE; pause/stop arrancan el conteo de inactividad.
+		roomLive.syncOfflineSince(roomId);
 
 		if (
 			action === "next" ||
@@ -488,6 +504,7 @@ async function postSkipVote(req, res, next) {
 			});
 
 			roomState.clearSkipVotes(roomId);
+			roomLive.syncOfflineSince(roomId);
 
 			if (io) {
 				const playback = { ...next, serverTime: Date.now() };

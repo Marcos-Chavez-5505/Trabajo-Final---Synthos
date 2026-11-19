@@ -1,5 +1,6 @@
 const playlistService = require("../services/playlist.service");
 const notificationService = require("../services/notification.service");
+const roomGenres = require("../services/roomGenres.service");
 const { httpError } = require("../utils/errors");
 const { parseSongIds } = require("../utils/reorder");
 const reorderEventService = require("../services/reorderEvent.service");
@@ -264,6 +265,9 @@ async function addSong(req, res, next) {
 			);
 		}
 
+		// Los géneros de las salas que usan esta playlist quedan obsoletos.
+		roomGenres.invalidateByPlaylist(id);
+
 		return res.status(201).json({
 			status: "success",
 			song: result.created,
@@ -328,6 +332,9 @@ async function removeSong(req, res, next) {
 				"SONG_NOT_IN_PLAYLIST",
 			);
 		}
+
+		// Los géneros de las salas que usan esta playlist quedan obsoletos.
+		roomGenres.invalidateByPlaylist(id);
 
 		return res.status(200).json({
 			status: "success",
