@@ -35,11 +35,12 @@ export const API_BASE_URL = '/api'
  * directo en la UI en vez de inventar un texto genérico.
  */
 export class ApiError extends Error {
-  constructor(message, { status, code } = {}) {
+  constructor(message, { status, code, reason } = {}) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
+    this.reason = reason
   }
 }
 
@@ -151,6 +152,7 @@ async function request(method, path, { body, params, signal, keepalive } = {}) {
     throw new ApiError(payload?.message ?? `Error ${response.status} al pedir ${path}.`, {
       status: response.status,
       code: payload?.code,
+      reason: payload?.reason,
     })
   }
 

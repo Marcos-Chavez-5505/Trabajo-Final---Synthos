@@ -86,6 +86,7 @@ export { resolvePlaylistCoverUrl } from "./features/playlists/playlistCover.js";
 export { default as useReorderSongs } from "./features/playlists/useReorderSongs.js";
 export { default as useMyRooms } from "./features/rooms/useMyRooms.js";
 export { default as useRoomPlayback } from "./features/rooms/useRoomPlayback.js";
+export { default as useRoomAccessGuard } from "./features/rooms/useRoomAccessGuard.js";
 export { default as useFollow } from "./features/social/useFollow.js";
 export { default as useNotifications } from "./features/notifications/useNotifications.js";
 

@@ -143,6 +143,39 @@ export function showSuccess(key) {
 }
 
 /**
+ * Aviso de que el usuario perdió el acceso a una sala (inactividad, kick o un
+ * 403 al reabrirla). No es un error de una acción: la pantalla lo muestra antes
+ * de volver al listado, así que no lleva botón de reintentar.
+ *
+ * @param {"inactivity"|"kicked"|"not_member"} [reason]
+ */
+export function showRoomAccessLost(reason) {
+	const copy =
+		reason === "inactivity"
+			? {
+					title: "Te sacamos de la sala",
+					description:
+						"La sala quedó inactiva y ya no tenés acceso. Te llevamos al listado de salas.",
+				}
+			: reason === "kicked"
+				? {
+						title: "Te sacaron de la sala",
+						description:
+							"El anfitrión te quitó de esta sala. Te llevamos al listado de salas.",
+					}
+				: {
+						title: "Ya no tenés acceso a la sala",
+						description: "Te llevamos al listado de salas.",
+					};
+
+	return toast.info(copy.title, {
+		id: "room:access-lost",
+		description: copy.description,
+		duration: 5000,
+	});
+}
+
+/**
  * Toast de una operación larga: pasa de carga a éxito o error sin dejar
  * rechazos sin manejar. Devuelve la misma promesa para que quien llama decida
  * si además recarga datos.

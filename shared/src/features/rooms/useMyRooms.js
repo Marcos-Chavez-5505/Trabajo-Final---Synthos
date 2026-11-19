@@ -13,7 +13,7 @@ import { subscribeToRoomEvent } from '../../services/socketService.js'
  * una sala desde otra pantalla. Por eso se suscribe a `subscribeToRooms` y usa un
  * `version` para volver a pedir la lista: el mismo patrón que `usePlaylistList`.
  *
- * Acá se suscriben también dos eventos de sala que ningún endpoint de este
+ * Acá se suscriben también los eventos de sala que ningún endpoint de este
  * service avisa. Va en el hook y no en `RoomView` porque el aviso puede llegar
  * con la persona en cualquier otra pantalla: el socket es de la sesión, no de la
  * ruta.
@@ -26,6 +26,8 @@ export default function useMyRooms() {
   useEffect(() => subscribeToRooms(() => setVersion((v) => v + 1)), [])
 
   // - `room:kicked`: a quien expulsan no le corre ninguna llamada propia.
+  // - `room:expelled`: lo mismo para la expulsión por inactividad del job, que
+  //   no pasa por ningún endpoint del cliente.
   // - `room:closed`: el anfitrión sí la tiene (cierra con `DELETE`), pero el
   //   resto de los miembros solo recibe el evento, y con él el host que cierra
   //   desde otro lado o la sala que se cierra sola al salir el anfitrión (D16).
@@ -35,10 +37,12 @@ export default function useMyRooms() {
   // volver a pedir la lista alcanza: no hace falta filtrar nada en el cliente.
   useEffect(() => {
     const offKicked = subscribeToRoomEvent('room:kicked', notifyRoomsChanged)
+    const offExpelled = subscribeToRoomEvent('room:expelled', notifyRoomsChanged)
     const offClosed = subscribeToRoomEvent('room:closed', notifyRoomsChanged)
 
     return () => {
       offKicked()
+      offExpelled()
       offClosed()
     }
   }, [])

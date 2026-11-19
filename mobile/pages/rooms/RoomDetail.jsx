@@ -10,7 +10,7 @@ import {
 	View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import {
 	getRoomById,
 	getPlayback,
@@ -24,6 +24,7 @@ import {
 	useAuth,
 	usePlayer,
 	useRoomPlayback,
+	useRoomAccessGuard,
 	connectSocket,
 	joinRoomChannel,
 	leaveRoomChannel,
@@ -37,6 +38,7 @@ import {
 	HeartOutlineIcon,
 } from "../../components/icons";
 import ProgressBar from "../../components/player/ProgressBar/ProgressBar";
+import { showRoomAccessLost } from "../../lib/toastMessages";
 import { ROOM_DETAIL_STYLES as styles } from "./RoomDetail.styles";
 import { colors } from "../../theme";
 
@@ -73,6 +75,41 @@ export default function RoomDetailScreen({ route }) {
 	const isHost = membership?.role === "host";
 	const host = room?.members?.find((m) => m.role === "host");
 
+	const isFocused = useIsFocused();
+	const mountedRef = useRef(true);
+	const focusedRef = useRef(isFocused);
+
+	useEffect(() => {
+		focusedRef.current = isFocused;
+	}, [isFocused]);
+
+	useEffect(() => {
+		mountedRef.current = true;
+
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
+
+	// Pérdida de acceso (inactividad, kick, 403 de la API o `join-room` al
+	// reconectar): un único aviso y, solo si la pantalla sigue al frente, volver
+	// al listado. El `reset` deja "Main > Rooms" como única ruta, así que atrás
+	// no regresa a la sala perdida.
+	const { reportError } = useRoomAccessGuard(id, {
+		onLost: (reason) => {
+			if (!mountedRef.current) return;
+
+			showRoomAccessLost(reason);
+
+			if (!focusedRef.current) return;
+
+			navigation.reset({
+				index: 0,
+				routes: [{ name: "Main", params: { screen: "Rooms" } }],
+			});
+		},
+	});
+
 	useEffect(() => {
 		let active = true;
 		setLoading(true);
@@ -92,16 +129,19 @@ export default function RoomDetailScreen({ route }) {
 				setLoading(false);
 			})
 			.catch((cause) => {
-				if (active) {
-					setError(mapApiError(cause));
-					setLoading(false);
-				}
+				if (!active) return;
+
+				// Pérdida de acceso: el guard ya avisó y redirigió.
+				if (reportError(cause)) return;
+
+				setError(mapApiError(cause));
+				setLoading(false);
 			});
 
 		return () => {
 			active = false;
 		};
-	}, [id]);
+	}, [id, reportError]);
 
 	const requestNext = useCallback(() => {
 		controlPlayback(id, "next").catch((cause) =>
@@ -142,7 +182,9 @@ export default function RoomDetailScreen({ route }) {
 				syncPlaybackRef.current(data.playback);
 				setVotes(data.skipVotes);
 			})
-			.catch(() => {});
+			.catch((cause) => {
+				if (active) reportError(cause);
+			});
 
 		const offJoined = subscribeToRoomEvent("joined-room", (payload) => {
 			if (!active) return;
@@ -198,15 +240,6 @@ export default function RoomDetailScreen({ route }) {
 			);
 		});
 
-		const offKicked = subscribeToRoomEvent("room:kicked", () => {
-			if (!active) return;
-			setForcedExit({
-				title: "Te sacaron de la sala",
-				message:
-					"El anfitrión te quitó de esta sala. Podés volver al listado para entrar a otra.",
-			});
-		});
-
 		const offClosed = subscribeToRoomEvent("room:closed", () => {
 			if (!active) return;
 			setForcedExit({
@@ -224,22 +257,25 @@ export default function RoomDetailScreen({ route }) {
 			offSkip();
 			offOnline();
 			offRating();
-			offKicked();
 			offClosed();
 		};
-	}, [id, loaded, viewerId]);
+	}, [id, loaded, viewerId, reportError]);
 
-	const runAction = useCallback(async (name, action) => {
-		setPending(name);
-		setActionError("");
-		try {
-			await action();
-		} catch (cause) {
-			setActionError(mapApiError(cause));
-		} finally {
-			setPending("");
-		}
-	}, []);
+	const runAction = useCallback(
+		async (name, action) => {
+			setPending(name);
+			setActionError("");
+			try {
+				await action();
+			} catch (cause) {
+				// Si el 403 es pérdida de acceso, el guard ya avisó y redirigió.
+				if (!reportError(cause)) setActionError(mapApiError(cause));
+			} finally {
+				setPending("");
+			}
+		},
+		[reportError],
+	);
 
 	function handleControl(action) {
 		runAction(action, async () => {
