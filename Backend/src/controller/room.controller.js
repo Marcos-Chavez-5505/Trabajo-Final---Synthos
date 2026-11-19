@@ -189,9 +189,19 @@ async function getRoomById(req, res, next) {
 		}
 
 		if (result.forbidden) {
-			return res
-				.status(403)
-				.json({ status: "error", message: "No sos miembro de esta sala." });
+			// Pérdida de acceso (o nunca fue miembro): la UI usa el `code` para
+			// distinguirla de otros 403 y el `reason` solo para el mensaje.
+			const reason = await roomService.getRoomAccessLostReason(
+				roomId,
+				userId,
+			);
+
+			return res.status(403).json({
+				status: "error",
+				code: "ROOM_ACCESS_LOST",
+				reason,
+				message: "No sos miembro de esta sala.",
+			});
 		}
 
 		const { passwordHash, ...roomSafe } = result.room;
@@ -406,9 +416,17 @@ async function getPlayback(req, res, next) {
 
 		const isMember = await roomService.isRoomMember(roomId, userId);
 		if (!isMember) {
-			return res
-				.status(403)
-				.json({ status: "error", message: "No sos miembro de esta sala." });
+			const reason = await roomService.getRoomAccessLostReason(
+				roomId,
+				userId,
+			);
+
+			return res.status(403).json({
+				status: "error",
+				code: "ROOM_ACCESS_LOST",
+				reason,
+				message: "No sos miembro de esta sala.",
+			});
 		}
 
 		const state = roomState.getRoomState(roomId);
@@ -457,9 +475,17 @@ async function postSkipVote(req, res, next) {
 
 		const isMember = await roomService.isRoomMember(roomId, userId);
 		if (!isMember) {
-			return res
-				.status(403)
-				.json({ status: "error", message: "No sos miembro de esta sala." });
+			const reason = await roomService.getRoomAccessLostReason(
+				roomId,
+				userId,
+			);
+
+			return res.status(403).json({
+				status: "error",
+				code: "ROOM_ACCESS_LOST",
+				reason,
+				message: "No sos miembro de esta sala.",
+			});
 		}
 
 		const hostId = await roomService.getHostIdOfRoom(roomId);

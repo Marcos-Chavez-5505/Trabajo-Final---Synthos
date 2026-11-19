@@ -8,6 +8,7 @@ const prisma = require("../prisma/prismaClient");
 const roomService = require("../services/room.service");
 const roomLive = require("../realtime/roomLive");
 const roomCards = require("../realtime/roomCards");
+const roomExpulsions = require("../realtime/roomExpulsions");
 const presence = require("../realtime/presence");
 
 const DEFAULT_INTERVAL_MS = 60_000;
@@ -40,7 +41,16 @@ async function expelAbsentGuests(roomId, io) {
 	);
 
 	for (const userId of targets) {
+		// `leaveRoom` borra el marcador (es una salida normal). Se vuelve a
+		// marcar después para conservar el motivo de esta expulsión.
 		await roomService.leaveRoom(userId, roomId);
+		roomExpulsions.markInactivityExpulsion(roomId, userId);
+		// Complemento: si el usuario tuviera un socket igual no está en
+		// `room:<id>`, pero el canal personal es el que corresponde avisarle.
+		io?.to(`user:${userId}`).emit("room:expelled", {
+			roomId,
+			reason: "inactivity",
+		});
 	}
 
 	if (targets.length > 0) {
@@ -54,6 +64,10 @@ async function expelAbsentGuests(roomId, io) {
 }
 
 async function runRoomInactivityPass(io) {
+	// Los marcadores de expulsión son solo para el mensaje de la UI y tienen
+	// TTL: se limpian acá para que el Map no crezca sin límite.
+	roomExpulsions.pruneExpiredExpulsions();
+
 	const rooms = await prisma.room.findMany({
 		where: { status: { not: "cerrada" } },
 		select: {

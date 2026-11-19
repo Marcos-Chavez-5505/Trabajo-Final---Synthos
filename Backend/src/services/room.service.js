@@ -3,6 +3,7 @@ const roomState = require("../realtime/roomState");
 const roomLive = require("../realtime/roomLive");
 const roomGenres = require("./roomGenres.service");
 const presence = require("../realtime/presence");
+const roomExpulsions = require("../realtime/roomExpulsions");
 const bcrypt = require("bcrypt");
 const crypto = require("node:crypto");
 const { Prisma } = require("@prisma/client");
@@ -405,7 +406,7 @@ async function joinRoom(userId, { code, password }) {
 		}
 	}
 
-	return prisma.$transaction(async (tx) => {
+	const result = await prisma.$transaction(async (tx) => {
 		const currentRoom = await tx.room.findUnique({
 			where: { id: room.id },
 			include: { members: { select: { idUser: true } } },
@@ -443,6 +444,12 @@ async function joinRoom(userId, { code, password }) {
 			alreadyMember: false,
 		};
 	});
+
+	// Volvió a entrar por su cuenta: ya no corresponde etiquetarlo como
+	// expulsado por inactividad.
+	roomExpulsions.clearInactivityExpulsion(room.id, userId);
+
+	return result;
 }
 
 async function leaveRoom(userId, roomId) {
@@ -463,6 +470,11 @@ async function leaveRoom(userId, roomId) {
 		err.status = 404;
 		throw err;
 	}
+
+	// Salida voluntaria (o por cierre de la anfitriona): el marcador de
+	// inactividad deja de aplicar. El job vuelve a marcar después de llamar
+	// acá, así que su expulsión conserva el motivo.
+	roomExpulsions.clearInactivityExpulsion(roomId, userId);
 
 	if (member.role === "host") {
 		await prisma.room.update({
@@ -502,6 +514,30 @@ async function getMemberRole(roomId, userId) {
 	});
 
 	return member?.role ?? null;
+}
+
+/**
+ * Motivo por el que un usuario perdió el acceso a una sala (o nunca lo tuvo).
+ * Es solo para el mensaje de la UI:
+ *  - `kicked`: el anfitrión lo expulsó (veto persistente en `room_kicked`);
+ *  - `inactivity`: lo expulsó el job (marcador en memoria, best-effort);
+ *  - `not_member`: cualquier otro caso.
+ *
+ * @returns {Promise<"kicked"|"inactivity"|"not_member">}
+ */
+async function getRoomAccessLostReason(roomId, userId) {
+	const kicked = await prisma.roomKicked.findUnique({
+		where: { idRoom_idUser: { idRoom: roomId, idUser: userId } },
+		select: { idUser: true },
+	});
+
+	if (kicked) return "kicked";
+
+	if (roomExpulsions.wasExpelledByInactivity(roomId, userId)) {
+		return "inactivity";
+	}
+
+	return "not_member";
 }
 
 async function getRoomHost(roomId) {
@@ -774,6 +810,7 @@ module.exports = {
 	getMemberRole,
 	getRoomHost,
 	getRoomByIdForMember,
+	getRoomAccessLostReason,
 	kickMember,
 	closeRoom,
 	getHostIdOfRoom,

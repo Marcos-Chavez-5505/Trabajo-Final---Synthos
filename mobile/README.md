@@ -1,20 +1,19 @@
 # Mobile — SYNTHOS
 
-App Expo (React Native) para la aplicacion de musica social. Fase 7+ — navegacion con Expo Router, motor de audio adaptado y variables de entorno especificas.
+App Expo (React Native) para la aplicacion de musica social. Fase 7+ — navegacion con React Navigation, motor de audio adaptado y variables de entorno especificas.
 
 ## Stack Tecnologico
 
 - **Framework**: React Native + Expo (SDK ~58)
-- **Navegacion**: Expo Router (rutas en `src/app/`)
+- **Navegacion**: React Navigation (native stack + bottom tabs, ver `mobile/App.jsx`)
 - **Audio**: Motor adaptado (web: `HTMLAudioElement`, mobile: `expo-audio`)
 - **Storage**: `expo-secure-store` (token), `expo-file-system` (archivos)
 - **UI**: Componentes reutilizables desde `@synthos/shared` y `shared/assets/icons`
 
 ## Navegacion y Rutas
 
-- Todas las routes viven en `src/app/` — cada archivo es una screen.
-- `_layout.tsx` files definen los navegadores.
-- Usar `Link`, `router`, y `useLocalSearchParams` desde `expo-router`.
+- Las screens viven en `mobile/pages/`; los navegadores se definen en `mobile/App.jsx` (stack raiz) y `mobile/navigation/MainTabs.jsx` (tabs).
+- Usar `useNavigation`, `navigate`, y `route.params` desde `@react-navigation/native`.
 
 ## Motor de Audio
 

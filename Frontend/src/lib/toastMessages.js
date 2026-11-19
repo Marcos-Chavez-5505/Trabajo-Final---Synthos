@@ -99,6 +99,32 @@ export const toastMessages = {
     showApiError("No se pudo enviar la calificación", cause, "room-rate-error")
   },
 
+  roomAccessLost(reason) {
+    const copy =
+      reason === "inactivity"
+        ? {
+            title: "Te sacamos de la sala",
+            description:
+              "La sala quedó inactiva y ya no tenés acceso. Te llevamos al listado de salas.",
+          }
+        : reason === "kicked"
+          ? {
+              title: "Te sacaron de la sala",
+              description:
+                "El anfitrión te quitó de esta sala. Te llevamos al listado de salas.",
+            }
+          : {
+              title: "Ya no tenés acceso a la sala",
+              description: "Te llevamos al listado de salas.",
+            }
+
+    toast.add({
+      id: "room-access-lost",
+      type: "info",
+      ...copy,
+    })
+  },
+
   roomLeft(isHost) {
     toast.add({
       id: "room-left",

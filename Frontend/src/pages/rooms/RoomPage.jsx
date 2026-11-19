@@ -20,6 +20,7 @@ import { useAuth } from "@synthos/shared";
 import { usePlayer } from "@synthos/shared";
 import { usePlayerTime } from "@synthos/shared";
 import { useRoomPlayback } from "@synthos/shared";
+import { useRoomAccessGuard } from "@synthos/shared";
 import Avatar from "@/components/ui/Avatar.jsx";
 import ProgressBar from '@/features/player/components/ProgressBar.jsx';
 import {
@@ -113,6 +114,16 @@ export default function RoomPage() {
 		navigate("/salas", { replace: true });
 	}
 
+	// Pérdida de acceso (inactividad, kick, 403 de la API o `join-room` al
+	// reconectar): un solo aviso, sin modal y sin volver a entrar. `replace`
+	// deja el listado en lugar de la sala en el historial.
+	const { reportError } = useRoomAccessGuard(id, {
+		onLost: (reason) => {
+			toastMessages.roomAccessLost(reason);
+			goToRooms();
+		},
+	});
+
 	useEffect(() => {
 		let active = true;
 
@@ -136,6 +147,10 @@ export default function RoomPage() {
 			.catch((cause) => {
 				if (!active) return;
 
+				// La pérdida de acceso ya muestra su toast y redirige: no se
+				// suma el error genérico ni la pantalla de "volver".
+				if (reportError(cause)) return;
+
 				toastMessages.roomLoadError(cause);
 				setLoadFailed(true);
 				setLoading(false);
@@ -144,7 +159,7 @@ export default function RoomPage() {
 		return () => {
 			active = false;
 		};
-	}, [id, navigate]);
+	}, [id, navigate, reportError]);
 
 	useEffect(() => {
 		if (!loaded) return undefined;
@@ -162,7 +177,9 @@ export default function RoomPage() {
 				setVotes(data.skipVotes);
 			})
 			.catch((cause) => {
-				if (active) toastMessages.roomPlaybackError(cause);
+				if (active && !reportError(cause)) {
+					toastMessages.roomPlaybackError(cause);
+				}
 			});
 
 		const offJoined = subscribeToRoomEvent("joined-room", (payload) => {
@@ -223,15 +240,6 @@ export default function RoomPage() {
 			);
 		});
 
-		const offKicked = subscribeToRoomEvent("room:kicked", () => {
-			if (!active) return;
-			setForcedExit({
-				title: "Te sacaron de la sala",
-				message:
-					"El anfitrión te quitó de esta sala. Podés volver al listado para entrar a otra.",
-			});
-		});
-
 		const offClosed = subscribeToRoomEvent("room:closed", () => {
 			if (!active) return;
 			setForcedExit({
@@ -249,10 +257,9 @@ export default function RoomPage() {
 			offSkip();
 			offOnline();
 			offRating();
-			offKicked();
 			offClosed();
 		};
-	}, [id, loaded, navigate, viewerId, syncPlayback]);
+	}, [id, loaded, navigate, viewerId, syncPlayback, reportError]);
 
 	const effectivePlayback = playback ?? PLAYBACK_FALLBACK;
 	const playing = effectivePlayback.status === "playing";
@@ -268,12 +275,13 @@ export default function RoomPage() {
 			try {
 				await action();
 			} catch (cause) {
-				onError(cause);
+				// Si el 403 es pérdida de acceso, el guard ya avisó y redirigió.
+				if (!reportError(cause)) onError(cause);
 			} finally {
 				setPending("");
 			}
 		},
-		[],
+		[reportError],
 	);
 
 	function handleLeave() {
