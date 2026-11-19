@@ -6,18 +6,12 @@
  * sea el render. Las reglas son las mismas que tenía la tarjeta de web.
  */
 
-import { withRoomMock } from './roomMock.js'
-
 const DEFAULT_CAPACITY = 10
 const MAX_GUEST_SLOTS = 9
 const MAX_GENRES = 3
 const HEARTS = 5
 
-export function getRoomCardModel(rawRoom) {
-  // TODO: quitar el mock al integrar con el backend (la tarjeta ya lee los
-  // campos tal como llegarán: isLive, genres, members y hostAvatarUrl).
-  const room = withRoomMock(rawRoom)
-
+export function getRoomCardModel(room) {
   const hostId = room.hostId || room.hostUserId || room.ownerId
   const genres = Array.isArray(room.genres)
     ? room.genres.slice(0, MAX_GENRES)
@@ -27,7 +21,8 @@ export function getRoomCardModel(rawRoom) {
   // evita desbordes aunque el cupo real sea mayor.
   const capacity = room.maxCapacity ?? DEFAULT_CAPACITY
   const slots = Math.min(Math.max(0, capacity - 1), MAX_GUEST_SLOTS)
-  const guests = room.members.slice(0, slots)
+  const members = Array.isArray(room.members) ? room.members : []
+  const guests = members.slice(0, slots)
   const emptySlots = slots - guests.length
 
   const hasRatings = Boolean(room.ratingsCount)

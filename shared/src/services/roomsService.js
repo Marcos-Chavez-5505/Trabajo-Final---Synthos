@@ -1,5 +1,6 @@
 import { del, get, post } from "./api.js";
 import { toSong } from "./songsService.js";
+import { mapGenreLabels } from "../utils/genreLabels.js";
 
 const listeners = new Set();
 
@@ -190,13 +191,32 @@ function toRoom(raw) {
 		description: raw.description ?? "",
 		hostId: raw.host_id ?? raw.hostId ?? null,
 		hostUsername: raw.host_username ?? raw.hostUsername ?? null,
+		hostAvatarUrl: raw.host_picture_url ?? raw.hostAvatarUrl ?? null,
 		hostRating: rating === 0 ? null : rating,
 		ratingsCount: Number(raw.ratings_count ?? raw.ratingsCount ?? 0),
-		membersCount: Number(raw.members_count ?? raw.membersCount ?? 0),
+		...toRoomCardFields(raw),
 		songsCount: Number(raw.songs_count ?? raw.songsCount ?? 0),
 		isPrivate: Boolean(raw.is_private ?? raw.isPrivate),
 		maxCapacity: raw.max_capacity ?? raw.maxCapacity ?? null,
 		status: raw.status ?? "activa",
+	};
+}
+
+/**
+ * Campos de la tarjeta que comparten el listado (`is_live`, `members_count`) y
+ * el evento `room:card-updated` (`isLive`, `membersCount`). Se mapea una sola
+ * vez para no aplicar `mapGenreLabels` dos veces.
+ */
+export function toRoomCardFields(raw) {
+	if (!raw) {
+		return { isLive: false, membersCount: 0, members: [], genres: [] };
+	}
+
+	return {
+		isLive: Boolean(raw.is_live ?? raw.isLive),
+		membersCount: Number(raw.members_count ?? raw.membersCount ?? 0),
+		members: Array.isArray(raw.members) ? raw.members.map(toRoomCardMember) : [],
+		genres: mapGenreLabels(raw.genres),
 	};
 }
 
@@ -227,6 +247,18 @@ function toRoomMember(raw) {
 		username: raw.user?.username ?? "",
 		avatarUrl: raw.user?.pictureUrl ?? null,
 		role: raw.role,
+	};
+}
+
+/**
+ * Invitado de la tarjeta: solo lo que se pinta. Viene del listado y ya está
+ * filtrado por presencia en el backend.
+ */
+function toRoomCardMember(raw) {
+	return {
+		id: String(raw.id),
+		username: raw.username ?? "",
+		avatarUrl: raw.avatarUrl ?? null,
 	};
 }
 

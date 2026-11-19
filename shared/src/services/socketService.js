@@ -26,6 +26,9 @@ const listeners = new Map()
 // eso implica volver a hacer `join-room` (si no, la sala deja de emitir).
 const joinedChannels = new Set()
 
+// Suscripción al lobby de `/salas`. También se re-emite al reconectar.
+let lobbyJoined = false
+
 /**
  * Registra un handler para un evento del servidor y lo engancha al socket si ya
  * hay conexión.
@@ -87,6 +90,7 @@ export function connectSocket() {
   // sala, porque `join-room` es por conexión y no se recuerda solo.
   socket.on('connect', () => {
     joinedChannels.forEach((roomId) => socket.emit('join-room', roomId))
+    if (lobbyJoined) socket.emit('join-lobby')
   })
 
   return socket
@@ -119,6 +123,60 @@ export function leaveRoomChannel(roomId) {
 }
 
 /**
+ * Entra al lobby de `/salas` (tarjetas en vivo). Es simétrico a
+ * `joinRoomChannel`: se recuerda para re-emitir `join-lobby` al reconectar.
+ */
+export function joinLobby() {
+  lobbyJoined = true
+  connectSocket()?.emit('join-lobby')
+}
+
+/** Sale del lobby. El socket sigue abierto para las demás pantallas. */
+export function leaveLobby() {
+  lobbyJoined = false
+  socket?.emit('leave-lobby')
+}
+
+/**
+ * Listener de `room:card-updated` / `room:card-removed`, con una única función
+ * de cancelación. Usa el registro central de `subscribeToRoomEvent`, así que
+ * también engancha handlers si el socket aún no existe.
+ *
+ * @param {{ onUpdated?: (payload: any) => void, onRemoved?: (payload: any) => void }} handlers
+ * @returns {() => void}
+ */
+export function subscribeToRoomCards({ onUpdated, onRemoved } = {}) {
+  const unsubscribers = []
+
+  if (typeof onUpdated === 'function') {
+    unsubscribers.push(subscribeToRoomEvent('room:card-updated', onUpdated))
+  }
+
+  if (typeof onRemoved === 'function') {
+    unsubscribers.push(subscribeToRoomEvent('room:card-removed', onRemoved))
+  }
+
+  return () => unsubscribers.forEach((unsubscribe) => unsubscribe())
+}
+
+/**
+ * Ejecuta `handler` cada vez que el socket conecta o reconecta. Sirve para
+ * volver a pedir el listado y no perderse eventos mientras estuvo caído.
+ *
+ * @param {() => void} handler
+ * @returns {() => void}
+ */
+export function subscribeToSocketConnect(handler) {
+  const current = connectSocket()
+
+  if (!current) return () => {}
+
+  current.on('connect', handler)
+
+  return () => current.off('connect', handler)
+}
+
+/**
  * Cierra la conexión y olvida los suscriptores.
  *
  * La llama el cierre de sesión: dejar el socket vivo con un token viejo sería
@@ -132,6 +190,7 @@ export function disconnectSocket() {
   socket = null
   listeners.clear()
   joinedChannels.clear()
+  lobbyJoined = false
 }
 
 /** @returns {import('socket.io-client').Socket|null} */
