@@ -19,10 +19,30 @@ function getRoomState(roomId) {
 	return rooms.get(roomId);
 }
 
+/** Estado de una sala sin crearlo. Para leer `isLive` sin ensuciar la memoria. */
+function peekPlayback(roomId) {
+	return rooms.get(roomId)?.playback ?? null;
+}
+
 function updatePlayback(roomId, playback) {
 	const state = getRoomState(roomId);
 	state.playback = { ...state.playback, ...playback, updatedAt: Date.now() };
 	return state.playback;
+}
+
+/**
+ * Cálculo de pausa compartido con el controller: conserva la posición
+ * transcurrida desde el último `updatedAt`.
+ */
+function pausedPatch(current) {
+	const elapsed = current.status === "playing" ? Date.now() - current.updatedAt : 0;
+
+	return { status: "paused", positionMs: current.positionMs + elapsed };
+}
+
+function pausePlayback(roomId) {
+	const state = getRoomState(roomId);
+	return updatePlayback(roomId, pausedPatch(state.playback));
 }
 
 function clearSkipVotes(roomId) {
@@ -77,6 +97,9 @@ function deleteRoomState(roomId) {
 
 module.exports = {
 	getRoomState,
+	peekPlayback,
+	pausedPatch,
+	pausePlayback,
 	updatePlayback,
 	clearSkipVotes,
 	setSkipVotesRequired,

@@ -1,5 +1,8 @@
 const prisma = require("../prisma/prismaClient");
 const roomState = require("../realtime/roomState");
+const roomLive = require("../realtime/roomLive");
+const roomGenres = require("./roomGenres.service");
+const presence = require("../realtime/presence");
 const bcrypt = require("bcrypt");
 const crypto = require("node:crypto");
 const { Prisma } = require("@prisma/client");
@@ -7,11 +10,14 @@ const { httpError } = require("../utils/errors");
 
 const LIKE_WILDCARDS = /[\\%_]/g;
 
+// Tope de avatares que muestra la tarjeta de sala (la anfitriona va aparte).
+const MAX_CARD_MEMBERS = 9;
+
 function toLikePattern(query) {
 	return `%${String(query).replace(LIKE_WILDCARDS, (char) => `\\${char}`)}%`;
 }
 
-function buildRoomListQuery({ query, sort, order, onlyMine, userId }) {
+function buildRoomListQuery({ query, sort, order, onlyMine, userId, roomId }) {
 	const direction = order === "desc" ? Prisma.raw("DESC") : Prisma.raw("ASC");
 	const orderBy =
 		sort === "rating"
@@ -23,6 +29,10 @@ function buildRoomListQuery({ query, sort, order, onlyMine, userId }) {
 			room.name ILIKE ${toLikePattern(query)} ESCAPE '\\'
 			OR host_user.username ILIKE ${toLikePattern(query)} ESCAPE '\\'
 		)`
+		: Prisma.empty;
+
+	const roomFilter = roomId
+		? Prisma.sql`AND room.id = ${Number(roomId)}`
 		: Prisma.empty;
 
 	const visibility = onlyMine
@@ -44,13 +54,14 @@ function buildRoomListQuery({ query, sort, order, onlyMine, userId }) {
 			room.creation_date,
 			host_user.id AS host_id,
 			host_user.username AS host_username,
+			host_user.picture_url AS host_picture_url,
 			COALESCE(host_avg_rating.avg_rating, 0) AS avg_rating,
 			COALESCE(ratings_count.total, 0) AS ratings_count,
 			COALESCE(members_count.total, 0) AS members_count,
 			COALESCE(songs_count.total, 0) AS songs_count
 		FROM room
 		LEFT JOIN LATERAL (
-			SELECT u.id, u.username
+			SELECT u.id, u.username, u.picture_url
 			FROM room_member rm
 			JOIN "user" u ON u.id = rm.id_user
 			WHERE rm.id_room = room.id AND rm.role = 'host'
@@ -75,18 +86,26 @@ function buildRoomListQuery({ query, sort, order, onlyMine, userId }) {
 		) AS songs_count ON true
 		WHERE ${visibility}
 		${textFilter}
+		${roomFilter}
 		ORDER BY ${orderBy}
 	`;
 }
 
-async function listRooms({ query = "", sort = "name", order = "asc" } = {}) {
-	return prisma.$queryRaw(
+async function listRooms({
+	query = "",
+	sort = "name",
+	order = "asc",
+	includeMembers = false,
+} = {}) {
+	const rows = await prisma.$queryRaw(
 		buildRoomListQuery({ query, sort, order, onlyMine: false }),
 	);
+
+	return enrichRoomRows(rows, { includeMembers });
 }
 
 async function listMyRooms(userId, { query = "" } = {}) {
-	return prisma.$queryRaw(
+	const rows = await prisma.$queryRaw(
 		buildRoomListQuery({
 			query,
 			sort: "name",
@@ -95,6 +114,98 @@ async function listMyRooms(userId, { query = "" } = {}) {
 			userId,
 		}),
 	);
+
+	return enrichRoomRows(rows);
+}
+
+/**
+ * Arma una fila del listado completa: presencia (`members`), `is_live` y
+ * `genres`. La usan el listado y el evento `room:card-updated` para que la
+ * tarjeta se construya de una sola forma.
+ */
+async function enrichRoomRows(rows, { includeMembers = true } = {}) {
+	const withMembers = includeMembers ? await attachRoomMembers(rows) : rows;
+
+	return roomGenres.attachRoomGenres(withLiveState(withMembers));
+}
+
+/**
+ * Fila completa de UNA sala con la misma visibilidad que el listado (activa y
+ * pública). `null` si la sala no existe, está cerrada o es privada: el lobby lo
+ * interpreta como "sacá la tarjeta".
+ */
+async function getRoomCardById(roomId) {
+	const rows = await prisma.$queryRaw(
+		buildRoomListQuery({
+			query: "",
+			sort: "name",
+			order: "asc",
+			onlyMine: false,
+			roomId,
+		}),
+	);
+
+	const enriched = await enrichRoomRows(rows, { includeMembers: true });
+
+	return enriched[0] ?? null;
+}
+
+/**
+ * `is_live` no se persiste: sale del playback y de la presencia de la
+ * anfitriona en memoria. Se mezcla acá para que el listado y `/mine` usen la
+ * misma regla.
+ */
+function withLiveState(rows) {
+	return rows.map((row) => ({
+		...row,
+		is_live: roomLive.isRoomPlaying(row.id, row.host_id),
+	}));
+}
+
+/**
+ * Agrega a cada sala del listado los invitados **presentes** (sin la
+ * anfitriona), en orden de antigüedad de membresía.
+ *
+ * Es una sola consulta para todas las salas: nada de N+1. La presencia se
+ * resuelve en memoria (`realtime/presence.js`) y `membersCount` sigue saliendo
+ * de la membresía persistida, así que puede ser mayor que `members.length`.
+ */
+async function attachRoomMembers(rows) {
+	if (rows.length === 0) return rows;
+
+	const memberships = await prisma.roomMember.findMany({
+		where: {
+			idRoom: { in: rows.map((row) => row.id) },
+			role: { not: "host" },
+		},
+		select: {
+			idRoom: true,
+			user: { select: { id: true, username: true, pictureUrl: true } },
+		},
+		orderBy: [{ joinDate: "asc" }, { idUser: "asc" }],
+	});
+
+	const usersByRoom = new Map();
+	for (const membership of memberships) {
+		const list = usersByRoom.get(membership.idRoom);
+		if (list) list.push(membership.user);
+		else usersByRoom.set(membership.idRoom, [membership.user]);
+	}
+
+	return rows.map((row) => {
+		const online = new Set(presence.roomOnlineUsers(row.id).map(String));
+
+		const members = (usersByRoom.get(row.id) ?? [])
+			.filter((user) => online.has(String(user.id)))
+			.slice(0, MAX_CARD_MEMBERS)
+			.map((user) => ({
+				id: user.id,
+				username: user.username,
+				avatarUrl: user.pictureUrl ?? null,
+			}));
+
+		return { ...row, members };
+	});
 }
 
 const ROOM_INCLUDE = {
@@ -384,6 +495,15 @@ async function isRoomMember(roomId, userId) {
 	return Boolean(member);
 }
 
+async function getMemberRole(roomId, userId) {
+	const member = await prisma.roomMember.findUnique({
+		where: { idRoom_idUser: { idRoom: roomId, idUser: userId } },
+		select: { role: true },
+	});
+
+	return member?.role ?? null;
+}
+
 async function getRoomHost(roomId) {
 	const host = await prisma.roomMember.findFirst({
 		where: { idRoom: roomId, role: "host" },
@@ -547,7 +667,7 @@ async function getPlaylistSongsOfRoom(roomId) {
 async function getRoomStatus(roomId) {
 	const room = await prisma.room.findUnique({
 		where: { id: roomId },
-		select: { id: true, status: true },
+		select: { id: true, status: true, isPrivate: true },
 	});
 	return room;
 }
@@ -645,11 +765,13 @@ async function getHostRatingsCount(hostId) {
 module.exports = {
 	listRooms,
 	listMyRooms,
+	getRoomCardById,
 	createRoom,
 	joinRoom,
 	leaveRoom,
 	getRoomWithMembers,
 	isRoomMember,
+	getMemberRole,
 	getRoomHost,
 	getRoomByIdForMember,
 	kickMember,

@@ -23,8 +23,8 @@ El repo es un **monorepo con workspaces npm** (`frontend`, `shared`, `mobile`; `
 - **La API siempre estÃ¡ bajo `/api`** y el Frontend llama con **rutas relativas** (`/api/songs/search`).
   En dev el proxy de `Frontend/vite.config.js` las redirige a `localhost:3000`; en producciÃ³n las sirve un
   reverse proxy. Por eso el mismo build funciona en los dos entornos sin variables de entorno.
-- **No hay tests automatizados.** `Backend/npm test` es un stub y el Frontend no tiene runner: la
-  verificaciÃ³n es `npm run lint` + `npm run build` en el Frontend y pruebas manuales contra la API.
+- **No hay tests automatizados.** La verificación es `npm run lint` + `npm run build` en el
+  Frontend y pruebas manuales contra la API.
 - **Los comandos del Backend** estÃ¡n en la raÃ­z de `Backend/`: `npm run dev` (nodemon),
   `docker compose up -d` (Postgres + pgAdmin), `npx prisma migrate dev`, `npx prisma db seed`.
 

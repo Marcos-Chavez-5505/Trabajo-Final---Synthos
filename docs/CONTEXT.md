@@ -53,7 +53,7 @@ Idioma de dominio, UI, comentarios, nombres de archivos y mensajes de error: **e
 
 **Stack:** Express **5** (CommonJS, `"type": "commonjs"`), Prisma **7** con `@prisma/adapter-pg`, PostgreSQL 17, `bcrypt`, `jsonwebtoken`, `cors`, `dotenv`, `multer` (multipart), `@imagekit/nodejs` (fotos de perfil), `nodemon` (dev). `mongoose` estÃ¡ en dependencies pero **no se usa en ningÃºn lado**.
 
-**Scripts:** `npm run dev` (nodemon, NODE_ENV=development), `npm start`, `vercel-build` (`prisma generate`). No hay tests (`npm test` es el stub de npm).
+**Scripts:** `npm run dev` (nodemon, NODE_ENV=development), `npm start`, `vercel-build` (`prisma generate`). No hay tests automatizados.
 
 **Capas:** `routes â†’ controller â†’ service â†’ prisma`. Los controllers solo validan HTTP (`req.params/query/body`, `req.user.sub`) y devuelven status; la lÃ³gica y las queries viven en `services/`. NingÃºn `fetch`/query fuera de services.
 

@@ -1,8 +1,11 @@
 const router = require("express").Router();
 const roomController = require("../controller/room.controller");
-const { authenticate } = require("../middlewares/auth.middleware");
+const {
+	authenticate,
+	optionalAuthenticate,
+} = require("../middlewares/auth.middleware");
 
-router.get("/", roomController.getSortedRoom);
+router.get("/", optionalAuthenticate, roomController.getSortedRoom);
 
 router.use(authenticate);
 

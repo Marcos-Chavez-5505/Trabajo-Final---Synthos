@@ -7,8 +7,36 @@ const jwt = require("jsonwebtoken");
 const app = require("./app");
 const roomService = require("./services/room.service");
 const presence = require("./realtime/presence");
+const roomLive = require("./realtime/roomLive");
+const roomInactivityJob = require("./realtime/roomInactivityJob");
+const roomGenres = require("./services/roomGenres.service");
+const roomCards = require("./realtime/roomCards");
+const { registerLobbyHandlers } = require("./realtime/lobby");
 
 const PORT = process.env.PORT || 3000;
+
+// Gracia de reconexión de la presencia (ver realtime/presence.js). Con 0 el
+// socket sale de la presencia apenas se desconecta, que es lo útil en pruebas.
+presence.configurePresence({
+	graceMs: Number(process.env.ROOM_PRESENCE_GRACE_MS) || undefined,
+});
+
+// Estado en vivo de las salas (playback + anfitriona presente) y tiempos del
+// job de inactividad. Vacío = default documentado en .env.example.
+roomLive.configureRoomLive({
+	hostOfflinePauseMs: Number(process.env.ROOM_HOST_OFFLINE_PAUSE_MS) || undefined,
+	inactiveExpelMs: Number(process.env.ROOM_INACTIVE_EXPEL_MS) || undefined,
+});
+
+// Red de seguridad de la caché de géneros por sala (default 5 min).
+roomGenres.configureRoomGenres({
+	ttlMs: Number(process.env.ROOM_GENRES_CACHE_TTL_MS) || undefined,
+});
+
+// Agrupación de eventos de tarjeta hacia el lobby (default 1.5 s).
+roomCards.configureRoomCards({
+	debounceMs: Number(process.env.ROOM_CARD_DEBOUNCE_MS) || undefined,
+});
 
 const httpServer = http.createServer(app);
 
@@ -48,6 +76,7 @@ io.on("connection", (socket) => {
 	const userId = socket.user.sub;
 	socket.data.rooms = new Set();
 	socket.join(`user:${userId}`);
+	registerLobbyHandlers(socket);
 	console.log(`[Socket] Usuario ${userId} conectado (socket ${socket.id})`);
 
 	// Unirse a un canal de sala (solo si es miembro)
@@ -58,12 +87,15 @@ io.on("connection", (socket) => {
 		}
 
 		try {
-			const isMember = await roomService.isRoomMember(id, userId);
-			if (!isMember) {
+			const role = await roomService.getMemberRole(id, userId);
+			if (!role) {
 				return socket.emit("error", {
 					message: "No sos miembro de esta sala.",
 				});
 			}
+
+			// Se cachea para poder detectar su desconexión y pausar la sala.
+			if (role === "host") roomLive.registerRoomHost(id, userId);
 
 			socket.join(`room:${id}`);
 			console.log(`[Socket] Usuario ${userId} se unió a room:${id}`);
@@ -90,6 +122,25 @@ io.on("connection", (socket) => {
 
 app.set("io", io);
 
+roomLive.initRoomLive(io);
+roomCards.initRoomCards(io);
+roomInactivityJob.startRoomInactivityJob({
+	io,
+	intervalMs: Number(process.env.ROOM_INACTIVITY_JOB_INTERVAL_MS) || undefined,
+});
+
 httpServer.listen(PORT, () => {
 	console.log(`Servidor ejecutándose en puerto ${PORT}`);
 });
+
+// Apagado ordenado: el job no debe quedar corriendo ni con un tick a medias.
+function shutdown() {
+	roomInactivityJob.stopRoomInactivityJob();
+	roomCards.shutdownRoomCards();
+	roomLive.shutdownRoomLive();
+	io.close();
+	httpServer.close(() => process.exit(0));
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);

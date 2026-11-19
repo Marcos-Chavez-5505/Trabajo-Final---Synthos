@@ -48,6 +48,7 @@ export { default as useSongSearch } from "./hooks/useSongsSearch.jsx";
 // utils
 export * from "./utils/mapError.js";
 export * from "./utils/formatTime.js";
+export * from "./utils/genreLabels.js";
 export { default as buildPageRange } from "./utils/pageRange.js";
 
 // tokens
@@ -89,5 +90,4 @@ export { default as useFollow } from "./features/social/useFollow.js";
 export { default as useNotifications } from "./features/notifications/useNotifications.js";
 
 // modelo de la tarjeta de sala (compartido web/mobile)
-export { withRoomMock } from "./features/rooms/roomMock.js";
 export { getRoomCardModel } from "./features/rooms/roomCardModel.js";

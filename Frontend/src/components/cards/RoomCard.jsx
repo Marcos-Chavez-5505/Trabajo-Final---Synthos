@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import Avatar from "@/components/ui/Avatar.jsx";
-import { withRoomMock } from "@synthos/shared"; // TODO: quitar al integrar con el backend
 import crownIcon from "@synthos/shared/assets/icons/crown.svg";
 import emptyHeartIcon from "@synthos/shared/assets/icons/empty_heart.svg";
 import fullHeartIcon from "@synthos/shared/assets/icons/full_heart.svg";
@@ -29,8 +28,7 @@ const MAX_GUEST_SLOTS = 9;
 const MAX_GENRES = 3;
 const HEARTS = 5;
 
-export default function RoomCard({ room: rawRoom, action }) {
-  const room = withRoomMock(rawRoom);
+export default function RoomCard({ room, action }) {
   const hostId = room.hostId || room.hostUserId || room.ownerId;
   const genres = Array.isArray(room.genres) ? room.genres.slice(0, MAX_GENRES) : [];
 
@@ -142,7 +140,7 @@ function LiveChip({ isLive }) {
 function MembersTray({ room }) {
   const capacity = room.maxCapacity ?? DEFAULT_CAPACITY;
   const slots = Math.min(Math.max(0, capacity - 1), MAX_GUEST_SLOTS);
-  const members = room.members.slice(0, slots);
+  const members = (Array.isArray(room.members) ? room.members : []).slice(0, slots);
   const empty = slots - members.length;
   const label = `${room.membersCount} de ${capacity} personas en la sala`;
 
