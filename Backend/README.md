@@ -39,6 +39,10 @@ PORT=3000
 NODE_ENV=development
 ```
 
+Las salas usan además las variables `ROOM_*` (gracia de presencia, pausa por anfitriona
+ausente, expulsión por inactividad, TTL de géneros y debounce de tarjetas). Están
+documentadas con sus defaults en `.env.example`.
+
 ## Docker
 
 El backend incluye `docker-compose.yml` para levantar la base de datos y el servidor juntos:

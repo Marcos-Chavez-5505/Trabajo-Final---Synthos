@@ -564,8 +564,8 @@ campo se ignora y la playlist se actualiza solo con `name`/`description`/`addSon
 
 | Endpoint | Auth | Request | Response |
 |---|---|---|---|
-| `GET /` | opcional | query: `query` (texto libre), `sort` = `name` (default, alias `alphabetical`) \| `rating`, `order` = `asc` (default) \| `desc` | **Array plano** (sin envelope) de salas |
-| `GET /mine` | **sí** | query: `query` opcional | Las salas activas de las que el usuario es miembro, mismas columnas. **Incluye las privadas** (a esas se entra con el código) |
+| `GET /` | opcional | query: `query` (texto libre), `sort` = `name` (default, alias `alphabetical`) \| `rating`, `order` = `asc` (default) \| `desc` | **Array plano** (sin envelope) de salas. Con sesión agrega `members`; sin sesión no |
+| `GET /mine` | **sí** | query: `query` opcional | Las salas activas de las que el usuario es miembro, mismas columnas, siempre con `members`. **Incluye las privadas** (a esas se entra con el código) |
 | `POST /` | **sí** | body `{ name, description?, playlistId, isPrivate, password? }` | `201` con la sala: `id`, `code`, `name`, `description`, `isPrivate`, `maxCapacity` (**siempre 10**, lo fija el server), `status`, `hostAvgRating`, `viewerHasRated`, `members[]` (id, username, `pictureUrl`, rol), `playlistSource` con sus `songs` en orden por `position`. **Nunca devuelve `passwordHash`** |
 | `POST /join` | **sí** | body `{ code, password? }` | `201` si se unió, `200` si ya era miembro. La misma sala que `POST /` |
 | `GET /:id` | **sí** | — | `200` con la sala (igual que `POST /`, más `viewerHasRated` y `viewerRating`). `403` si no sos miembro, `404` si no existe |
@@ -579,11 +579,28 @@ campo se ignora y la playlist se actualiza solo con `name`/`description`/`addSon
 
 **Forma de las salas del listado** (columnas explícitas, nunca `room.*`, para no filtrar
 `password_hash`): `id`, `code`, `name`, `description`, `id_playlist_source`, `is_private`,
-`max_capacity`, `status`, `creation_date`, `host_id`, `host_username`, `avg_rating`,
-`members_count`, `songs_count`. El listado público devuelve **solo las públicas y activas**;
-las privadas no aparecen (se entra con `code`, D14) y las cerradas tampoco. `avg_rating` es
-`numeric` de Postgres y llega como **string**; cuando el anfitrión no tiene calificaciones el
-backend lo coalescea a `0`.
+`max_capacity`, `status`, `creation_date`, `host_id`, `host_username`,
+`host_picture_url`, `avg_rating`, `ratings_count`, `members_count`, `songs_count`,
+`is_live`, `genres` y, solo con sesión, `members`. El listado público devuelve **solo
+las públicas y activas**; las privadas no aparecen (se entra con `code`, D14) y las
+cerradas tampoco. `avg_rating` es `numeric` de Postgres y llega como **string**; cuando
+el anfitrión no tiene calificaciones el backend lo coalescea a `0`.
+
+- `members_count`: membresía **persistida** (incluye a la anfitriona). Es la que decide
+  “Llena” y el cupo, no la presencia.
+- `members`: invitados **presentes** (al menos un socket), **sin la anfitriona**, máximo
+  **9**, ordenados por `room_member.join_date`. Cada uno es `{ id, username, avatarUrl }`.
+  Puede ser `[]` aunque `members_count` sea mayor. Sin sesión la clave **no viene**; el
+  frontend la normaliza a `[]`.
+- `host_picture_url`: `User.pictureUrl` del anfitrión, o `null`. La tarjeta usa el avatar
+  de respaldo si falta.
+- `is_live`: booleano, nunca `undefined`. `true` solo si hay una canción reproduciéndose y
+  la anfitriona tiene al menos un socket (o está dentro de la gracia de 60 s). No se
+  persiste.
+- `genres`: nombres crudos de la base, hasta 3, según las canciones de
+  `id_playlist_source`. `[]` si no hay datos. El cliente los traduce/etiqueta y deduplica
+  con `mapGenreLabels`.
+- `ratings_count`: cantidad de personas distintas que calificaron al anfitrión.
 
 **Orden:** `sort=name` ordena por nombre en el sentido de `order`; `sort=rating` ordena por
 `avg_rating DESC` con desempate alfabético. `sort` u `order` inválidos devuelven `400` con
@@ -630,3 +647,131 @@ es expulsado. `next` del anfitrión anula la votación en curso.
 participa califica y el anfitrión no califica a nadie (`403`). `GET /users/:id` y
 `GET /users/me` devuelven además `hostRating` y `hostRatingsCount`, para que el perfil
 muestre el promedio.
+
+### 10.2 Contrato del listado (extendido)
+
+```bash
+# Sin sesión: no incluye `members` (no se exponen avatares de invitados).
+curl -s "http://localhost:3000/api/rooms?sort=name&order=asc"
+
+# Con sesión: agrega `members` de los presentes.
+curl -s "http://localhost:3000/api/rooms?sort=name&order=asc" \
+  -H "Authorization: Bearer $TOKEN"
+
+# Mis salas (siempre autenticado, incluye privadas y siempre trae `members`).
+curl -s "http://localhost:3000/api/rooms/mine" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Ítem de ejemplo (con sesión):
+
+```json
+{
+  "id": 101,
+  "code": "B41877",
+  "name": "Rock",
+  "description": "Para escuchar sin mirar la pantalla.",
+  "id_playlist_source": 12,
+  "is_private": false,
+  "max_capacity": 10,
+  "status": "activa",
+  "creation_date": "2026-10-19T20:17:53.988Z",
+  "host_id": 17,
+  "host_username": "ana_sintoniza",
+  "host_picture_url": "https://.../avatar-17.png",
+  "avg_rating": "4.3333333333333333",
+  "ratings_count": 3,
+  "members_count": 4,
+  "songs_count": 12,
+  "is_live": true,
+  "genres": ["rock", "indie", "electronic"],
+  "members": [
+    { "id": 20, "username": "diego_bajos", "avatarUrl": null }
+  ]
+}
+```
+
+`members` se calcula con la presencia en memoria y se limita a 9; `members_count` sale de
+`room_member`. Por eso “Llena” puede aparecer con menos avatares que el cupo: alguien
+unido y desconectado ocupa lugar hasta que lo expulsa el job de inactividad.
+
+### 10.3 Lobby y tarjetas en vivo
+
+Canal de Socket.IO `lobby`, solo para sockets autenticados:
+
+| Cliente → servidor | Efecto |
+|---|---|
+| `join-lobby` | Suma el socket a `lobby` y responde `joined-lobby` |
+| `leave-lobby` | Lo saca de `lobby` (el socket sigue abierto) |
+
+Al desconectarse, Socket.IO saca al socket de todas sus salas; el servidor no guarda una
+lista propia de miembros del lobby. Al reconectar, el cliente debe volver a emitir
+`join-lobby` (y `join-room` para las salas).
+
+| Servidor → lobby | Payload |
+|---|---|
+| `room:card-updated` | `{ roomId, isLive, membersCount, members, genres }` |
+| `room:card-removed` | `{ roomId }` |
+
+- `room:card-updated` se emite con **debounce trailing por sala** (`ROOM_CARD_DEBOUNCE_MS`,
+  default 1500): una ráfaga de cambios termina en un único evento. El payload se calcula
+  recién al emitir, con las mismas piezas del listado (`is_live`, `members` de presencia
+  con tope 9 sin anfitriona, `genres`, `members_count`). Si es idéntico al último emitido
+  para esa sala, no se emite.
+- `members` y `genres` viajan **crudos** (misma forma que el listado); el cliente los
+  mapea con `toRoomCardFields`.
+- `room:card-removed` se emite cuando una sala **pública** se cierra. Se emite una vez
+  por sala. Las salas privadas o inexistentes nunca estuvieron en el listado y no generan
+  eventos.
+- **Las salas nuevas no aparecen en vivo**: no se emite un evento de alta. El listado se
+  actualiza al recargar o al reconectar (el cliente vuelve a pedir el listado).
+- Disparadores: presencia, invalidación de géneros, cambios de `isLive` (play/pausa/stop/
+  skip/pausa automática), join/leave/expulsión manual, expulsión por inactividad y cierre.
+
+### 10.4 Presencia, pausa de la anfitriona y expulsión
+
+- **Presente** = el usuario tiene al menos un socket en `room:<id>`. Se deduplica por
+  `userId`: dos pestañas cuentan una sola vez.
+- **Gracia de reconexión:** al irse el último socket, el usuario sigue presente
+  `ROOM_PRESENCE_GRACE_MS` (default 60 s). Si vuelve antes, se cancela la salida.
+- **Pausa por anfitriona ausente:** si la anfitriona se queda sin sockets, la sala se pausa
+  `ROOM_HOST_OFFLINE_PAUSE_MS` después (default 2 min), independientemente de la gracia.
+  Se conserva la posición calculada desde `updatedAt` y se emite `room:playback` a
+  `room:<id>`. Si reconecta antes, no se pausa.
+- **Expulsión por inactividad:** un job cada `ROOM_INACTIVITY_JOB_INTERVAL_MS` (default
+  60 s) revisa las salas no cerradas que llevan `ROOM_INACTIVE_EXPEL_MS` (default 30 min)
+  sin estar LIVE y borra la membresía de los invitados **no presentes**.
+- **La anfitriona nunca se expulsa**, esté conectada o no y sin importar cuánto tiempo
+  lleve la sala OFF. La sala tampoco se cierra: las salas son persistentes por diseño.
+- La expulsión borra **solo** `room_member`; no inserta en `room_kicked` (el expulsado por
+  inactividad puede volver con el código) y emite `room:members` + `room:card-updated`.
+
+### 10.5 Variables de entorno
+
+| Variable | Default | Qué controla |
+|---|---|---|
+| `ROOM_PRESENCE_GRACE_MS` | `60000` | Gracia de presencia tras el último socket |
+| `ROOM_HOST_OFFLINE_PAUSE_MS` | `120000` | Pausa automática sin sockets de la anfitriona |
+| `ROOM_INACTIVE_EXPEL_MS` | `1800000` | Tiempo OFF antes de expulsar invitados ausentes |
+| `ROOM_INACTIVITY_JOB_INTERVAL_MS` | `60000` | Frecuencia del job de expulsión |
+| `ROOM_GENRES_CACHE_TTL_MS` | `300000` | TTL de la caché de géneros por sala |
+| `ROOM_CARD_DEBOUNCE_MS` | `1500` | Debounce de `room:card-updated` por sala |
+
+Todas se documentan en `Backend/.env.example`. Vacías = default.
+
+### 10.6 Estado en vivo: memoria y backend persistente
+
+`isLive`, la reproducción, la presencia, el `offlineSince`, la caché de géneros y los
+debounces viven **en memoria del proceso**. Al reiniciar el servidor:
+
+- las salas quedan OFF hasta que la anfitriona vuelva a dar play con su socket conectado;
+- la caché de géneros se recalcula desde la playlist en la siguiente lectura;
+- el conteo de inactividad se reanuda de forma perezosa.
+
+Por eso esta funcionalidad **exige un backend Node persistente** (no serverless): si el
+proceso se recicla en cada request, no hay continuidad de sockets ni de estado.
+
+La caché de géneros se invalida al agregar o quitar canciones por
+`POST /api/playlists/:id/songs` y `DELETE /api/playlists/:id/songs/:songId` (y afecta a
+todas las salas que usan esa playlist). No se invalida si se borra una canción del
+catálogo o se renombra un género: eso se corrige al vencer `ROOM_GENRES_CACHE_TTL_MS`.
