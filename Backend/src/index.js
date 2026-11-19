@@ -9,6 +9,7 @@ const roomService = require("./services/room.service");
 const presence = require("./realtime/presence");
 const roomLive = require("./realtime/roomLive");
 const roomInactivityJob = require("./realtime/roomInactivityJob");
+const roomExpulsions = require("./realtime/roomExpulsions");
 const roomGenres = require("./services/roomGenres.service");
 const roomCards = require("./realtime/roomCards");
 const { registerLobbyHandlers } = require("./realtime/lobby");
@@ -27,6 +28,15 @@ roomLive.configureRoomLive({
 	hostOfflinePauseMs: Number(process.env.ROOM_HOST_OFFLINE_PAUSE_MS) || undefined,
 	inactiveExpelMs: Number(process.env.ROOM_INACTIVE_EXPEL_MS) || undefined,
 });
+
+// Cuánto se recuerda en memoria que una expulsión fue por inactividad (solo
+// para el mensaje de la UI). Default 24 h; `0` lo desactiva (por eso no se usa
+// `|| undefined`, que descartaría el 0).
+const expulsionMarkerTtlMs = process.env.ROOM_EXPULSION_MARKER_TTL_MS
+	? Number(process.env.ROOM_EXPULSION_MARKER_TTL_MS)
+	: undefined;
+
+roomExpulsions.configureRoomExpulsions({ markerTtlMs: expulsionMarkerTtlMs });
 
 // Red de seguridad de la caché de géneros por sala (default 5 min).
 roomGenres.configureRoomGenres({
@@ -89,7 +99,17 @@ io.on("connection", (socket) => {
 		try {
 			const role = await roomService.getMemberRole(id, userId);
 			if (!role) {
+				// Mismo contrato que el 403 HTTP (`ROOM_ACCESS_LOST` + motivo):
+				// el cliente lo usa para salir de la sala sin reintentar.
+				const reason = await roomService.getRoomAccessLostReason(
+					id,
+					userId,
+				);
+
 				return socket.emit("error", {
+					roomId: id,
+					code: "ROOM_ACCESS_LOST",
+					reason,
 					message: "No sos miembro de esta sala.",
 				});
 			}
