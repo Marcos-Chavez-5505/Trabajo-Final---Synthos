@@ -568,13 +568,13 @@ campo se ignora y la playlist se actualiza solo con `name`/`description`/`addSon
 | `GET /mine` | **sí** | query: `query` opcional | Las salas activas de las que el usuario es miembro, mismas columnas, siempre con `members`. **Incluye las privadas** (a esas se entra con el código) |
 | `POST /` | **sí** | body `{ name, description?, playlistId, isPrivate, password? }` | `201` con la sala: `id`, `code`, `name`, `description`, `isPrivate`, `maxCapacity` (**siempre 10**, lo fija el server), `status`, `hostAvgRating`, `viewerHasRated`, `members[]` (id, username, `pictureUrl`, rol), `playlistSource` con sus `songs` en orden por `position`. **Nunca devuelve `passwordHash`** |
 | `POST /join` | **sí** | body `{ code, password? }` | `201` si se unió, `200` si ya era miembro. La misma sala que `POST /` |
-| `GET /:id` | **sí** | — | `200` con la sala (igual que `POST /`, más `viewerHasRated` y `viewerRating`). `403` si no sos miembro, `404` si no existe |
+| `GET /:id` | **sí** | — | `200` con la sala (igual que `POST /`, más `viewerHasRated` y `viewerRating`). `403` `ROOM_ACCESS_LOST` si no sos miembro (ver §10.1), `404` si no existe |
 | `POST /:id/leave` | **sí** | — | `204`. Si quien sale es el **anfitrión, la sala se cierra** |
 | `DELETE /:id` | **sí** | — | `204`. Solo el anfitrión. Cierra la sala y emite `room:closed` |
 | `DELETE /:id/members/:userId` | **sí** | — | `204`. Solo el anfitrión. `400` si se intenta sacar al anfitrión |
 | `POST /:id/playback` | **sí** | body `{ action: "play" \| "pause" \| "next" \| "stop" }` | `200 { status, playback }`. **Solo el anfitrión** |
-| `GET /:id/playback` | **sí** | — | `200 { status, playback, skipVotes }` |
-| `POST /:id/skip-votes` | **sí** | — | `201 { status, skipVotes, approved }`. **403 para el anfitrión** |
+| `GET /:id/playback` | **sí** | — | `200 { status, playback, skipVotes }`. `403` `ROOM_ACCESS_LOST` si no sos miembro |
+| `POST /:id/skip-votes` | **sí** | — | `201 { status, skipVotes, approved }`. **403 para el anfitrión**; `403` `ROOM_ACCESS_LOST` si no sos miembro |
 | `POST /:id/rating` | **sí** | body `{ rating }` (entero 1–5) | `201 { status, rating }`. Califica al anfitrión (TS-11) |
 
 **Forma de las salas del listado** (columnas explícitas, nunca `room.*`, para no filtrar
@@ -625,10 +625,30 @@ servidor valida contra `room_member` (un no miembro no entra al canal `room:<id>
 | `room:members` | Entra o sale alguien, o se expulsa a alguien | `roomMember[]` (filas crudas con `user` anidado) |
 | `room:skip-votes` | Cada voto, y al limpiarse la votación | `{ voters: number[], required }` (`required: 0` = ya no hay votación) |
 | `room:rating` | Al calificar al anfitrión | `{ roomId, hostId, avgRating }` |
-| `room:kicked` | Al expulsado, solo a su socket | `{ roomId }` |
+| `room:kicked` | Al expulsado, a su canal personal `user:<id>` (todos sus sockets) | `{ roomId }` |
+| `room:expelled` | Al invitado que expulsa el job de inactividad, a su canal `user:<id>` | `{ roomId, reason: "inactivity" }` |
 | `room:closed` | Al cerrar la sala, y cuando sale el anfitrión | `{ roomId }` |
 
 Los clientes **solo escuchan**: el estado cambia por REST y el servidor lo emite.
+
+**Pérdida de acceso (`ROOM_ACCESS_LOST`).** Cuando el usuario ya no es miembro de una sala
+(lo expulsó el anfitrión, lo sacó el job de inactividad o nunca lo fue), los endpoints que
+exigen membresía responden `403` con un `code` estable y un `reason` para el mensaje:
+
+```json
+{ "status": "error", "code": "ROOM_ACCESS_LOST", "reason": "inactivity", "message": "No sos miembro de esta sala." }
+```
+
+- `reason` puede ser `kicked` (veto persistente en `room_kicked`), `inactivity` (marcador en
+  memoria del job, §10.4) o `not_member` (cualquier otro caso). Es **solo para la UI**: no
+  cambia la autorización y se pierde al reiniciar el backend (pasa a `not_member`).
+- Aplica a `GET /:id`, `GET /:id/playback` y `POST /:id/skip-votes`. Otros `403` (por ejemplo
+  `POST /join` con contraseña incorrecta o una acción exclusiva del anfitrión) **no** llevan
+  este `code`: el cliente los trata como errores normales y no redirige.
+- `join-room` responde el mismo contrato por el evento `error` de Socket.IO:
+  `{ roomId, code: "ROOM_ACCESS_LOST", reason, message }`. El cliente lo usa al reconectar
+  para salir de la sala sin reintentar: saca el `roomId` de los canales pendientes y no
+  vuelve a emitir `join-room`.
 
 **Posición de reproducción:** el estado vive **en memoria del proceso**, una sola instancia, y
 se pierde si el servidor se reinicia (tras un reinicio, `GET /:id/playback` responde
@@ -745,6 +765,15 @@ lista propia de miembros del lobby. Al reconectar, el cliente debe volver a emit
   lleve la sala OFF. La sala tampoco se cierra: las salas son persistentes por diseño.
 - La expulsión borra **solo** `room_member`; no inserta en `room_kicked` (el expulsado por
   inactividad puede volver con el código) y emite `room:members` + `room:card-updated`.
+- Después de borrar la membresía, el job deja un **marcador en memoria** por
+  `(sala, usuario)` con TTL `ROOM_EXPULSION_MARKER_TTL_MS` y emite `room:expelled` al canal
+  `user:<id>`. Sirve para que el `reason` del `403`/`join-room` sea `inactivity` y no
+  `not_member`. `joinRoom` y la salida voluntaria borran el marcador (los que se van solos no
+  quedan etiquetados). Las entradas vencidas se limpian en cada pasada del job.
+- Como el job solo expulsa a invitados **sin sockets**, el evento `room:expelled` casi nunca
+  llega en vivo: el cliente se entera al reconectar (`join-room`) o al volver a pedir la sala
+  (`403`). El evento existe para el caso en que el socket siga vivo (por ejemplo, una
+  expulsión forzada desde otra instancia).
 
 ### 10.5 Variables de entorno
 
@@ -756,17 +785,20 @@ lista propia de miembros del lobby. Al reconectar, el cliente debe volver a emit
 | `ROOM_INACTIVITY_JOB_INTERVAL_MS` | `60000` | Frecuencia del job de expulsión |
 | `ROOM_GENRES_CACHE_TTL_MS` | `300000` | TTL de la caché de géneros por sala |
 | `ROOM_CARD_DEBOUNCE_MS` | `1500` | Debounce de `room:card-updated` por sala |
+| `ROOM_EXPULSION_MARKER_TTL_MS` | `86400000` | TTL del marcador en memoria de expulsión por inactividad (`0` lo desactiva) |
 
 Todas se documentan en `Backend/.env.example`. Vacías = default.
 
 ### 10.6 Estado en vivo: memoria y backend persistente
 
-`isLive`, la reproducción, la presencia, el `offlineSince`, la caché de géneros y los
-debounces viven **en memoria del proceso**. Al reiniciar el servidor:
+`isLive`, la reproducción, la presencia, el `offlineSince`, la caché de géneros, los
+debounces y los marcadores de expulsión por inactividad viven **en memoria del proceso**. Al
+reiniciar el servidor:
 
 - las salas quedan OFF hasta que la anfitriona vuelva a dar play con su socket conectado;
 - la caché de géneros se recalcula desde la playlist en la siguiente lectura;
-- el conteo de inactividad se reanuda de forma perezosa.
+- el conteo de inactividad se reanuda de forma perezosa;
+- el `reason` de las expulsiones por inactividad pasa a `not_member`.
 
 Por eso esta funcionalidad **exige un backend Node persistente** (no serverless): si el
 proceso se recicla en cada request, no hay continuidad de sockets ni de estado.
