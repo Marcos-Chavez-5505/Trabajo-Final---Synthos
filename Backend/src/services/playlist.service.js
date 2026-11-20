@@ -328,8 +328,18 @@ async function createInvitation(playlistId, senderId, receiverId) {
 				data: { type: "colab" },
 			});
 
-			await tx.playlistMember.create({
-				data: { idPlaylist: playlistId, idUser: senderId, role: "creator" },
+			// Puede quedar una fila del creador de una conversión anterior;
+			// upsert evita un P2002 sobre la PK (idPlaylist, idUser).
+			await tx.playlistMember.upsert({
+				where: {
+					idPlaylist_idUser: { idPlaylist: playlistId, idUser: senderId },
+				},
+				update: {},
+				create: {
+					idPlaylist: playlistId,
+					idUser: senderId,
+					role: "creator",
+				},
 			});
 		}
 

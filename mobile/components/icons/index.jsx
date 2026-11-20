@@ -99,6 +99,7 @@ export const HamburgerMenuIcon = fromCatalog("hamburger_menu");
 export const EllipsisIcon = fromCatalog("ellipsis");
 export const MicrophoneIcon = fromCatalog("microphone");
 export const CloseIcon = fromCatalog("close");
+export const GlobeIcon = fromCatalog("globe");
 export const AlbumIcon = fromCatalog("album");
 
 // ── Pendiente de migrar al catálogo ────────────────────────────────────────

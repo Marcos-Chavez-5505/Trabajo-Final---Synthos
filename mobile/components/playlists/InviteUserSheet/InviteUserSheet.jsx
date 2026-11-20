@@ -1,48 +1,25 @@
-import { useEffect, useState } from "react";
-import {
-	ActivityIndicator,
-	Keyboard,
-	KeyboardAvoidingView,
-	Modal,
-	Platform,
-	Pressable,
-	ScrollView,
-	Text,
-	TextInput,
-	View,
-} from "react-native";
-import {
-	Gesture,
-	GestureDetector,
-	GestureHandlerRootView,
-} from "react-native-gesture-handler";
-import Animated, {
-	Easing,
-	useAnimatedStyle,
-	useSharedValue,
-	withSpring,
-	withTiming,
-} from "react-native-reanimated";
-import { scheduleOnRN } from "react-native-worklets";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { mapApiError, searchUsers, useDebounce } from "@synthos/shared";
+import {
+	BottomSheetInput,
+	BottomSheetModal,
+	BottomSheetScrollContent,
+} from "../../ui/BottomSheet/BottomSheet";
 import {
 	Avatar,
 	AvatarFallback,
 	AvatarImage,
 } from "../../ui/Avatar/Avatar";
-import { colors, spacing } from "../../../theme";
+import MemberRow from "../MemberRow/MemberRow";
+import { CloseIcon, GlobeIcon, SearchIcon } from "../../icons";
+import { colors } from "../../../theme";
 import { INVITE_USER_SHEET_STYLES as styles } from "./InviteUserSheet.styles";
 
 const DEBOUNCE_MS = 300;
 const MIN_QUERY = 2;
 const PAGE_SIZE = 10;
-
-// Empujar el asa más de esta distancia (o con esta velocidad) cierra el sheet.
-const CLOSE_DISTANCE = 110;
-const CLOSE_VELOCITY = 900;
-const DRAG_SETTLE = { damping: 45, stiffness: 500 };
-const DRAG_EXIT = { duration: 180, easing: Easing.out(Easing.cubic) };
+const SNAP_POINTS = ["88%"];
 
 const STATUS_LABEL = {
 	pendiente: "Pendiente",
@@ -50,70 +27,101 @@ const STATUS_LABEL = {
 	rechazada: "Rechazó",
 };
 
-// Reanimated mueve los shared values en el hilo de UI; el linter de React los
-// trata como valores inmutables del render y no distingue ese patrón.
-/* eslint-disable react-hooks/immutability */
+/** Fila de resultado: avatar, nombre y estado o botón Invitar (como en web). */
+function InviteRow({ person, status, pending, disabled, onInvite }) {
+	return (
+		<View style={styles.personRow}>
+			<Avatar size={32}>
+				<AvatarImage uri={person.avatarUrl} name={person.username} />
+				<AvatarFallback name={person.username} />
+			</Avatar>
+
+			<View style={styles.personText}>
+				<Text style={styles.personName} numberOfLines={1}>
+					{person.username}
+				</Text>
+				<Text style={styles.personHandle} numberOfLines={1}>
+					@{person.username}
+				</Text>
+			</View>
+
+			<View style={styles.action}>
+				{status ? (
+					<Text style={styles.status}>
+						{STATUS_LABEL[status] ?? STATUS_LABEL.pendiente}
+					</Text>
+				) : pending ? (
+					<Text style={styles.status}>Enviando…</Text>
+				) : (
+					<Pressable
+						onPress={onInvite}
+						disabled={disabled}
+						style={({ pressed }) => [
+							styles.inviteButton,
+							pressed && styles.pressed,
+							disabled && styles.disabled,
+						]}
+						accessibilityRole="button"
+						accessibilityLabel={`Invitar a ${person.username}`}
+					>
+						<Text style={styles.inviteButtonText}>Invitar</Text>
+					</Pressable>
+				)}
+			</View>
+		</View>
+	);
+}
 
 /**
- * Bottom sheet para invitar personas a una playlist (port de `UserSearch` web).
+ * Sheet "Colaboradores": integrantes de la playlist arriba y buscador para
+ * invitar a más personas abajo, con la misma estructura que `UserSearch` web.
  *
- * Busca con la API (desde 2 letras, con debounce) y excluye a miembros e
- * invitados. `onInvite` devuelve una promesa: el sheet muestra el estado de
- * envío y el error inline sin cerrarse, para invitar a varias seguidas.
+ * Lo presenta quien lo usa (botón "Invitar" del detalle de playlist). Mantiene
+ * el error inline y no se cierra al invitar, para poder sumar varias personas
+ * seguidas. Las invitaciones ya enviadas se marcan sobre el resultado (no se
+ * excluyen de la búsqueda), igual que en web.
  */
 export default function InviteUserSheet({
 	open,
 	onClose,
+	onInvite,
 	userId,
-	isCollaborative,
+	members = [],
 	excludeIds = [],
 	invitations = [],
-	onInvite,
+	canManageMembers = true,
+	onRemoveMember,
+	visibilityLabel = "Public Playlist",
+	title = "Colaboradores",
+	description,
+	inviteTitle = "Invitar colaboradores",
+	placeholder = "Buscar personas…",
 }) {
-	const insets = useSafeAreaInsets();
+	const sheetRef = useRef(null);
+	const presentedRef = useRef(false);
 	const [query, setQuery] = useState("");
 	const [response, setResponse] = useState({ key: null, items: [], error: null });
 	const [pendingId, setPendingId] = useState(null);
 	const [submitError, setSubmitError] = useState("");
-
-	const dragY = useSharedValue(0);
-	const sheetHeight = useSharedValue(0);
-
-	const sheetDrag = useAnimatedStyle(() => ({
-		transform: [{ translateY: dragY.value }],
-	}));
-
-	// El arrastre vive en el asa: así no compite con el scroll de resultados ni
-	// con el teclado del buscador. Hacia arriba el sheet no se mueve.
-	const dragGesture = Gesture.Pan()
-		.activeOffsetY([-9999, 10])
-		.onUpdate((event) => {
-			dragY.value = Math.max(0, event.translationY);
-		})
-		.onEnd((event) => {
-			const shouldClose =
-				event.translationY > CLOSE_DISTANCE ||
-				event.velocityY > CLOSE_VELOCITY;
-
-			if (!shouldClose) {
-				dragY.value = withSpring(0, DRAG_SETTLE);
-				return;
-			}
-
-			dragY.value = withTiming(
-				sheetHeight.value + 80,
-				DRAG_EXIT,
-				(finished) => {
-					if (finished) scheduleOnRN(handleClose);
-				},
-			);
-		});
 
 	const trimmedQuery = query.trim();
 	const hasMinChars = trimmedQuery.length >= MIN_QUERY;
 	const debouncedQuery = useDebounce(trimmedQuery, DEBOUNCE_MS);
 	const canSearch = debouncedQuery.length >= MIN_QUERY;
 	const requestKey = canSearch ? debouncedQuery : null;
+
+	// Llamar a dismiss() sobre un modal que nunca se presentó (o que ya se
+	// desmontó) lo deja en estado DISMISSING: el portal se monta pero no
+	// renderiza y el present() posterior parece no hacer nada. Por eso se cierra
+	// solo mientras esté efectivamente presentado.
+	useEffect(() => {
+		if (open) {
+			presentedRef.current = true;
+			sheetRef.current?.present();
+		} else if (presentedRef.current) {
+			sheetRef.current?.dismiss();
+		}
+	}, [open]);
 
 	useEffect(() => {
 		if (!open || !canSearch) return undefined;
@@ -136,9 +144,25 @@ export default function InviteUserSheet({
 		};
 	}, [open, canSearch, debouncedQuery, requestKey]);
 
-	function handleClose() {
-		Keyboard.dismiss();
-		dragY.value = 0;
+	const isSettled = trimmedQuery === debouncedQuery;
+	const isCurrent = response.key === requestKey;
+	const isLoading = open && hasMinChars && (!isSettled || (canSearch && !isCurrent));
+	const searchError = isSettled && isCurrent ? response.error : null;
+
+	const invitationStatusById = useMemo(
+		() => new Map(invitations.map((invitation) => [invitation.receiver.id, invitation.status])),
+		[invitations],
+	);
+	const excluded = new Set(excludeIds);
+	const rows =
+		isSettled && isCurrent
+			? response.items.filter(
+					(person) => person.id !== userId && !excluded.has(person.id),
+				)
+			: [];
+
+	function handleDismiss() {
+		presentedRef.current = false;
 		setQuery("");
 		setResponse({ key: null, items: [], error: null });
 		setPendingId(null);
@@ -146,28 +170,18 @@ export default function InviteUserSheet({
 		onClose?.();
 	}
 
-	const isSettled = trimmedQuery === debouncedQuery;
-	const isCurrent = response.key === requestKey;
-	const isLoading = open && hasMinChars && (!isSettled || (canSearch && !isCurrent));
-	const searchError = isSettled && isCurrent ? response.error : null;
-
-	const excluded = new Set(excludeIds);
-	const people =
-		isSettled && isCurrent
-			? response.items.filter(
-					(person) => person.id !== userId && !excluded.has(person.id),
-				)
-			: [];
+	function clearQuery() {
+		setQuery("");
+	}
 
 	async function handleSelect(person) {
-		if (pendingId) return;
+		if (pendingId || invitationStatusById.has(person.id)) return;
 
 		setPendingId(person.id);
 		setSubmitError("");
 
 		try {
 			await onInvite?.(person);
-			setQuery("");
 		} catch (cause) {
 			setSubmitError(mapApiError(cause));
 		} finally {
@@ -175,150 +189,108 @@ export default function InviteUserSheet({
 		}
 	}
 
+	const emptyMessage = searchError
+		? searchError
+		: isLoading
+			? "Buscando…"
+			: !hasMinChars
+				? `Escribí al menos ${MIN_QUERY} letras para buscar personas`
+				: `No encontramos personas para “${trimmedQuery}”.`;
+
 	return (
-		<Modal
-			visible={open}
-			transparent
-			animationType="slide"
-			statusBarTranslucent
-			onRequestClose={handleClose}
+		<BottomSheetModal
+			ref={sheetRef}
+			snapPoints={SNAP_POINTS}
+			enableDynamicSizing={false}
+			onDismiss={handleDismiss}
+			accessibilityLabel={description ?? title}
 		>
-			<GestureHandlerRootView style={styles.overlay}>
-				<KeyboardAvoidingView
-					style={styles.overlay}
-					behavior={Platform.OS === "ios" ? "padding" : undefined}
-				>
+			<BottomSheetScrollContent
+				keyboardShouldPersistTaps="handled"
+				showsVerticalScrollIndicator={false}
+				contentContainerStyle={styles.content}
+			>
+				{/* Cabecera */}
+				<View style={styles.header}>
+					<View style={styles.visibility}>
+						<GlobeIcon size={18} color={colors.textMuted} />
+						<Text style={styles.visibilityText}>{visibilityLabel}</Text>
+					</View>
+					<Text style={styles.title}>{title}</Text>
 					<Pressable
-						style={styles.backdrop}
-						onPressIn={handleClose}
+						onPress={() => sheetRef.current?.dismiss()}
+						style={({ pressed }) => [styles.close, pressed && styles.pressed]}
 						accessibilityRole="button"
 						accessibilityLabel="Cerrar"
-					/>
-
-					<Animated.View
-						style={[
-							styles.sheet,
-							{ paddingBottom: insets.bottom + spacing.lg },
-							sheetDrag,
-						]}
-						onLayout={(event) => {
-							sheetHeight.value = event.nativeEvent.layout.height;
-						}}
+						hitSlop={8}
 					>
-						<GestureDetector gesture={dragGesture}>
-							<View style={styles.dragArea}>
-								<View style={styles.grabber} />
-								<Text style={styles.title}>Invitar a la playlist</Text>
-							</View>
-						</GestureDetector>
+						<CloseIcon size={22} color={colors.textPrimary} />
+					</Pressable>
+				</View>
 
-						<Text style={styles.description}>
-							{isCollaborative
-								? "Buscá a quien quieras sumar. Van a poder agregar y quitar canciones."
-								: "Al invitar a alguien, la playlist deja de ser privada y pasa a ser colaborativa."}
-						</Text>
+				{/* Integrantes */}
+				<View style={styles.section}>
+					{members.map((member) => (
+						<MemberRow
+							key={member.id}
+							member={member}
+							canRemove={canManageMembers && member.role !== "creator"}
+							onRemove={() => onRemoveMember?.(member)}
+						/>
+					))}
+				</View>
 
-						<View style={styles.searchWrapper}>
-							<TextInput
-								value={query}
-								onChangeText={setQuery}
-								placeholder="Buscar personas…"
-								placeholderTextColor={colors.textMuted}
-								autoCapitalize="none"
-								autoCorrect={false}
-								style={styles.searchInput}
-								accessibilityLabel="Buscar personas"
-							/>
-							{isLoading ? <ActivityIndicator color={colors.textMuted} /> : null}
+				{/* Invitar */}
+				<View style={styles.section}>
+					<Text style={styles.sectionTitle}>{inviteTitle}</Text>
+
+					{submitError ? <Text style={styles.error}>{submitError}</Text> : null}
+
+					<View style={styles.searchWrapper}>
+						<SearchIcon size={18} color={colors.textMuted} />
+						<BottomSheetInput
+							value={query}
+							onChangeText={setQuery}
+							placeholder={placeholder}
+							autoCapitalize="none"
+							autoCorrect={false}
+							accessibilityLabel="Buscar personas"
+							style={styles.searchInput}
+						/>
+						{isLoading ? (
+							<ActivityIndicator size="small" color={colors.textMuted} />
+						) : null}
+						{query ? (
+							<Pressable
+								onPress={clearQuery}
+								style={({ pressed }) => [pressed && styles.pressed]}
+								accessibilityRole="button"
+								accessibilityLabel="Borrar búsqueda"
+								hitSlop={8}
+							>
+								<CloseIcon size={16} color={colors.textMuted} />
+							</Pressable>
+						) : null}
+					</View>
+
+					{rows.length > 0 ? (
+						<View style={styles.results}>
+							{rows.map((person) => (
+								<InviteRow
+									key={person.id}
+									person={person}
+									status={invitationStatusById.get(person.id)}
+									pending={pendingId === person.id}
+									disabled={pendingId !== null}
+									onInvite={() => handleSelect(person)}
+								/>
+							))}
 						</View>
-
-						{submitError ? <Text style={styles.error}>{submitError}</Text> : null}
-
-						<ScrollView
-							style={styles.results}
-							keyboardShouldPersistTaps="handled"
-							showsVerticalScrollIndicator={false}
-						>
-							{searchError ? (
-								<Text style={styles.message}>{searchError}</Text>
-							) : !hasMinChars ? (
-								<Text style={styles.message}>
-									Escribí al menos {MIN_QUERY} letras para buscar personas.
-								</Text>
-							) : isLoading && people.length === 0 ? (
-								<Text style={styles.message}>Buscando…</Text>
-							) : people.length === 0 ? (
-								<Text style={styles.message}>
-									No encontramos personas para “{trimmedQuery}”.
-								</Text>
-							) : (
-								people.map((person) => (
-									<Pressable
-										key={person.id}
-										onPress={() => handleSelect(person)}
-										disabled={pendingId !== null}
-										style={({ pressed }) => [
-											styles.personRow,
-											pressed && styles.pressed,
-											pendingId !== null && styles.disabled,
-										]}
-										accessibilityRole="button"
-										accessibilityLabel={`Invitar a ${person.username}`}
-									>
-										<Avatar size={32}>
-											<AvatarImage
-												uri={person.avatarUrl}
-												name={person.username}
-											/>
-											<AvatarFallback name={person.username} />
-										</Avatar>
-
-										<View style={styles.personText}>
-											<Text style={styles.personName} numberOfLines={1}>
-												{person.username}
-											</Text>
-											<Text style={styles.personEmail} numberOfLines={1}>
-												{person.email || `@${person.username}`}
-											</Text>
-										</View>
-
-										{pendingId === person.id ? (
-											<Text style={styles.pending}>Enviando…</Text>
-										) : null}
-									</Pressable>
-								))
-							)}
-
-							{invitations.length > 0 ? (
-								<View style={styles.sentSection}>
-									<Text style={styles.sentTitle}>Invitaciones enviadas</Text>
-									{invitations.map((invitation) => (
-										<View
-											key={invitation.receiver.id}
-											style={styles.sentRow}
-											accessibilityLabel={`${invitation.receiver.username}: ${STATUS_LABEL[invitation.status] ?? "Pendiente"}`}
-										>
-											<Avatar size={28}>
-												<AvatarImage
-													uri={invitation.receiver.avatarUrl}
-													name={invitation.receiver.username}
-												/>
-												<AvatarFallback name={invitation.receiver.username} />
-											</Avatar>
-											<Text style={styles.sentName} numberOfLines={1}>
-												{invitation.receiver.username}
-											</Text>
-											<Text style={styles.sentStatus}>
-												{STATUS_LABEL[invitation.status] ?? "Pendiente"}
-											</Text>
-										</View>
-									))}
-								</View>
-							) : null}
-						</ScrollView>
-					</Animated.View>
-				</KeyboardAvoidingView>
-			</GestureHandlerRootView>
-		</Modal>
+					) : (
+						<Text style={styles.message}>{emptyMessage}</Text>
+					)}
+				</View>
+			</BottomSheetScrollContent>
+		</BottomSheetModal>
 	);
 }
