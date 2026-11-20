@@ -287,7 +287,8 @@ Todas pasaron. El script era de un solo uso y se eliminó después.
 cd Backend
 docker compose up -d
 # copiar .env.example a .env y completar DATABASE_URL y las POSTGRES_*
-npx prisma migrate dev --name <nombre>
+npx prisma generate
+npx prisma migrate deploy
 npx prisma db seed
 npm run dev
 
@@ -303,6 +304,20 @@ curl "http://localhost:3000/api/songs/popular"
 # 3. Frontend
 cd Frontend && npm run dev
 ```
+
+**Migraciones en bases existentes (Prisma 7.10).** Para una base nueva, `npx prisma generate` +
+`npx prisma migrate deploy` aplica todas las migraciones; no hace falta `migrate dev`. Si la base ya
+tiene `room_kicked` creada a mano o con `db push`, registrar la migración
+`20261120095925_add_room_kicked` antes de seguir:
+
+```bash
+npx prisma migrate resolve --applied 20261120095925_add_room_kicked
+npx prisma migrate deploy
+```
+
+Si la base existente no tiene `room_kicked`, alcanza con `npx prisma generate` + `npx prisma migrate deploy`.
+**No usar `migrate dev` sobre bases con tablas creadas a mano**: detecta el desfase y propone un reset
+que borra los datos. Detalle completo en `Backend/README.md` (§ Base de datos y migraciones).
 
 En el frontend: `/home` muestra novedades con carátula, artista y género; `/buscar` pagina con números;
 el reproductor reproduce audio real desde la fila de novedades.
