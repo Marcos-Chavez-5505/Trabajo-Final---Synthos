@@ -284,6 +284,7 @@ model RoomKicked {
   user     User     @relation("KickedUser", fields: [idUser], references: [id], onDelete: Cascade)
 
   @@id([idRoom, idUser])
+  @@index([idUser])
   @@map("room_kicked")
 }
 
