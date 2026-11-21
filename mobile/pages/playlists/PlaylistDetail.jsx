@@ -1102,14 +1102,18 @@ export default function PlaylistDetailScreen({ route }) {
 				<InviteUserSheet
 					open={inviting}
 					onClose={() => setInviting(false)}
-					userId={userId}
-					isCollaborative={playlist.isCollaborative}
-					excludeIds={[
-						...playlist.members.map((member) => member.id),
-						...invitations.map((invitation) => invitation.receiver.id),
-					]}
-					invitations={invitations}
 					onInvite={handleInvite}
+					userId={userId}
+					members={playlist.members}
+					excludeIds={playlist.members.map((member) => member.id)}
+					canManageMembers={isCreator}
+					onRemoveMember={confirmRemoveMember}
+					invitations={invitations}
+					description={
+						playlist.isCollaborative
+							? "Buscá a quien quieras sumar. Van a poder agregar y quitar canciones."
+							: "Buscá a quien quieras sumar. Al invitar a alguien, la playlist deja de ser privada y pasa a ser colaborativa."
+					}
 				/>
 			) : null}
 
