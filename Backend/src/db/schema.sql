@@ -180,7 +180,6 @@ CREATE TABLE room (
     description         TEXT,
     id_playlist_source  INT NOT NULL REFERENCES playlist(id) ON DELETE RESTRICT,
     is_private          BOOLEAN NOT NULL DEFAULT FALSE,
-    password_hash       VARCHAR(255),
     max_capacity        INT NOT NULL,
     status              VARCHAR(20) NOT NULL CHECK (status IN ('activa','cerrada')),
     creation_date       TIMESTAMP NOT NULL DEFAULT NOW(),
@@ -195,7 +194,10 @@ CREATE TABLE room_member (
     id_user   INT NOT NULL REFERENCES "user"(id)   ON DELETE CASCADE,
     role      VARCHAR(20) NOT NULL CHECK (role IN ('host','member')),
     join_date TIMESTAMP NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (id_room, id_user)
+    PRIMARY KEY (id_room, id_user),
+    -- Una sola sala activa por usuario. La app borra las filas al cerrar la
+    -- sala, así que la unicidad se cumple sin índices parciales.
+    UNIQUE (id_user)
 );
 
 -- ============================================

@@ -54,14 +54,12 @@ export async function createRoom({
 	description,
 	playlistId,
 	isPrivate,
-	password,
 }) {
 	const data = await post("/rooms", {
 		name,
 		description: description || "",
 		playlistId: Number(playlistId),
 		isPrivate: Boolean(isPrivate),
-		password: isPrivate ? password : "",
 	});
 
 	notifyRoomsChanged();
@@ -69,12 +67,11 @@ export async function createRoom({
 	return toRoomDetail(data?.room);
 }
 
-export async function joinRoom(code, password) {
+export async function joinRoom(code) {
 	const data = await post("/rooms/join", {
 		code: String(code ?? "")
 			.trim()
 			.toUpperCase(),
-		password: password ?? "",
 	});
 
 	notifyRoomsChanged();

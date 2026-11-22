@@ -46,8 +46,7 @@ async function getMyRooms(req, res, next) {
 async function createRoom(req, res, next) {
 	try {
 		const userId = req.user.sub;
-		const { name, description, playlistId, isPrivate, password } =
-			req.body || {};
+		const { name, description, playlistId, isPrivate } = req.body || {};
 
 		if (typeof name !== "string" || name.trim().length === 0) {
 			return res
@@ -67,25 +66,20 @@ async function createRoom(req, res, next) {
 				.json({ status: "error", message: "isPrivate debe ser boolean." });
 		}
 
-		if (isPrivate && (typeof password !== "string" || password.length < 4)) {
-			return res.status(400).json({
-				status: "error",
-				message:
-					"Las salas privadas requieren contraseña (mínimo 4 caracteres).",
-			});
-		}
-
 		const room = await roomService.createRoom(userId, {
 			name: name.trim(),
 			description,
 			playlistId,
 			isPrivate,
-			password,
 		});
 
 		const io = req.app.get("io");
 		if (io) {
 			io.to(`room:${room.id}`).emit("room:members", room.members);
+			io.to(`user:${userId}`).emit("room:current-changed", {
+				roomId: room.id,
+				previousRoomId: null,
+			});
 		}
 
 		return res.status(201).json({ status: "success", room });
@@ -102,7 +96,7 @@ async function createRoom(req, res, next) {
 async function joinRoom(req, res, next) {
 	try {
 		const userId = req.user.sub;
-		const { code, password } = req.body || {};
+		const { code } = req.body || {};
 
 		if (typeof code !== "string" || code.trim().length === 0) {
 			return res
@@ -112,15 +106,30 @@ async function joinRoom(req, res, next) {
 
 		const result = await roomService.joinRoom(userId, {
 			code: code.trim().toUpperCase(),
-			password,
 		});
 
 		const io = req.app.get("io");
 		if (io) {
 			io.to(`room:${result.room.id}`).emit("room:members", result.room.members);
+
+			if (result.leftRoomId) {
+				const previous = await roomService.getRoomWithMembers(
+					result.leftRoomId,
+				);
+				io.to(`room:${result.leftRoomId}`).emit(
+					"room:members",
+					previous?.members ?? [],
+				);
+			}
+
+			io.to(`user:${userId}`).emit("room:current-changed", {
+				roomId: result.room.id,
+				previousRoomId: result.leftRoomId ?? null,
+			});
 		}
 
 		roomCards.notifyRoomCardChanged(result.room.id);
+		if (result.leftRoomId) roomCards.notifyRoomCardChanged(result.leftRoomId);
 
 		const status = result.alreadyMember ? 200 : 201;
 		return res.status(status).json({ status: "success", room: result.room });
@@ -149,6 +158,13 @@ async function leaveRoom(req, res, next) {
 		if (io) {
 			if (result.closed) {
 				roomState.deleteRoomState(roomId);
+
+				// Avisar también por el canal personal: un miembro que navegó
+				// fuera de la sala ya no está en `room:<id>`.
+				for (const memberId of result.memberIds ?? []) {
+					io.to(`user:${memberId}`).emit("room:closed", { roomId });
+				}
+
 				io.to(`room:${roomId}`).emit("room:closed", { roomId });
 			} else {
 				const room = await roomService.getRoomWithMembers(roomId);
@@ -188,6 +204,14 @@ async function getRoomById(req, res, next) {
 				.json({ status: "error", message: "Sala no encontrada." });
 		}
 
+		if (result.closed) {
+			return res.status(404).json({
+				status: "error",
+				code: "ROOM_CLOSED",
+				message: "La sala está cerrada.",
+			});
+		}
+
 		if (result.forbidden) {
 			// Pérdida de acceso (o nunca fue miembro): la UI usa el `code` para
 			// distinguirla de otros 403 y el `reason` solo para el mensaje.
@@ -204,9 +228,7 @@ async function getRoomById(req, res, next) {
 			});
 		}
 
-		const { passwordHash, ...roomSafe } = result.room;
-
-		return res.status(200).json({ status: "success", room: roomSafe });
+		return res.status(200).json({ status: "success", room: result.room });
 	} catch (error) {
 		if (error.status) {
 			return res
@@ -263,11 +285,16 @@ async function closeRoom(req, res, next) {
 			return res.status(400).json({ status: "error", message: "Id inválido." });
 		}
 
-		await roomService.closeRoom(hostId, roomId);
+		const result = await roomService.closeRoom(hostId, roomId);
 
 		const io = req.app.get("io");
 		if (io) {
 			roomState.deleteRoomState(roomId);
+
+			for (const memberId of result.memberIds ?? []) {
+				io.to(`user:${memberId}`).emit("room:closed", { roomId });
+			}
+
 			io.to(`room:${roomId}`).emit("room:closed", { roomId });
 		}
 

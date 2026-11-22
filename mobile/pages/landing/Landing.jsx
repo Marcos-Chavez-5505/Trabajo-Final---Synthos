@@ -12,7 +12,7 @@ const HOW_IT_WORKS = [
 	{
 		step: "2",
 		title: "Abrí una sala",
-		text: "Invitá a quien quieras, pública o con contraseña.",
+		text: "Invitá a quien quieras, pública o privada.",
 	},
 	{
 		step: "3",

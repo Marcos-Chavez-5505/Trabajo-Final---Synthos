@@ -15,7 +15,7 @@ import {
   ROOM_ORDERS,
   DEFAULT_ROOM_ORDER,
 } from '@synthos/shared'
-import { useDebounce, useRoomsList } from '@synthos/shared'
+import { useDebounce, useRoomsList, useMyRooms, useAuth } from '@synthos/shared'
 import RoomCard from '@/components/cards/RoomCard.jsx'
 import JoinRoomDialog from '@/features/rooms/components/JoinRoomDialog.jsx'
 import roomIcon from '@synthos/shared/assets/icons/headphones.svg'
@@ -63,6 +63,12 @@ export default function RoomsPage() {
   }, [debounced, query, setSearchParams])
 
   const { isCurrent, rooms, error } = useRoomsList(query, sort, order)
+  const { user } = useAuth()
+  const { currentRoom } = useMyRooms()
+
+  const isCurrentHost = currentRoom
+    ? String(currentRoom.hostId) === String(user?.id)
+    : false
 
   function patchParams(patch) {
     setSearchParams((prev) => {
@@ -143,24 +149,51 @@ export default function RoomsPage() {
         <ul className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rooms.map((room) => (
             <li key={room.id}>
-              <RoomCard room={room} action={<RoomCardAction room={room} />} />
+              <RoomCard
+                room={room}
+                action={
+                  <RoomCardAction
+                    room={room}
+                    currentRoom={currentRoom}
+                    isCurrentHost={isCurrentHost}
+                  />
+                }
+              />
             </li>
           ))}
         </ul>
       )}
 
-      <JoinRoomDialog open={joinOpen} onOpenChange={setJoinOpen} />
+      <JoinRoomDialog
+        open={joinOpen}
+        onOpenChange={setJoinOpen}
+        currentRoom={currentRoom}
+        isCurrentHost={isCurrentHost}
+      />
     </section>
   )
 }
 
-function RoomCardAction({ room }) {
-  const full = room.maxCapacity !== null && room.membersCount >= room.maxCapacity
+function RoomCardAction({ room, currentRoom, isCurrentHost }) {
+  const isCurrent = currentRoom && String(currentRoom.id) === String(room.id)
+  const full =
+    !isCurrent &&
+    room.maxCapacity !== null &&
+    room.membersCount >= room.maxCapacity
+  const blockedByHost = Boolean(currentRoom) && isCurrentHost && !isCurrent
 
-  return <JoinRoomButton room={room} full={full} />
+  return (
+    <JoinRoomButton
+      room={room}
+      full={full}
+      isCurrent={isCurrent}
+      blockedByHost={blockedByHost}
+      switching={Boolean(currentRoom) && !isCurrent}
+    />
+  )
 }
 
-function JoinRoomButton({ room, full }) {
+function JoinRoomButton({ room, full, isCurrent, blockedByHost, switching }) {
   const navigate = useNavigate()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
@@ -181,6 +214,35 @@ function JoinRoomButton({ room, full }) {
     }
   }
 
+  if (isCurrent) {
+    return (
+      <span className="flex flex-col items-end">
+        <button
+          type="button"
+          onClick={() => navigate(`/salas/${room.id}`)}
+          className="rounded-full px-6 py-2.5 Fucsia Button text-surface font-bold hover:brightness-110"
+        >
+          Ir a mi sala
+        </button>
+      </span>
+    )
+  }
+
+  if (blockedByHost) {
+    return (
+      <span className="flex flex-col items-end">
+        <button
+          type="button"
+          disabled
+          title="Cierra tu sala para entrar a otra"
+          className="rounded-full px-6 py-2.5 Volume Button font-bold disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Cierra tu sala
+        </button>
+      </span>
+    )
+  }
+
   return (
     <span className="flex flex-col items-end">
       <button
@@ -190,7 +252,13 @@ function JoinRoomButton({ room, full }) {
         aria-label={full ? 'Sala llena' : undefined}
         className="rounded-full px-6 py-2.5 Fucsia Button text-surface font-bold hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:brightness-100"
       >
-        {full ? 'Llena' : pending ? 'Uniéndote…' : 'Unirme'}
+        {full
+          ? 'Llena'
+          : pending
+            ? 'Uniéndote…'
+            : switching
+              ? 'Cambiar de sala'
+              : 'Unirme'}
       </button>
       {error && (
         <span className="text-muted-foreground TextTiny mt-1 max-w-40 text-right">

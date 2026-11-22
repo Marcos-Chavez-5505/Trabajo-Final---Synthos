@@ -15,19 +15,20 @@ import { mapApiError } from '@synthos/shared'
  *
  * Es la única vía de entrada a una sala privada (D14): las privadas no salen en el
  * listado de `/salas`, así que sin este diálogo no habría forma de llegar a una.
+ * Se entra con el código, sin contraseña (D27).
  *
  * El modal de este flujo es el `Sheet` de Base UI; el buscador de personas de
  * las playlists usa el `Dialog` de `components/ui`.
- *
- * La contraseña solo se pide si la sala resultara privada, y el backend responde
- * 403 tanto si falta como si es incorrecta, así que el campo va siempre visible
- * con su explicación en vez de aparecer y desaparecer.
  */
-export default function JoinRoomDialog({ open, onOpenChange }) {
+export default function JoinRoomDialog({
+  open,
+  onOpenChange,
+  currentRoom,
+  isCurrentHost,
+}) {
   const navigate = useNavigate()
 
   const [code, setCode] = useState('')
-  const [password, setPassword] = useState('')
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
 
@@ -46,7 +47,7 @@ export default function JoinRoomDialog({ open, onOpenChange }) {
     setPending(true)
 
     try {
-      const joined = await joinRoom(code, password)
+      const joined = await joinRoom(code)
 
       onOpenChange(false)
       navigate(`/salas/${joined.id}`)
@@ -59,7 +60,6 @@ export default function JoinRoomDialog({ open, onOpenChange }) {
   function handleOpenChange(next) {
     if (!next) {
       setCode('')
-      setPassword('')
       setError('')
       setPending(false)
     }
@@ -74,11 +74,31 @@ export default function JoinRoomDialog({ open, onOpenChange }) {
           <SheetTitle>Unirme con código</SheetTitle>
           <SheetDescription>
             Las salas privadas no aparecen en el listado: entrás con el código que
-            te pasó quien la creó, y con su contraseña si es privada.
+            te pasó quien la creó.
           </SheetDescription>
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3 px-4 pb-4">
+          {currentRoom && (
+            <div className="rounded-lg px-3 py-2 Volume TextTiny">
+              <p>
+                {isCurrentHost
+                  ? `Estás administrando «${currentRoom.name}». Cerrala para entrar a otra.`
+                  : `Al entrar a otra sala vas a salir de «${currentRoom.name}».`}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenChange(false)
+                  navigate(`/salas/${currentRoom.id}`)
+                }}
+                className="TextFucsia mt-1 underline"
+              >
+                Ir a mi sala
+              </button>
+            </div>
+          )}
+
           <label className="block space-y-1">
             <span className="text-muted-foreground TextMedium">Código de la sala</span>
             <input
@@ -89,20 +109,6 @@ export default function JoinRoomDialog({ open, onOpenChange }) {
               aria-label="Código de la sala"
               maxLength={12}
               autoFocus
-              className="text-foreground TextRegluar w-full rounded px-3 py-2 Volume outline-none"
-            />
-          </label>
-
-          <label className="block space-y-1">
-            <span className="text-muted-foreground TextMedium">
-              Contraseña (solo si la sala es privada)
-            </span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Dejala vacía si la sala es pública"
-              aria-label="Contraseña de la sala"
               className="text-foreground TextRegluar w-full rounded px-3 py-2 Volume outline-none"
             />
           </label>

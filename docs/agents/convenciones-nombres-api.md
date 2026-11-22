@@ -24,7 +24,7 @@ Origen: AGENTS.md original §3 y regla 7.
 | `vote`                | votar (ej. skip)                             |
 | `follow` / `unfollow` | seguir/dejar de seguir                       |
 
-Ejemplos: `roomsService.js` → `searchRooms({query,sort,order})`, `getRoomById(id)`, `createRoom(data)`, `joinRoom(code, password?)`, `voteSkip(roomId)`.
+Ejemplos: `roomsService.js` → `searchRooms({query,sort,order})`, `getRoomById(id)`, `createRoom(data)`, `joinRoom(code)`, `voteSkip(roomId)`.
 
 **Rutas API (REST, backend):** base `/api`, recursos en plural, minúsculas, sin verbos:
 

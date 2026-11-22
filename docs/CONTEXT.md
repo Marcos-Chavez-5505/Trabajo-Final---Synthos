@@ -127,8 +127,8 @@ POST   /api/playlists/invitations/:idPlaylist/reject â†’ authenticate â†
 
 GET    /api/rooms?query=&sort=name|rating&order=asc|desc  â†’ array crudo con columnas explÃ­citas de `room` + `host_id`, `host_username`, `avg_rating` (string), `members_count`, `songs_count`. Solo pÃºblicas y activas
 GET    /api/rooms/mine       â†’ authenticate; mismo shape, de las salas activas del usuario (incluye privadas)
-POST   /api/rooms            â†’ authenticate, { name, description?, playlistId, isPrivate, password? } â†’ 201 { status, room } con `members[]` y `playlistSource.songs`. Acepta playlist propia **o** de una colab de la que sea miembro (D19); exige â‰¥1 canciÃ³n. `maxCapacity` siempre 10, el `code` lo genera el server. Nunca devuelve `passwordHash`
-POST   /api/rooms/join       â†’ authenticate, { code, password? } â†’ 201 (200 si ya era miembro); 404 cÃ³digo inexistente, 403 contraseÃ±a, 400 cerrada, 409 llena
+POST   /api/rooms            â†’ authenticate, { name, description?, playlistId, isPrivate } â†’ 201 { status, room } con `members[]` y `playlistSource.songs`. Acepta playlist propia **o** de una colab de la que sea miembro (D19); exige â‰¥1 canciÃ³n. `maxCapacity` siempre 10, el `code` lo genera el server.
+POST   /api/rooms/join       â†’ authenticate, { code } â†’ 201 (200 si ya era miembro); 404 cÃ³digo inexistente, 400 cerrada, 409 llena
 GET    /api/rooms/:id        â†’ authenticate (403 no miembro, 404 no existe) â†’ { status, room } con `members[]`, `hostAvgRating`, `viewerHasRated` y las canciones de la fuente
 POST   /api/rooms/:id/leave  â†’ authenticate â†’ 204 (si sale el anfitriÃ³n, **cierra la sala**)
 DELETE /api/rooms/:id        â†’ authenticate, solo host â†’ 204 (cierra y emite `room:closed`)
@@ -160,7 +160,7 @@ Tablas mapeadas a snake_case (`@@map`, `@map`), claves compuestas como `@@id([a,
 - **Favorite**: PK `[idUser, idSong]`.
 - **Follow**: PK `[followerId, followedId]` (hay CHECK de no auto-seguirse mencionado en el frontend).
 - **Content / ContentPlayement**: tienen rutas de lectura/escritura de recomendaciones (TS-19); `ContentPlayement` es donde vive el destinatario de una recomendaciÃ³n. `SongMood` + `Mood` alimentan `GET /songs/recommendations`.
-- **Room**: `code` unique (â‰¤20), `name`, `idPlaylistSource` NOT NULL FK playlist, `isPrivate`, `passwordHash?`, `maxCapacity`, `status: RoomStatus { activa | cerrada }`, `expiresAt?`. `RoomMember` con `RoomRole { host | member }`. `HostRating` PK `[idRoom, idRater, idHost]`, `rating SmallInt`.
+- **Room**: `code` unique (â‰¤20), `name`, `idPlaylistSource` NOT NULL FK playlist, `isPrivate`, `maxCapacity`, `status: RoomStatus { activa | cerrada }`, `expiresAt?`. `RoomMember` con `RoomRole { host | member }`. `HostRating` PK `[idRoom, idRater, idHost]`, `rating SmallInt`.
 - **Vistas** (preview `views`): `user_genre_counts`, `user_top_genre` (usada por `searchUsers`), `HostAvgRating` â†’ mapeada a `host_avg_rating` (`AVG(host_rating.rating)` por `id_host`, creada a mano por la migraciÃ³n `20261013164336`; la usa el raw SQL de salas y el promedio del anfitriÃ³n).
 
 **Semillas:** `prisma.config.ts` â†’ `db seed` corre `seed.js && seedRooms.js && seedUsers.js` (idempotentes). `seed.js` puebla artista/canciones/gÃ©neros/moods desde `prisma/data/songs.json` (descarta canciones sin gÃ©nero o mood). `seedRooms.js` crea 5 anfitriones + 3 raters (contraseÃ±a **`Demo1234`**), playlists fuente, salas y `host_rating` (escala 1â€“5) para que el orden por rating sea comprobable. `seedUsers.js` suma usuarios, follows, favoritos, playlists y recomendaciones; incluye un bloque `POPULAR_SONGS` con canciones marcadas por 3+ personas distintas y `markedDate` refrescado a la semana actual para que `/populares` tenga datos.
