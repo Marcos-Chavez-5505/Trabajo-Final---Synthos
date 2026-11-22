@@ -7,7 +7,11 @@ import {
 import { subscribeToRoomEvent } from '../../services/socketService.js'
 
 /**
- * Salas del usuario para el grupo "Mis Salas" del Sidebar.
+ * Sala actual del usuario para el grupo "Mis Salas" del Sidebar.
+ *
+ * Con la regla de una sola sala activa, `rooms` tiene 0 o 1 elemento y
+ * `currentRoom` es ese elemento (o `null`). Se mantiene la forma de lista para
+ * no romper a los consumidores que ya iteran `rooms`.
  *
  * El Sidebar vive arriba de la ruta, así que no se remonta al unirse o salir de
  * una sala desde otra pantalla. Por eso se suscribe a `subscribeToRooms` y usa un
@@ -39,11 +43,16 @@ export default function useMyRooms() {
     const offKicked = subscribeToRoomEvent('room:kicked', notifyRoomsChanged)
     const offExpelled = subscribeToRoomEvent('room:expelled', notifyRoomsChanged)
     const offClosed = subscribeToRoomEvent('room:closed', notifyRoomsChanged)
+    const offCurrentChanged = subscribeToRoomEvent(
+      'room:current-changed',
+      notifyRoomsChanged,
+    )
 
     return () => {
       offKicked()
       offExpelled()
       offClosed()
+      offCurrentChanged()
     }
   }, [])
 
@@ -73,5 +82,5 @@ export default function useMyRooms() {
     }
   }, [version])
 
-  return { rooms, loading }
+  return { rooms, loading, currentRoom: rooms[0] ?? null }
 }

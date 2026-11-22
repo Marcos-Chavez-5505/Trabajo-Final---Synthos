@@ -4,7 +4,6 @@ const roomLive = require("../realtime/roomLive");
 const roomGenres = require("./roomGenres.service");
 const presence = require("../realtime/presence");
 const roomExpulsions = require("../realtime/roomExpulsions");
-const bcrypt = require("bcrypt");
 const crypto = require("node:crypto");
 const { Prisma } = require("@prisma/client");
 const { httpError } = require("../utils/errors");
@@ -13,6 +12,72 @@ const LIKE_WILDCARDS = /[\\%_]/g;
 
 // Tope de avatares que muestra la tarjeta de sala (la anfitriona va aparte).
 const MAX_CARD_MEMBERS = 9;
+
+// Namespace de los advisory locks por usuario que serializan create/join. Dos
+// pedidos simultáneos del mismo usuario (dos pestañas, web + mobile) se
+// resuelven uno después del otro: el segundo ve la membresía del primero y
+// aplica el 409 o el auto-leave que corresponde.
+const ROOM_USER_LOCK_NAMESPACE = 20261122;
+
+/**
+ * Membresía actual del usuario. Con la regla de una sola sala activa hay como
+ * máximo una fila. Si quedó una fila vieja de una sala cerrada, se descarta
+ * para no bloquear al usuario.
+ *
+ * @param {number} userId
+ * @param {object} [client] `prisma` o el `tx` de una transacción.
+ */
+async function findCurrentMembership(userId, client = prisma) {
+	const member = await client.roomMember.findFirst({
+		where: { idUser: userId },
+		select: {
+			idRoom: true,
+			role: true,
+			room: { select: { status: true, name: true } },
+		},
+	});
+
+	if (!member) return null;
+
+	if (member.room.status === "cerrada") {
+		await client.roomMember.deleteMany({
+			where: { idRoom: member.idRoom, idUser: userId },
+		});
+		return null;
+	}
+
+	return member;
+}
+
+/**
+ * 409 con el código que corresponde según el rol de la membresía actual.
+ * El host no puede entrar a otra sala sin cerrar la suya (D24); un invitado
+ * puede cambiar de sala, pero `joinRoom` lo resuelve saliendo de la anterior.
+ */
+function currentRoomError(member) {
+	if (member.role === "host") {
+		return httpError(
+			409,
+			`Estás administrando «${member.room.name}». Cerrala para entrar o crear otra.`,
+			"ROOM_ALREADY_HOSTING",
+		);
+	}
+
+	return httpError(
+		409,
+		`Ya estás en «${member.room.name}». Salí de esa para entrar a otra.`,
+		"ROOM_ALREADY_IN_ROOM",
+	);
+}
+
+function isUniqueViolationOn(error, field) {
+	if (error?.code !== "P2002") return false;
+
+	const target = error.meta?.target;
+	const values = Array.isArray(target) ? target : [target];
+
+	return values.some((value) => String(value).includes(field));
+}
 
 function toLikePattern(query) {
 	return `%${String(query).replace(LIKE_WILDCARDS, (char) => `\\${char}`)}%`;
@@ -241,7 +306,7 @@ function generateRoomCode() {
 function safeRoom(room) {
 	if (!room) return room;
 
-	const { passwordHash, ...rest } = room;
+	const rest = { ...room };
 
 	if (rest.playlistSource && Array.isArray(rest.playlistSource.songs)) {
 		rest.playlistSource = {
@@ -253,10 +318,7 @@ function safeRoom(room) {
 	return rest;
 }
 
-async function createRoom(
-	hostId,
-	{ name, description, playlistId, isPrivate, password },
-) {
+async function createRoom(hostId, { name, description, playlistId, isPrivate }) {
 	const playlist = await prisma.playlist.findUnique({
 		where: { id: playlistId },
 		include: {
@@ -266,30 +328,33 @@ async function createRoom(
 	});
 
 	if (!playlist) {
-		const err = new Error("La playlist no existe.");
-		err.status = 404;
-		throw err;
+		throw httpError(404, "La playlist no existe.", "PLAYLIST_NOT_FOUND");
 	}
 
 	const isCreator = playlist.idCreator === hostId;
 	const isMember = playlist.members.some((m) => m.idUser === hostId);
 
 	if (!isCreator && !isMember) {
-		const err = new Error("La playlist no te pertenece.");
-		err.status = 403;
-		throw err;
+		throw httpError(
+			403,
+			"La playlist no te pertenece.",
+			"NOT_PLAYLIST_MEMBER",
+		);
 	}
 
 	if (playlist.songs.length === 0) {
-		const err = new Error("La playlist no tiene canciones.");
-		err.status = 400;
-		throw err;
+		throw httpError(
+			400,
+			"La playlist no tiene canciones.",
+			"INVALID_ROOM_PLAYLIST",
+		);
 	}
 
-	let passwordHash = null;
-	if (isPrivate) {
-		passwordHash = await bcrypt.hash(password, 10);
-	}
+	// Chequeo temprano para no generar un código ni abrir una transacción si el
+	// usuario ya está en una sala. La transacción lo vuelve a comprobar bajo el
+	// advisory lock: esta lectura puede quedar vieja.
+	const current = await findCurrentMembership(hostId);
+	if (current) throw currentRoomError(current);
 
 	let code;
 	let attempts = 0;
@@ -306,8 +371,16 @@ async function createRoom(
 		throw err;
 	}
 
-	return prisma
-		.$transaction(async (tx) => {
+	try {
+		const created = await prisma.$transaction(async (tx) => {
+			await tx.$queryRaw`
+				SELECT 1 AS locked
+				FROM (SELECT pg_advisory_xact_lock(${ROOM_USER_LOCK_NAMESPACE}, ${hostId})) AS lock
+			`;
+
+			const lockedCurrent = await findCurrentMembership(hostId, tx);
+			if (lockedCurrent) throw currentRoomError(lockedCurrent);
+
 			const room = await tx.room.create({
 				data: {
 					code,
@@ -315,7 +388,6 @@ async function createRoom(
 					description: description ?? null,
 					idPlaylistSource: playlistId,
 					isPrivate: isPrivate ?? false,
-					passwordHash,
 					maxCapacity: 10,
 					status: "activa",
 				},
@@ -329,22 +401,37 @@ async function createRoom(
 				where: { id: room.id },
 				include: ROOM_INCLUDE,
 			});
-		})
-		.then(async (created) =>
-			safeRoom({
-				...created,
-				hostAvgRating: await getHostAvgRating(hostId),
-				hostRatingsCount: await getHostRatingsCount(hostId),
-				viewerHasRated: false,
-			}),
-		);
+		});
+
+		return safeRoom({
+			...created,
+			hostAvgRating: await getHostAvgRating(hostId),
+			hostRatingsCount: await getHostRatingsCount(hostId),
+			viewerHasRated: false,
+		});
+	} catch (error) {
+		// Carrera con otro create/join del mismo usuario: el índice único es el
+		// árbitro final. Se traduce al 409 de negocio, no al P2002 crudo.
+		if (isUniqueViolationOn(error, "id_user")) {
+			const existing = await findCurrentMembership(hostId);
+
+			throw existing
+				? currentRoomError(existing)
+				: httpError(
+						409,
+						"Ya estás en una sala. Salí de esa para crear otra.",
+						"ROOM_ALREADY_IN_ROOM",
+					);
+		}
+
+		throw error;
+	}
 }
 
-async function joinRoom(userId, { code, password }) {
+async function joinRoom(userId, { code }) {
 	const room = await prisma.room.findUnique({
 		where: { code },
 		include: {
-			members: { select: { idUser: true } },
 			playlistSource: {
 				include: {
 					songs: {
@@ -366,15 +453,11 @@ async function joinRoom(userId, { code, password }) {
 	});
 
 	if (!room) {
-		const err = new Error("Sala no encontrada.");
-		err.status = 404;
-		throw err;
+		throw httpError(404, "Sala no encontrada.", "ROOM_NOT_FOUND");
 	}
 
 	if (room.status === "cerrada") {
-		const err = new Error("La sala está cerrada.");
-		err.status = 400;
-		throw err;
+		throw httpError(400, "La sala está cerrada.", "ROOM_CLOSED");
 	}
 
 	// Expulsión persistente: si el usuario fue sacado de esta sala, no puede
@@ -385,34 +468,69 @@ async function joinRoom(userId, { code, password }) {
 	});
 
 	if (wasKicked) {
-		const err = new Error("Te expulsaron de esta sala. No podés volver a entrar.");
-		err.status = 403;
-		throw err;
+		throw httpError(
+			403,
+			"Te expulsaron de esta sala. No podés volver a entrar.",
+			"ROOM_KICKED",
+		);
 	}
 
-	const alreadyMember = room.members.some((m) => m.idUser === userId);
+	try {
+		const result = await prisma.$transaction(async (tx) => {
+			// Serializa create/join del mismo usuario y, después, los joins de
+			// distintos usuarios a esta sala (capacidad).
+			await tx.$queryRaw`
+				SELECT 1 AS locked
+				FROM (SELECT pg_advisory_xact_lock(${ROOM_USER_LOCK_NAMESPACE}, ${userId})) AS lock
+			`;
+			await tx.$queryRaw`
+				SELECT id FROM "room" WHERE id = ${room.id} FOR UPDATE
+			`;
 
-	if (room.isPrivate && !alreadyMember) {
-		if (!password || typeof password !== "string") {
-			const err = new Error("Esta sala requiere contraseña.");
-			err.status = 403;
-			throw err;
-		}
-		const valid = await bcrypt.compare(password, room.passwordHash);
-		if (!valid) {
-			const err = new Error("Contraseña incorrecta.");
-			err.status = 403;
-			throw err;
-		}
-	}
+			const currentRoom = await tx.room.findUnique({
+				where: { id: room.id },
+				include: { members: { select: { idUser: true } } },
+			});
 
-	const result = await prisma.$transaction(async (tx) => {
-		const currentRoom = await tx.room.findUnique({
-			where: { id: room.id },
-			include: { members: { select: { idUser: true } } },
-		});
+			if (!currentRoom || currentRoom.status === "cerrada") {
+				throw httpError(400, "La sala está cerrada.", "ROOM_CLOSED");
+			}
 
-		if (currentRoom.members.some((m) => m.idUser === userId)) {
+			if (currentRoom.members.some((m) => m.idUser === userId)) {
+				return {
+					room: safeRoom(
+						await tx.room.findUnique({
+							where: { id: room.id },
+							include: ROOM_INCLUDE,
+						}),
+					),
+					alreadyMember: true,
+					leftRoomId: null,
+				};
+			}
+
+			const current = await findCurrentMembership(userId, tx);
+			let leftRoomId = null;
+
+			if (current) {
+				// El host no puede estar en otra sala: primero debe cerrar la
+				// suya. Un invitado cambia de sala: se va de la anterior.
+				if (current.role === "host") throw currentRoomError(current);
+
+				leftRoomId = current.idRoom;
+				await tx.roomMember.deleteMany({
+					where: { idRoom: current.idRoom, idUser: userId },
+				});
+			}
+
+			if (currentRoom.members.length >= currentRoom.maxCapacity) {
+				throw httpError(409, "La sala está llena.", "ROOM_FULL");
+			}
+
+			await tx.roomMember.create({
+				data: { idRoom: room.id, idUser: userId, role: "member" },
+			});
+
 			return {
 				room: safeRoom(
 					await tx.room.findUnique({
@@ -420,36 +538,51 @@ async function joinRoom(userId, { code, password }) {
 						include: ROOM_INCLUDE,
 					}),
 				),
-				alreadyMember: true,
+				alreadyMember: false,
+				leftRoomId,
 			};
-		}
-
-		if (currentRoom.members.length >= currentRoom.maxCapacity) {
-			const err = new Error("La sala está llena.");
-			err.status = 409;
-			throw err;
-		}
-
-		await tx.roomMember.create({
-			data: { idRoom: room.id, idUser: userId, role: "member" },
 		});
 
-		return {
-			room: safeRoom(
-				await tx.room.findUnique({
-					where: { id: room.id },
-					include: ROOM_INCLUDE,
-				}),
-			),
-			alreadyMember: false,
-		};
-	});
+		// Volvió a entrar por su cuenta: ya no corresponde etiquetarlo como
+		// expulsado por inactividad. Si venía de otra sala, su marcador tampoco
+		// aplica.
+		roomExpulsions.clearInactivityExpulsion(room.id, userId);
+		if (result.leftRoomId) {
+			roomExpulsions.clearInactivityExpulsion(result.leftRoomId, userId);
+		}
 
-	// Volvió a entrar por su cuenta: ya no corresponde etiquetarlo como
-	// expulsado por inactividad.
-	roomExpulsions.clearInactivityExpulsion(room.id, userId);
+		return result;
+	} catch (error) {
+		// El índice único (o la PK) es el árbitro final de las carreras. El
+		// advisory lock hace que casi nunca se llegue acá, pero dos procesos o
+		// un insert externo todavía pueden provocarlo.
+		if (error?.code === "P2002") {
+			const existing = await findCurrentMembership(userId);
 
-	return result;
+			if (existing?.idRoom === room.id) {
+				return {
+					room: safeRoom(
+						await prisma.room.findUnique({
+							where: { id: room.id },
+							include: ROOM_INCLUDE,
+						}),
+					),
+					alreadyMember: true,
+					leftRoomId: null,
+				};
+			}
+
+			throw existing
+				? currentRoomError(existing)
+				: httpError(
+						409,
+						"Ya estás en una sala. Salí de esa para entrar a otra.",
+						"ROOM_ALREADY_IN_ROOM",
+					);
+		}
+
+		throw error;
+	}
 }
 
 async function leaveRoom(userId, roomId) {
@@ -459,16 +592,12 @@ async function leaveRoom(userId, roomId) {
 	});
 
 	if (!room) {
-		const err = new Error("Sala no encontrada.");
-		err.status = 404;
-		throw err;
+		throw httpError(404, "Sala no encontrada.", "ROOM_NOT_FOUND");
 	}
 
 	const member = room.members.find((m) => m.idUser === userId);
 	if (!member) {
-		const err = new Error("No sos miembro de esta sala.");
-		err.status = 404;
-		throw err;
+		throw httpError(404, "No sos miembro de esta sala.", "ROOM_NOT_MEMBER");
 	}
 
 	// Salida voluntaria (o por cierre de la anfitriona): el marcador de
@@ -477,15 +606,24 @@ async function leaveRoom(userId, roomId) {
 	roomExpulsions.clearInactivityExpulsion(roomId, userId);
 
 	if (member.role === "host") {
-		await prisma.room.update({
-			where: { id: roomId },
-			data: { status: "cerrada" },
-		});
-		return { closed: true };
+		const memberIds = room.members.map((m) => m.idUser);
+
+		// Cerrar la sala libera a todos: sin membresías no hay sala "actual".
+		await prisma.$transaction([
+			prisma.room.update({
+				where: { id: roomId },
+				data: { status: "cerrada" },
+			}),
+			prisma.roomMember.deleteMany({ where: { idRoom: roomId } }),
+		]);
+
+		return { closed: true, memberIds };
 	}
 
-	await prisma.roomMember.delete({
-		where: { idRoom_idUser: { idRoom: roomId, idUser: userId } },
+	// `deleteMany` en vez de `delete`: si otra pestaña ya salió, la salida es
+	// idempotente y no revienta con P2025.
+	await prisma.roomMember.deleteMany({
+		where: { idRoom: roomId, idUser: userId },
 	});
 
 	return { closed: false };
@@ -556,6 +694,8 @@ async function getRoomByIdForMember(roomId, userId) {
 
 	if (!room) return { notFound: true };
 
+	if (room.status === "cerrada") return { closed: true };
+
 	const isMember = room.members.some((m) => m.idUser === userId);
 	if (!isMember) return { forbidden: true };
 
@@ -592,39 +732,43 @@ async function kickMember(hostId, roomId, targetUserId) {
 	});
 
 	if (!room) {
-		const err = new Error("Sala no encontrada.");
-		err.status = 404;
-		throw err;
+		throw httpError(404, "Sala no encontrada.", "ROOM_NOT_FOUND");
 	}
 
 	const host = room.members.find(
 		(m) => m.idUser === hostId && m.role === "host",
 	);
 	if (!host) {
-		const err = new Error("No sos el anfitrión de esta sala.");
-		err.status = 403;
-		throw err;
+		throw httpError(
+			403,
+			"No sos el anfitrión de esta sala.",
+			"NOT_ROOM_HOST",
+		);
 	}
 
 	const target = room.members.find((m) => m.idUser === targetUserId);
 	if (!target) {
-		const err = new Error("El usuario no es miembro de esta sala.");
-		err.status = 404;
-		throw err;
+		throw httpError(
+			404,
+			"El usuario no es miembro de esta sala.",
+			"ROOM_NOT_MEMBER",
+		);
 	}
 
 	if (target.role === "host") {
-		const err = new Error("El anfitrión no puede eliminarse a sí mismo.");
-		err.status = 400;
-		throw err;
+		throw httpError(
+			400,
+			"El anfitrión no puede eliminarse a sí mismo.",
+			"CANNOT_REMOVE_HOST",
+		);
 	}
 
 	// Borrar de miembros e insertar en la lista negra de la sala en una sola
 	// transacción: si el proceso muere entre medio, no queda un expulsado que
 	// puede volver a entrar.
 	await prisma.$transaction([
-		prisma.roomMember.delete({
-			where: { idRoom_idUser: { idRoom: roomId, idUser: targetUserId } },
+		prisma.roomMember.deleteMany({
+			where: { idRoom: roomId, idUser: targetUserId },
 		}),
 		prisma.roomKicked.upsert({
 			where: { idRoom_idUser: { idRoom: roomId, idUser: targetUserId } },
@@ -643,26 +787,32 @@ async function closeRoom(hostId, roomId) {
 	});
 
 	if (!room) {
-		const err = new Error("Sala no encontrada.");
-		err.status = 404;
-		throw err;
+		throw httpError(404, "Sala no encontrada.", "ROOM_NOT_FOUND");
 	}
 
 	const host = room.members.find(
 		(m) => m.idUser === hostId && m.role === "host",
 	);
 	if (!host) {
-		const err = new Error("No sos el anfitrión de esta sala.");
-		err.status = 403;
-		throw err;
+		throw httpError(
+			403,
+			"No sos el anfitrión de esta sala.",
+			"NOT_ROOM_HOST",
+		);
 	}
 
-	await prisma.room.update({
-		where: { id: roomId },
-		data: { status: "cerrada" },
-	});
+	const memberIds = room.members.map((m) => m.idUser);
 
-	return { closed: true };
+	// Cerrar la sala libera a todos: sin membresías no hay sala "actual".
+	await prisma.$transaction([
+		prisma.room.update({
+			where: { id: roomId },
+			data: { status: "cerrada" },
+		}),
+		prisma.roomMember.deleteMany({ where: { idRoom: roomId } }),
+	]);
+
+	return { closed: true, memberIds };
 }
 
 async function getHostIdOfRoom(roomId) {

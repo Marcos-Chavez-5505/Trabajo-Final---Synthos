@@ -163,10 +163,16 @@ export function showRoomAccessLost(reason) {
 						description:
 							"El anfitrión te quitó de esta sala. Te llevamos al listado de salas.",
 					}
-				: {
-						title: "Ya no tenés acceso a la sala",
-						description: "Te llevamos al listado de salas.",
-					};
+				: reason === "other_room"
+					? {
+							title: "Cambiaste de sala",
+							description:
+								"Tu sesión ya no está en esta sala. Te llevamos al listado de salas.",
+						}
+					: {
+							title: "Ya no tenés acceso a la sala",
+							description: "Te llevamos al listado de salas.",
+						};
 
 	return toast.info(copy.title, {
 		id: "room:access-lost",

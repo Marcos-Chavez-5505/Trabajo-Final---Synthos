@@ -580,26 +580,26 @@ campo se ignora y la playlist se actualiza solo con `name`/`description`/`addSon
 | Endpoint | Auth | Request | Response |
 |---|---|---|---|
 | `GET /` | opcional | query: `query` (texto libre), `sort` = `name` (default, alias `alphabetical`) \| `rating`, `order` = `asc` (default) \| `desc` | **Array plano** (sin envelope) de salas. Con sesión agrega `members`; sin sesión no |
-| `GET /mine` | **sí** | query: `query` opcional | Las salas activas de las que el usuario es miembro, mismas columnas, siempre con `members`. **Incluye las privadas** (a esas se entra con el código) |
-| `POST /` | **sí** | body `{ name, description?, playlistId, isPrivate, password? }` | `201` con la sala: `id`, `code`, `name`, `description`, `isPrivate`, `maxCapacity` (**siempre 10**, lo fija el server), `status`, `hostAvgRating`, `viewerHasRated`, `members[]` (id, username, `pictureUrl`, rol), `playlistSource` con sus `songs` en orden por `position`. **Nunca devuelve `passwordHash`** |
-| `POST /join` | **sí** | body `{ code, password? }` | `201` si se unió, `200` si ya era miembro. La misma sala que `POST /` |
-| `GET /:id` | **sí** | — | `200` con la sala (igual que `POST /`, más `viewerHasRated` y `viewerRating`). `403` `ROOM_ACCESS_LOST` si no sos miembro (ver §10.1), `404` si no existe |
-| `POST /:id/leave` | **sí** | — | `204`. Si quien sale es el **anfitrión, la sala se cierra** |
-| `DELETE /:id` | **sí** | — | `204`. Solo el anfitrión. Cierra la sala y emite `room:closed` |
+| `GET /mine` | **sí** | query: `query` opcional | La sala activa de la que el usuario es miembro (**0 o 1** por la regla D26), mismas columnas, siempre con `members`. **Incluye las privadas** (a esas se entra con el código) |
+| `POST /` | **sí** | body `{ name, description?, playlistId, isPrivate }` | `201` con la sala: `id`, `code`, `name`, `description`, `isPrivate`, `maxCapacity` (**siempre 10**, lo fija el server), `status`, `hostAvgRating`, `viewerHasRated`, `members[]` (id, username, `pictureUrl`, rol), `playlistSource` con sus `songs` en orden por `position`. `409` `ROOM_ALREADY_IN_ROOM` / `ROOM_ALREADY_HOSTING` si ya está en una sala (D26) |
+| `POST /join` | **sí** | body `{ code }` | `201` si se unió, `200` si ya era miembro. La misma sala que `POST /`. Si el usuario es **invitado** en otra sala, sale de esa y entra (auto-leave); si es **anfitrión**, `409` `ROOM_ALREADY_HOSTING`. Sirve para públicas y privadas: la privada se entra solo con el código (D27) |
+| `GET /:id` | **sí** | — | `200` con la sala (igual que `POST /`, más `viewerHasRated` y `viewerRating`). `403` `ROOM_ACCESS_LOST` si no sos miembro (ver §10.1), `404` `ROOM_CLOSED` si la sala está cerrada, `404` si no existe |
+| `POST /:id/leave` | **sí** | — | `204`. Si quien sale es el **anfitrión, la sala se cierra y se borran todas sus membresías** |
+| `DELETE /:id` | **sí** | — | `204`. Solo el anfitrión. Cierra la sala, borra las membresías y emite `room:closed` |
 | `DELETE /:id/members/:userId` | **sí** | — | `204`. Solo el anfitrión. `400` si se intenta sacar al anfitrión |
 | `POST /:id/playback` | **sí** | body `{ action: "play" \| "pause" \| "next" \| "stop" }` | `200 { status, playback }`. **Solo el anfitrión** |
 | `GET /:id/playback` | **sí** | — | `200 { status, playback, skipVotes }`. `403` `ROOM_ACCESS_LOST` si no sos miembro |
 | `POST /:id/skip-votes` | **sí** | — | `201 { status, skipVotes, approved }`. **403 para el anfitrión**; `403` `ROOM_ACCESS_LOST` si no sos miembro |
 | `POST /:id/rating` | **sí** | body `{ rating }` (entero 1–5) | `201 { status, rating }`. Califica al anfitrión (TS-11) |
 
-**Forma de las salas del listado** (columnas explícitas, nunca `room.*`, para no filtrar
-`password_hash`): `id`, `code`, `name`, `description`, `id_playlist_source`, `is_private`,
-`max_capacity`, `status`, `creation_date`, `host_id`, `host_username`,
-`host_picture_url`, `avg_rating`, `ratings_count`, `members_count`, `songs_count`,
-`is_live`, `genres` y, solo con sesión, `members`. El listado público devuelve **solo
-las públicas y activas**; las privadas no aparecen (se entra con `code`, D14) y las
-cerradas tampoco. `avg_rating` es `numeric` de Postgres y llega como **string**; cuando
-el anfitrión no tiene calificaciones el backend lo coalescea a `0`.
+**Forma de las salas del listado** (columnas explícitas, nunca `room.*`): `id`, `code`,
+`name`, `description`, `id_playlist_source`, `is_private`, `max_capacity`, `status`,
+`creation_date`, `host_id`, `host_username`, `host_picture_url`, `avg_rating`,
+`ratings_count`, `members_count`, `songs_count`, `is_live`, `genres` y, solo con sesión,
+`members`. El listado público devuelve **solo las públicas y activas**; las privadas no
+aparecen (se entra con `code`, D14/D27) y las cerradas tampoco. `avg_rating` es `numeric`
+de Postgres y llega como **string**; cuando el anfitrión no tiene calificaciones el backend
+lo coalescea a `0`.
 
 - `members_count`: membresía **persistida** (incluye a la anfitriona). Es la que decide
   “Llena” y el cupo, no la presencia.
@@ -626,6 +626,28 @@ usuario tenga acceso, sea personal propia o colaborativa de la que participe: no
 `type`. Exige que exista (404), que sea suya o sea miembro (403) y que tenga al menos una
 canción (400).
 
+### 10.0 Una sola sala activa (D26)
+
+Un usuario puede estar en **una sola sala activa a la vez**, y el anfitrión cuenta como
+miembro: no puede administrar una sala y ser invitado en otra. "Estar en una sala" es una
+membresía **persistida** en `room_member`, no una pestaña abierta.
+
+- `POST /rooms` y `POST /rooms/join` responden `409`:
+  - `ROOM_ALREADY_IN_ROOM` si el usuario es invitado en otra sala;
+  - `ROOM_ALREADY_HOSTING` si administra otra sala.
+- `POST /rooms/join` con un invitado en otra sala lo **saca de la anterior** y lo mete en la
+  nueva (auto-leave). Un anfitrión no se auto-cierra: debe cerrar su sala primero.
+- Al cerrar una sala (por `DELETE /rooms/:id` o porque sale el anfitrión) se borran todas sus
+  filas de `room_member`: todos quedan libres para otra sala.
+- La regla se garantiza en la base con un índice único sobre `room_member(id_user)`.
+  `room_member` contiene solo membresías de salas activas; por eso no hace falta un índice
+  parcial sobre `room.status`.
+- Desconectarse o cerrar la app **no libera** la sala. Un invitado ausente la libera cuando
+  el job de inactividad lo expulsa (§10.4); un anfitrión queda bloqueado hasta que cierre la
+  sala explícitamente.
+- Un `409` de estos **no** es `ROOM_ACCESS_LOST`: el cliente lo muestra como error de la
+  acción y no redirige.
+
 ### 10.1 Sincronización (WebSocket)
 
 Socket.IO sobre el mismo servidor HTTP. El handshake se autentica con el JWT en
@@ -637,12 +659,13 @@ servidor valida contra `room_member` (un no miembro no entra al canal `room:<id>
 |---|---|---|
 | `joined-room` | Al entrar al canal (también en cada reconexión) | `{ roomId }` |
 | `room:playback` | Cada acción de reproducción, y cuando se aprueba un voto de skip | `{ songId, status, positionMs, updatedAt }` |
-| `room:members` | Entra o sale alguien, o se expulsa a alguien | `roomMember[]` (filas crudas con `user` anidado) |
+| `room:members` | Entra o sale alguien, cambia de sala o se expulsa a alguien | `roomMember[]` (filas crudas con `user` anidado) |
 | `room:skip-votes` | Cada voto, y al limpiarse la votación | `{ voters: number[], required }` (`required: 0` = ya no hay votación) |
 | `room:rating` | Al calificar al anfitrión | `{ roomId, hostId, avgRating }` |
 | `room:kicked` | Al expulsado, a su canal personal `user:<id>` (todos sus sockets) | `{ roomId }` |
 | `room:expelled` | Al invitado que expulsa el job de inactividad, a su canal `user:<id>` | `{ roomId, reason: "inactivity" }` |
-| `room:closed` | Al cerrar la sala, y cuando sale el anfitrión | `{ roomId }` |
+| `room:current-changed` | Al crear o unirse a una sala, al canal `user:<id>` (todos sus sockets) | `{ roomId, previousRoomId }` |
+| `room:closed` | Al cerrar la sala, y cuando sale el anfitrión. Se envía a `room:<id>` y al canal `user:<id>` de cada miembro | `{ roomId }` |
 
 Los clientes **solo escuchan**: el estado cambia por REST y el servidor lo emite.
 
@@ -658,8 +681,10 @@ exigen membresía responden `403` con un `code` estable y un `reason` para el me
   memoria del job, §10.4) o `not_member` (cualquier otro caso). Es **solo para la UI**: no
   cambia la autorización y se pierde al reiniciar el backend (pasa a `not_member`).
 - Aplica a `GET /:id`, `GET /:id/playback` y `POST /:id/skip-votes`. Otros `403` (por ejemplo
-  `POST /join` con contraseña incorrecta o una acción exclusiva del anfitrión) **no** llevan
-  este `code`: el cliente los trata como errores normales y no redirige.
+  una acción exclusiva del anfitrión) **no** llevan este `code`: el cliente los trata como
+  errores normales y no redirige.
+- Los `409` `ROOM_ALREADY_IN_ROOM` / `ROOM_ALREADY_HOSTING` de §10.0 tampoco son pérdida de
+  acceso: son errores de la acción y no redirigen.
 - `join-room` responde el mismo contrato por el evento `error` de Socket.IO:
   `{ roomId, code: "ROOM_ACCESS_LOST", reason, message }`. El cliente lo usa al reconectar
   para salir de la sala sin reintentar: saca el `roomId` de los canales pendientes y no

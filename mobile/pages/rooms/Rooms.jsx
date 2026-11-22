@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
-import { useRoomsList, useDebounce, joinRoom } from "@synthos/shared";
+import { useRoomsList, useDebounce, joinRoom, useMyRooms, useAuth } from "@synthos/shared";
 import RoomCard from "../../components/cards/RoomCard/RoomCard";
 import TopBar from "../../components/layout/TopBar/TopBar";
 import { HeadphonesIcon } from "../../components/icons";
@@ -19,6 +19,12 @@ export default function RoomsScreen() {
 
 	const { isCurrent, rooms, error } = useRoomsList(debounced, "name", "asc");
 
+	const { user } = useAuth();
+	const { currentRoom } = useMyRooms();
+	const isCurrentHost = currentRoom
+		? String(currentRoom.hostId) === String(user?.id)
+		: false;
+
 	function renderItem({ item }) {
 		return (
 			<View style={styles.cardWrapper}>
@@ -32,7 +38,14 @@ export default function RoomsScreen() {
 									})
 							: undefined
 					}
-					action={<JoinButton room={item} navigation={navigation} />}
+					action={
+						<JoinButton
+							room={item}
+							navigation={navigation}
+							currentRoom={currentRoom}
+							isCurrentHost={isCurrentHost}
+						/>
+					}
 				/>
 			</View>
 		);
@@ -92,14 +105,24 @@ export default function RoomsScreen() {
 	);
 }
 
-function JoinButton({ room, navigation }) {
+function JoinButton({ room, navigation, currentRoom, isCurrentHost }) {
 	const [pending, setPending] = useState(false);
 
-	const full = room.maxCapacity !== null && room.membersCount >= room.maxCapacity;
-	const disabled = pending || full;
+	const isCurrent = Boolean(currentRoom) && String(currentRoom.id) === String(room.id);
+	const blockedByHost = Boolean(currentRoom) && isCurrentHost && !isCurrent;
+	const full =
+		!isCurrent &&
+		room.maxCapacity !== null &&
+		room.membersCount >= room.maxCapacity;
+	const disabled = pending || full || blockedByHost;
 
 	async function handleJoin() {
 		if (disabled) return;
+
+		if (isCurrent) {
+			navigation.navigate("RoomDetail", { id: room.id });
+			return;
+		}
 
 		setPending(true);
 
@@ -114,6 +137,18 @@ function JoinButton({ room, navigation }) {
 		}
 	}
 
+	const label = isCurrent
+		? "Ir"
+		: blockedByHost
+			? "Cerrá tu sala"
+			: full
+				? "Llena"
+				: pending
+					? "Uniéndote…"
+					: currentRoom
+						? "Cambiar"
+						: "Unirme";
+
 	return (
 		<Pressable
 			style={[styles.joinButton, disabled && styles.joinButtonDisabled]}
@@ -121,11 +156,15 @@ function JoinButton({ room, navigation }) {
 			disabled={disabled}
 			accessibilityRole="button"
 			accessibilityState={{ disabled }}
-			accessibilityLabel={full ? "Sala llena" : undefined}
+			accessibilityLabel={
+				blockedByHost
+					? "Cerrá tu sala para entrar a otra"
+					: full
+						? "Sala llena"
+						: undefined
+			}
 		>
-			<Text style={styles.joinButtonText}>
-				{full ? "Llena" : pending ? "Uniéndote…" : "Unirme"}
-			</Text>
+			<Text style={styles.joinButtonText}>{label}</Text>
 		</Pressable>
 	);
 }

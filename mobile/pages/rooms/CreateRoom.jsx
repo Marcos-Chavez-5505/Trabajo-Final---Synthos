@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
-import { useAuth, listPlaylists, createRoom, mapApiError } from "@synthos/shared";
+import { useAuth, listPlaylists, createRoom, mapApiError, useMyRooms } from "@synthos/shared";
 import { CREATE_ROOM_STYLES as styles } from "./CreateRoom.styles";
 import { showActionError, showSuccess } from "../../lib/toastMessages";
 
@@ -19,6 +19,7 @@ const MAX_DESCRIPTION = 200;
 export default function CreateRoomScreen() {
 	const navigation = useNavigation();
 	const { user } = useAuth();
+	const { currentRoom, loading: roomsLoading } = useMyRooms();
 
 	const [playlists, setPlaylists] = useState(null);
 	const [loadError, setLoadError] = useState("");
@@ -26,7 +27,6 @@ export default function CreateRoomScreen() {
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
 	const [isPrivate, setIsPrivate] = useState(false);
-	const [password, setPassword] = useState("");
 	const [playlistId, setPlaylistId] = useState("");
 	const [error, setError] = useState("");
 	const [saving, setSaving] = useState(false);
@@ -54,6 +54,42 @@ export default function CreateRoomScreen() {
 
 	if (!user) return null;
 
+	if (currentRoom) {
+		const isCurrentHost = String(currentRoom.hostId) === String(user.id);
+
+		return (
+			<View style={styles.container}>
+				<ScrollView contentContainerStyle={styles.scroll}>
+					<Text style={styles.title}>Ya estás en una sala</Text>
+					<Text style={styles.subtitle}>
+						{isCurrentHost
+							? `Cerrá «${currentRoom.name}» para crear otra.`
+							: `Salí de «${currentRoom.name}» para crear otra.`}
+					</Text>
+
+					<View style={styles.buttonsRow}>
+						<Pressable
+							style={styles.buttonPrimary}
+							onPress={() =>
+								navigation.replace("RoomDetail", { id: currentRoom.id })
+							}
+						>
+							<Text style={styles.buttonText}>Ir a mi sala</Text>
+						</Pressable>
+						<Pressable
+							style={styles.buttonSecondary}
+							onPress={() => navigation.goBack()}
+						>
+							<Text style={styles.buttonText}>Volver</Text>
+						</Pressable>
+					</View>
+				</ScrollView>
+
+				<StatusBar style="light" />
+			</View>
+		);
+	}
+
 	const nothingToShow = playlists !== null && playlists.length === 0;
 
 	async function handleSubmit() {
@@ -68,10 +104,6 @@ export default function CreateRoomScreen() {
 			setError("Elegí una playlist como fuente de la sala.");
 			return;
 		}
-		if (isPrivate && !password.trim()) {
-			setError("Las salas privadas necesitan contraseña.");
-			return;
-		}
 
 		setSaving(true);
 		try {
@@ -79,7 +111,6 @@ export default function CreateRoomScreen() {
 				name,
 				description,
 				isPrivate,
-				password,
 				playlistId,
 			});
 			showSuccess("room:create");
@@ -90,7 +121,7 @@ export default function CreateRoomScreen() {
 		}
 	}
 
-	if (playlists === null) {
+	if (playlists === null || roomsLoading) {
 		return (
 			<View style={styles.container}>
 				<Text style={styles.loadingText}>Cargando tus playlists…</Text>
@@ -169,24 +200,9 @@ export default function CreateRoomScreen() {
 						</View>
 						<Text style={styles.hint}>
 							{isPrivate
-								? "No aparece en el listado. Se entra con el código y la contraseña."
+								? "No aparece en el listado. Se entra con el código."
 								: "Aparece en el listado y cualquiera puede entrar sin código."}
 						</Text>
-
-						{isPrivate ? (
-							<>
-								<Text style={styles.label}>Contraseña de la sala</Text>
-								<TextInput
-									style={styles.input}
-									value={password}
-									onChangeText={setPassword}
-									placeholder="Mínimo 4 caracteres"
-									placeholderTextColor="#b0a4b5"
-									secureTextEntry
-									maxLength={40}
-								/>
-							</>
-						) : null}
 
 						<Text style={styles.label}>Playlist fuente</Text>
 						{playlists.map((p) => (

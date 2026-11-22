@@ -247,7 +247,6 @@ model Room {
   description      String?
   idPlaylistSource Int          @map("id_playlist_source")
   isPrivate        Boolean      @default(false) @map("is_private")
-  passwordHash     String?      @map("password_hash") @db.VarChar(255)
   maxCapacity      Int          @map("max_capacity")
   status           RoomStatus
   creationDate     DateTime     @default(now()) @map("creation_date") @db.Timestamp(6)
@@ -272,6 +271,9 @@ model RoomMember {
   user     User     @relation(fields: [idUser], references: [id], onDelete: Cascade)
 
   @@id([idRoom, idUser])
+  // Una sola sala activa por usuario: las filas existen solo mientras la sala
+  // está activa, así que este índice también cubre "una sola sala como host".
+  @@unique([idUser])
   @@map("room_member")
 }
 

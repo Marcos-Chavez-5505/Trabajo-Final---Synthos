@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { listPlaylists } from '@synthos/shared'
 import { createRoom } from '@synthos/shared'
 import { useAuth } from '@synthos/shared'
+import { useMyRooms } from '@synthos/shared'
 import { mapApiError } from '@synthos/shared'
 
 const MAX_NAME = 60
@@ -27,6 +28,7 @@ const MAX_DESCRIPTION = 200
 export default function CreateRoomPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { currentRoom, loading: roomsLoading } = useMyRooms()
 
   const [playlists, setPlaylists] = useState(null)
   const [loadError, setLoadError] = useState('')
@@ -34,7 +36,6 @@ export default function CreateRoomPage() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [isPrivate, setIsPrivate] = useState(false)
-  const [password, setPassword] = useState('')
   const [playlistId, setPlaylistId] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -64,6 +65,38 @@ export default function CreateRoomPage() {
 
   if (!user) return null
 
+  if (currentRoom) {
+    const isCurrentHost = String(currentRoom.hostId) === String(user.id)
+
+    return (
+      <section className="px-6 py-4 md:px-10">
+        <h1 className="text-foreground Header3">Crear sala</h1>
+        <div className="mt-8 max-w-md rounded-lg p-6 SurfaceLight Elevation1">
+          <p className="text-foreground Header4">Ya estás en una sala</p>
+          <p className="text-muted-foreground TextRegluar mt-1">
+            {isCurrentHost
+              ? `Cerrá «${currentRoom.name}» para crear otra.`
+              : `Salí de «${currentRoom.name}» para crear otra.`}
+          </p>
+          <div className="mt-4 flex gap-2">
+            <Link
+              to={`/salas/${currentRoom.id}`}
+              className="rounded px-4 py-2 Fucsia Button hover:brightness-110"
+            >
+              Ir a mi sala
+            </Link>
+            <Link
+              to="/salas"
+              className="rounded px-4 py-2 Volume Button hover:brightness-110"
+            >
+              Volver
+            </Link>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   const nothingToShow = playlists !== null && playlists.length === 0
 
   async function handleSubmit(event) {
@@ -83,11 +116,6 @@ export default function CreateRoomPage() {
       return
     }
 
-    if (isPrivate && !password.trim()) {
-      setError('Las salas privadas necesitan contraseña.')
-      return
-    }
-
     setSaving(true)
 
     try {
@@ -95,7 +123,6 @@ export default function CreateRoomPage() {
         name,
         description,
         isPrivate,
-        password,
         playlistId,
       })
 
@@ -119,7 +146,7 @@ export default function CreateRoomPage() {
 
       {loadError && <p className="mt-6 max-w-md rounded px-3 py-2 Salmon TextMedium">{loadError}</p>}
 
-      {playlists === null ? (
+      {playlists === null || roomsLoading ? (
         <p className="text-muted-foreground TextRegluar mt-8">Cargando tus playlists…</p>
       ) : nothingToShow ? (
         <NoPlaylistsState />
@@ -178,27 +205,10 @@ export default function CreateRoomPage() {
             </div>
             <p className="text-muted-foreground TextTiny">
               {isPrivate
-                ? 'No aparece en el listado. Se entra con el código y la contraseña.'
+                ? 'No aparece en el listado. Se entra con el código.'
                 : 'Aparece en el listado y cualquiera puede entrar sin código.'}
             </p>
           </div>
-
-          {isPrivate && (
-            <label className="block space-y-1">
-              <span className="text-muted-foreground TextMedium">
-                Contraseña de la sala
-              </span>
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Mínimo 4 caracteres"
-                aria-label="Contraseña de la sala"
-                maxLength={40}
-                className="text-foreground TextRegluar w-full rounded px-3 py-2 Volume outline-none"
-              />
-            </label>
-          )}
 
           <label className="block space-y-1">
             <span className="text-muted-foreground TextMedium">

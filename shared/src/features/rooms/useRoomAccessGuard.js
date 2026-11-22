@@ -9,14 +9,17 @@ import {
 // usuario ya no es miembro. Ver `docs/ESPECIFICACIONES-BACKEND.md`.
 const ACCESS_LOST_CODE = 'ROOM_ACCESS_LOST'
 
-const REASONS = new Set(['inactivity', 'kicked', 'not_member'])
+const REASONS = new Set(['inactivity', 'kicked', 'not_member', 'other_room'])
 
 /**
  * Detector único de pérdida de acceso a una sala.
  *
- * Junta las cuatro formas en que el cliente se entera de que lo sacaron:
+ * Junta las formas en que el cliente se entera de que lo sacaron o de que la
+ * sala dejó de ser la suya:
  *  - `room:expelled` (evento del job de inactividad, canal `user:<id>`);
  *  - `room:kicked` (kick manual del anfitrión, canal `user:<id>`);
+ *  - `room:current-changed` (cambió de sala desde otra pestaña o
+ *    dispositivo, canal `user:<id>`);
  *  - `error` de `join-room` al reconectar (`code: "ROOM_ACCESS_LOST"`);
  *  - un 403 de la API con `code: "ROOM_ACCESS_LOST"` (`reportError`).
  *
@@ -27,8 +30,8 @@ const REASONS = new Set(['inactivity', 'kicked', 'not_member'])
  * No navega ni muestra nada: cada plataforma decide el toast y la redirección.
  *
  * @param {number|string} roomId
- * @param {{ onLost?: (reason: 'inactivity'|'kicked'|'not_member') => void }} [options]
- * @returns {{ lost: null|'inactivity'|'kicked'|'not_member', reportError: (cause: unknown) => boolean }}
+ * @param {{ onLost?: (reason: 'inactivity'|'kicked'|'not_member'|'other_room') => void }} [options]
+ * @returns {{ lost: null|'inactivity'|'kicked'|'not_member'|'other_room', reportError: (cause: unknown) => boolean }}
  */
 export default function useRoomAccessGuard(roomId, { onLost } = {}) {
   const id = Number(roomId)
@@ -88,10 +91,22 @@ export default function useRoomAccessGuard(roomId, { onLost } = {}) {
       }
     })
 
+    // La sala "actual" del usuario cambió (otra pestaña/dispositivo): esta
+    // pantalla ya no corresponde. El payload trae la sala nueva; si es la
+    // misma, no hay nada que hacer.
+    const offCurrentChanged = subscribeToRoomEvent(
+      'room:current-changed',
+      (payload) => {
+        if (Number(payload?.roomId) === id) return
+        loseAccess('other_room')
+      },
+    )
+
     return () => {
       offExpelled()
       offKicked()
       offError()
+      offCurrentChanged()
     }
   }, [id, loseAccess])
 
