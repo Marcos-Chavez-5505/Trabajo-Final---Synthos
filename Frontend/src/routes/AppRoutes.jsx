@@ -7,7 +7,6 @@ import RegisterPage from '@/pages/auth/RegisterPage.jsx'
 import ProfilePage from '@/pages/profile/ProfilePage.jsx'
 import PublicProfilePage from '@/pages/profile/PublicProfilePage.jsx'
 import RoomsPage from '@/pages/rooms/RoomsPage.jsx'
-import CreateRoomPage from '@/pages/rooms/CreateRoomPage.jsx'
 import RoomPage from '@/pages/rooms/RoomPage.jsx'
 import MoodPage from '@/pages/mood/MoodPage.jsx'
 import FollowListPage from '@/pages/profile/FollowListPage.jsx'
@@ -96,10 +95,10 @@ export default function AppRoutes() {
         element={<Protected><ArtistDetailPage /></Protected>}
       />
       {/* TS-17/TS-16: listado de salas con buscador y orden por calificación del
-          anfitrión. TS-14 agrega crear la sala y su pantalla: ambas detrás de
-          `Protected` porque el backend exige sesión hasta para leer el detalle. */}
+          anfitrión. Crear la sala vive en el mismo listado (Popover). Listado y
+          detalle van detrás de `Protected` porque el backend exige sesión hasta
+          para leer el detalle. */}
       <Route path="/salas" element={<Protected><RoomsPage /></Protected>} />
-      <Route path="/salas/crear" element={<Protected><CreateRoomPage /></Protected>} />
       <Route path="/salas/:id" element={<Protected><RoomPage /></Protected>} />
       {/* TS-20: recomendaciones por estado de ánimo. El detector se descarga
           cuando se entra a la pantalla, no al cargar la app. */}

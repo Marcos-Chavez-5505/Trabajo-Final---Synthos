@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DropdownMenu,
   DropdownMenuItem,
@@ -16,11 +16,21 @@ import {
   DEFAULT_ROOM_ORDER,
 } from '@synthos/shared'
 import { useDebounce, useRoomsList, useMyRooms, useAuth } from '@synthos/shared'
+import {
+  Popover,
+  PopoverContent,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import CreateButton from '@/components/actions/CreateButton.jsx'
 import RoomCard from '@/components/cards/RoomCard.jsx'
 import JoinRoomDialog from '@/features/rooms/components/JoinRoomDialog.jsx'
+import RoomCreateForm from '@/features/rooms/components/RoomCreateForm.jsx'
 import roomIcon from '@synthos/shared/assets/icons/headphones.svg'
 import searchIcon from '@synthos/shared/assets/icons/search.svg'
-import threeDotsIcon from '@synthos/shared/assets/icons/three_dots.svg'
+import scanIcon from '@synthos/shared/assets/icons/scan-barcode.svg'
+import collapseIcon from '@synthos/shared/assets/icons/collapse.svg'
 import { mapApiError } from '@synthos/shared'
 
 const DEBOUNCE_MS = 300
@@ -29,6 +39,7 @@ const DEBOUNCE_MS = 300
  * `/salas`: listado de salas con buscador y filtros (TS-16 + TS-17).
  */
 export default function RoomsPage() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const query = searchParams.get('q') ?? ''
@@ -37,6 +48,7 @@ export default function RoomsPage() {
 
   const [input, setInput] = useState(query)
   const [joinOpen, setJoinOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
 
   const debounced = useDebounce(input, DEBOUNCE_MS)
 
@@ -93,50 +105,67 @@ export default function RoomsPage() {
 
   return (
     <section className="px-6 py-4 md:px-10">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-foreground Header3">Salas</h1>
-          <p className="text-muted-foreground TextMedium mt-1">
-            Salas de escucha compartida. Buscá por nombre de sala o por el nombre
-            de quien la anfitriona.
-          </p>
-        </div>
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-foreground Header3">Salas</h1>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            to="/salas/crear"
-            className="rounded px-4 py-2 Fucsia Button hover:brightness-110"
-          >
-            Crear sala
-          </Link>
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => setJoinOpen(true)}
-            className="rounded px-4 py-2 Volume Button hover:brightness-110"
+            className="Volume TextMedium flex items-center gap-2 rounded-lg px-3 py-2 hover:brightness-110"
           >
+            <img src={scanIcon} alt="" aria-hidden="true" className="h-4 w-4" />
             Unirme con código
           </button>
-          <RoomSortMenu
-            sort={sort}
-            order={order}
-            onSort={handleSort}
-            onOrder={handleOrder}
-          />
+          <Popover open={creating} onOpenChange={setCreating}>
+            <PopoverTrigger
+              render={
+                <CreateButton
+                  active={creating}
+                  aria-label={creating ? 'Cancelar creación de sala' : 'Crear sala'}
+                >
+                  Crear sala
+                </CreateButton>
+              }
+            />
+
+            <PopoverContent
+              align="end"
+              className="w-80 max-h-[var(--available-height)] overflow-y-auto"
+            >
+              <PopoverHeader>
+                <PopoverTitle className="text-muted-foreground">Nueva sala</PopoverTitle>
+              </PopoverHeader>
+              <RoomCreateForm
+                onCreated={(room) => navigate(`/salas/${room.id}`)}
+                onCancel={() => setCreating(false)}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </header>
 
-      <div className="mt-6 max-w-md" role="search">
-        <div className="Volume flex items-center gap-2 rounded-full px-4 py-2">
-          <img src={searchIcon} alt="" aria-hidden="true" className="h-4 w-4 shrink-0" />
-          <input
-            type="search"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="Buscar sala o anfitriona"
-            aria-label="Buscar sala por nombre o por anfitriona"
-            className="text-foreground TextRegluar placeholder-muted-foreground/60 w-full bg-transparent outline-none"
-          />
+      <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="w-full max-w-md flex-1 basis-72" role="search">
+          <div className="Volume flex items-center gap-2 rounded-full px-4 py-2">
+            <img src={searchIcon} alt="" aria-hidden="true" className="h-4 w-4 shrink-0" />
+            <input
+              type="search"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder="Buscar sala o anfitriona"
+              aria-label="Buscar sala por nombre o por anfitriona"
+              className="text-foreground TextRegluar placeholder-muted-foreground/60 w-full bg-transparent outline-none"
+            />
+          </div>
         </div>
+
+        <RoomSortMenu
+          sort={sort}
+          order={order}
+          onSort={handleSort}
+          onOrder={handleOrder}
+        />
       </div>
 
       {error && <p className="mt-6 rounded px-3 py-2 Salmon TextMedium">{error}</p>}
@@ -274,51 +303,55 @@ function RoomSortMenu({ sort, order, onSort, onOrder }) {
   const sentido = ROOM_ORDERS.find((o) => o.value === order) ?? ROOM_ORDERS[0]
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            className="Volume Button CardRadius flex items-center gap-2 rounded px-4 py-2"
-            aria-label={`Ordenar por ${active.label}, ${sentido.label}`}
-          />
-        }
-      >
-        <img src={threeDotsIcon} alt="" aria-hidden="true" className="h-4 w-4" />
-        {active.label} · {sentido.label}
-      </DropdownMenuTrigger>
+    <div className="flex items-center gap-2">
+      <span className="text-muted-foreground TextRegluar">Ordenar por</span>
 
-      <DropdownMenuPortal>
-        <DropdownMenuPositioner side="bottom" align="end">
-          <DropdownMenuPopup>
-            {ROOM_SORTS.map((criterio) => (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <button
+              type="button"
+              className="Volume TextMedium flex items-center gap-2 rounded px-3 py-2 hover:brightness-110"
+              aria-label={`Ordenar por ${active.label}, ${sentido.label}`}
+            />
+          }
+        >
+          {active.label} · {sentido.label}
+          <img src={collapseIcon} alt="" aria-hidden="true" className="h-4 w-4" />
+        </DropdownMenuTrigger>
+
+        <DropdownMenuPortal>
+          <DropdownMenuPositioner side="bottom" align="end">
+            <DropdownMenuPopup>
+              {ROOM_SORTS.map((criterio) => (
+                <DropdownMenuItem
+                  key={criterio.value}
+                  nativeButton
+                  label={`Ordenar por ${criterio.label}`}
+                  onClick={() => onSort(criterio.value)}
+                  className={
+                    criterio.value === sort ? 'bg-sidebar-accent TextMedium' : undefined
+                  }
+                >
+                  {criterio.label}
+                </DropdownMenuItem>
+              ))}
+
               <DropdownMenuItem
-                key={criterio.value}
                 nativeButton
-                label={`Ordenar por ${criterio.label}`}
-                onClick={() => onSort(criterio.value)}
-                className={
-                  criterio.value === sort ? 'bg-sidebar-accent TextMedium' : undefined
+                label={
+                  order === 'asc' ? 'Cambiar a orden descendente' : 'Cambiar a orden ascendente'
                 }
+                onClick={() => onOrder(order === 'asc' ? 'desc' : 'asc')}
+                className="border-t border-sidebar-border"
               >
-                {criterio.label}
+                {order === 'asc' ? 'Orden descendente' : 'Orden ascendente'}
               </DropdownMenuItem>
-            ))}
-
-            <DropdownMenuItem
-              nativeButton
-              label={
-                order === 'asc' ? 'Cambiar a orden descendente' : 'Cambiar a orden ascendente'
-              }
-              onClick={() => onOrder(order === 'asc' ? 'desc' : 'asc')}
-              className="border-t border-sidebar-border"
-            >
-              {order === 'asc' ? 'Orden descendente' : 'Orden ascendente'}
-            </DropdownMenuItem>
-          </DropdownMenuPopup>
-        </DropdownMenuPositioner>
-      </DropdownMenuPortal>
-    </DropdownMenu>
+            </DropdownMenuPopup>
+          </DropdownMenuPositioner>
+        </DropdownMenuPortal>
+      </DropdownMenu>
+    </div>
   )
 }
 

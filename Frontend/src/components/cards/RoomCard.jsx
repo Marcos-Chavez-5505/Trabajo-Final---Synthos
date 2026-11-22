@@ -8,11 +8,11 @@ import userGroupIcon from "@synthos/shared/assets/icons/user_group.svg";
 /**
  * Tarjeta de una sala (v1, rediseño según Objetivo.png).
  *
- * Estructura:
+ * Estructura (ancho):
  *   [LIVE] [géneros]                         [action]
  *   Nombre de la sala
  *   Descripción (2 líneas)
- *   [bandeja de asistentes]            anfitriona + corazones
+ *   [bandeja de asistentes]            anfitrion + corazones
  *
  * Campos opcionales que la tarjeta lee si existen (ver preguntas abiertas):
  *   - room.isLive          boolean (LIVE si true, OFF si false)
@@ -64,11 +64,11 @@ export default function RoomCard({ room, action }) {
         </p>
       </div>
 
-      <div className="mt-auto flex flex-nowrap items-center justify-between gap-3 pt-1">
+      <div className="mt-auto flex flex-col items-start gap-3 pt-1 @min-[270px]:flex-row @min-[270px]:items-center @min-[270px]:justify-between">
         <MembersTray room={room} />
 
         {room.hostUsername && (
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex max-w-full min-w-0 items-center gap-3">
             <HostAvatar room={room} hostId={hostId} />
 
             <div className="flex min-w-0 flex-col">
@@ -180,12 +180,9 @@ function MembersTray({ room }) {
   );
 }
 
-const HOST_NAME_CLASS =
-  "text-foreground TextMedium hidden truncate @min-[298px]:block";
+const HOST_NAME_CLASS = "text-foreground TextMedium truncate @min-[270px]:hidden @min-[298px]:block";
 
-const HEARTS_ROW_VARS = {
-  "--size": "clamp(10px, calc((100cqw - 248px) / 5), 14px)",
-};
+const HEARTS_ROW_VARS = {"--wide-size": "clamp(10px, calc((100cqw - 248px) / 5), 14px)",};
 
 function Hearts({ rating, count }) {
   const hasRating = count > 0;
@@ -207,7 +204,7 @@ function Hearts({ rating, count }) {
     >
       <span
         aria-hidden="true"
-        className="hidden h-3.5 items-center gap-0.5 @min-[298px]:flex"
+        className="flex h-3.5 items-center gap-0.5 [--size:14px] @min-[270px]:hidden @min-[298px]:flex @min-[298px]:[--size:var(--wide-size)]"
         style={HEARTS_ROW_VARS}
       >
         {Array.from({ length: HEARTS }, (_, index) => (
@@ -217,7 +214,7 @@ function Hearts({ rating, count }) {
 
       <span
         aria-hidden="true"
-        className="TextMedium flex h-3.5 items-center gap-1 leading-none font-bold @min-[298px]:hidden"
+        className="TextMedium hidden h-3.5 items-center gap-1 leading-none font-bold @min-[270px]:flex @min-[298px]:hidden"
       >
         {rounded}
         <MaskIcon

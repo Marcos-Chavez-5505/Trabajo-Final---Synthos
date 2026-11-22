@@ -126,7 +126,7 @@ POST   /api/playlists/invitations/:idPlaylist/accept â†’ authenticate â†
 POST   /api/playlists/invitations/:idPlaylist/reject â†’ authenticate â†’ 200 (404 si no hay pendiente)
 
 GET    /api/rooms?query=&sort=name|rating&order=asc|desc  â†’ array crudo con columnas explÃ­citas de `room` + `host_id`, `host_username`, `avg_rating` (string), `members_count`, `songs_count`. Solo pÃºblicas y activas
-GET    /api/rooms/mine       â†’ authenticate; mismo shape, de las salas activas del usuario (incluye privadas)
+GET    /api/rooms/mine       â†’ authenticate; mismo shape, de la sala activa del usuario (0 o 1; incluye privadas)
 POST   /api/rooms            â†’ authenticate, { name, description?, playlistId, isPrivate } â†’ 201 { status, room } con `members[]` y `playlistSource.songs`. Acepta playlist propia **o** de una colab de la que sea miembro (D19); exige â‰¥1 canciÃ³n. `maxCapacity` siempre 10, el `code` lo genera el server.
 POST   /api/rooms/join       â†’ authenticate, { code } â†’ 201 (200 si ya era miembro); 404 cÃ³digo inexistente, 400 cerrada, 409 llena
 GET    /api/rooms/:id        â†’ authenticate (403 no miembro, 404 no existe) â†’ { status, room } con `members[]`, `hostAvgRating`, `viewerHasRated` y las canciones de la fuente
@@ -141,7 +141,7 @@ POST   /api/rooms/:id/rating     â†’ authenticate, { rating } 1â€“5 â
 
 **Endpoints que NO existen todavÃ­a** (los espera el frontend o el plan): **chat de salas** (no hay tabla `room_message` ni eventos que lo transmitan), contenidos (`Content`/`ContentPlayement` sin rutas), refresh de token, logout server-side real (logout solo responde OK). Las salas y las playlists colaborativas estÃ¡n completas de punta a punta; artistas ya tiene recurso propio (`GET /api/artists`).
 
-**Salas â€” sincronizaciÃ³n (Socket.IO, `src/realtime/` + `src/index.js`):** el handshake se autentica con el JWT en `socket.handshake.auth.token` (rechaza si falta o venciÃ³) y cada socket entra solo a `user:<id>`; entrar a una sala es `join-room`, que el servidor valida contra `room_member` antes de sumar el socket a `room:<id>`. Eventos: `joined-room`, `room:playback`, `room:members`, `room:skip-votes`, `room:rating`, `room:kicked`, `room:closed`. **Los clientes solo escuchan**: el estado cambia por REST y el servidor emite. El mute/silencio es **local por dispositivo** (`PlayerContext.isMuted` â†’ `audio.muted`): no viaja por el socket y cada miembro, incluido el anfitriÃ³n, silencia solo su propio audio. El estado de reproducciÃ³n y los votos viven en **memoria del proceso** (`src/realtime/roomState.js`), una sola instancia, y se pierden al reiniciar; `positionMs` va congelado en `updatedAt` (hora del servidor) y la posiciÃ³n real mientras suena es `positionMs + (Date.now() - updatedAt)`. **Exige backend Node persistente**: una funciÃ³n serverless no sostiene el handshake.
+**Salas â€” sincronizaciÃ³n (Socket.IO, `src/realtime/` + `src/index.js`):** el handshake se autentica con el JWT en `socket.handshake.auth.token` (rechaza si falta o venciÃ³) y cada socket entra solo a `user:<id>`; entrar a una sala es `join-room`, que el servidor valida contra `room_member` antes de sumar el socket a `room:<id>`. Eventos: `joined-room`, `room:playback`, `room:members`, `room:skip-votes`, `room:rating`, `room:kicked`, `room:current-changed`, `room:closed`. **Los clientes solo escuchan**: el estado cambia por REST y el servidor emite. El mute/silencio es **local por dispositivo** (`PlayerContext.isMuted` â†’ `audio.muted`): no viaja por el socket y cada miembro, incluido el anfitriÃ³n, silencia solo su propio audio. El estado de reproducciÃ³n y los votos viven en **memoria del proceso** (`src/realtime/roomState.js`), una sola instancia, y se pierden al reiniciar; `positionMs` va congelado en `updatedAt` (hora del servidor) y la posiciÃ³n real mientras suena es `positionMs + (Date.now() - updatedAt)`. **Exige backend Node persistente**: una funciÃ³n serverless no sostiene el handshake.
 
 ### 3.2 Validaciones (`utils/validation.js`)
 
@@ -235,7 +235,6 @@ Regla: **`mocks/` ya no existe**: no queda ningÃºn mock en el repo. Toda la re
 /playlists                Protected  Playlists (sub-pestaÃ±as por `?tab=mis|colaborativas|invitaciones`)
 /playlists/:id            Protected  PlaylistDetail
 /salas                    Protected  Rooms
-/salas/crear              Protected  CreateRoom
 /salas/:id                Protected  RoomView
 /animo                    Protected  MoodScan (recomendaciones por estado de Ã¡nimo, TS-20)
 /buscar                   Protected  Search (pestaÃ±as `?tipo=canciones|albumes|personas`, con `?q=` y `?page=`)
@@ -304,7 +303,7 @@ npm run dev                 # localhost:5173, proxy /api â†’ :3000
 - Ya no quedan pantallas placeholder. `BottomNav` y `hooks/useBreakpoint.js` siguen en disco sin uso (`PENDIENTES.md` §8); `MiniPlayerBar` y `HomeMobile` ya se eliminaron.
 - Campo inexistente en el esquema que la UI tolera con `null`: `source`. `album` ya existe (`Album`) y las canciones lo traen.
 - **Chat de salas**: la sincronizaciÃ³n de reproducciÃ³n ya usa WebSocket (`services/socketService.js` + Socket.IO), pero el chat no existe: no hay tabla `room_message` ni eventos que lo transmitan.
-- Salas: la barra de progreso es de solo lectura para los miembros (no hay endpoint para buscar dentro de la canciÃ³n, la posiciÃ³n es del servidor), y `joinRoom` no garantiza el tope de 10 ante dos ingresos simultÃ¡neos (la transacciÃ³n relee el cupo pero con el aislamiento por defecto de Postgres).
+- Salas: la barra de progreso es de solo lectura para los miembros (no hay endpoint para buscar dentro de la canción, la posición es del servidor). El tope de 10 lo arbitra la transacción de `joinRoom` bloqueando la sala con `FOR UPDATE`.
 - `GET /users/:id/follow-status` ya tiene consumidor: `useFollow` lo usa para resolver la relaciÃ³n y `isMutual` en un request (antes eran dos llamadas que bajaban la lista de seguidores de cada lado).
 - Backend: se borrÃ³ la columna `playlist.token_invitation` (migraciÃ³n `drop_token_invitation`) y `FRONTEND_URL` ya no se lee en ningÃºn lado.
 - Backend: en una `colab` cualquier miembro agrega y quita canciones (`POST|DELETE /playlists/:id/songs`); editar, borrar, invitar y echar son del creador (`idCreator`). `PUT /playlists/:id` conserva `addSongs`/`removeSongs` por compatibilidad y sigue siendo del creador: el frontend ya no lo usa para canciones. **Invitar convierte la playlist en `colab`**, asÃ­ que no hay miembros en playlists personales salvo la de favoritos, que no se puede invitar.
