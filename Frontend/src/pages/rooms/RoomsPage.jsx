@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  DropdownMenu,
-  DropdownMenuItem,
-  DropdownMenuPopup,
-  DropdownMenuPositioner,
-  DropdownMenuPortal,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu.tsx'
-import {
   joinRoom,
   ROOM_SORTS,
   DEFAULT_ROOM_SORT,
@@ -27,17 +19,14 @@ import CreateButton from '@/components/actions/CreateButton.jsx'
 import RoomCard from '@/components/cards/RoomCard.jsx'
 import JoinRoomDialog from '@/features/rooms/components/JoinRoomDialog.jsx'
 import RoomCreateForm from '@/features/rooms/components/RoomCreateForm.jsx'
+import RoomSortMenu from '@/features/rooms/components/RoomSortMenu.jsx'
 import roomIcon from '@synthos/shared/assets/icons/headphones.svg'
 import searchIcon from '@synthos/shared/assets/icons/search.svg'
 import scanIcon from '@synthos/shared/assets/icons/scan-barcode.svg'
-import collapseIcon from '@synthos/shared/assets/icons/collapse.svg'
 import { mapApiError } from '@synthos/shared'
 
 const DEBOUNCE_MS = 300
 
-/**
- * `/salas`: listado de salas con buscador y filtros (TS-16 + TS-17).
- */
 export default function RoomsPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -95,12 +84,11 @@ export default function RoomsPage() {
     })
   }
 
-  function handleSort(criterio) {
-    patchParams({ sort: criterio === DEFAULT_ROOM_SORT ? null : criterio })
-  }
-
-  function handleOrder(sentido) {
-    patchParams({ order: sentido === DEFAULT_ROOM_ORDER ? null : sentido })
+  function handleSortChange({ sort: nextSort, order: nextOrder }) {
+    patchParams({
+      sort: nextSort === DEFAULT_ROOM_SORT ? null : nextSort,
+      order: nextOrder === DEFAULT_ROOM_ORDER ? null : nextOrder,
+    })
   }
 
   return (
@@ -131,7 +119,7 @@ export default function RoomsPage() {
 
             <PopoverContent
               align="end"
-              className="w-80 max-h-[var(--available-height)] overflow-y-auto"
+              className="w-80 max-h-(--available-height) overflow-y-auto"
             >
               <PopoverHeader>
                 <PopoverTitle className="text-muted-foreground">Nueva sala</PopoverTitle>
@@ -160,12 +148,7 @@ export default function RoomsPage() {
           </div>
         </div>
 
-        <RoomSortMenu
-          sort={sort}
-          order={order}
-          onSort={handleSort}
-          onOrder={handleOrder}
-        />
+        <RoomSortMenu sort={sort} order={order} onChange={handleSortChange} />
       </div>
 
       {error && <p className="mt-6 rounded px-3 py-2 Salmon TextMedium">{error}</p>}
@@ -298,63 +281,6 @@ function JoinRoomButton({ room, full, isCurrent, blockedByHost, switching }) {
   )
 }
 
-function RoomSortMenu({ sort, order, onSort, onOrder }) {
-  const active = ROOM_SORTS.find((c) => c.value === sort) ?? ROOM_SORTS[0]
-  const sentido = ROOM_ORDERS.find((o) => o.value === order) ?? ROOM_ORDERS[0]
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-muted-foreground TextRegluar">Ordenar por</span>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <button
-              type="button"
-              className="Volume TextMedium flex items-center gap-2 rounded px-3 py-2 hover:brightness-110"
-              aria-label={`Ordenar por ${active.label}, ${sentido.label}`}
-            />
-          }
-        >
-          {active.label} · {sentido.label}
-          <img src={collapseIcon} alt="" aria-hidden="true" className="h-4 w-4" />
-        </DropdownMenuTrigger>
-
-        <DropdownMenuPortal>
-          <DropdownMenuPositioner side="bottom" align="end">
-            <DropdownMenuPopup>
-              {ROOM_SORTS.map((criterio) => (
-                <DropdownMenuItem
-                  key={criterio.value}
-                  nativeButton
-                  label={`Ordenar por ${criterio.label}`}
-                  onClick={() => onSort(criterio.value)}
-                  className={
-                    criterio.value === sort ? 'bg-sidebar-accent TextMedium' : undefined
-                  }
-                >
-                  {criterio.label}
-                </DropdownMenuItem>
-              ))}
-
-              <DropdownMenuItem
-                nativeButton
-                label={
-                  order === 'asc' ? 'Cambiar a orden descendente' : 'Cambiar a orden ascendente'
-                }
-                onClick={() => onOrder(order === 'asc' ? 'desc' : 'asc')}
-                className="border-t border-sidebar-border"
-              >
-                {order === 'asc' ? 'Orden descendente' : 'Orden ascendente'}
-              </DropdownMenuItem>
-            </DropdownMenuPopup>
-          </DropdownMenuPositioner>
-        </DropdownMenuPortal>
-      </DropdownMenu>
-    </div>
-  )
-}
-
 function EmptyState({ hasQuery }) {
   return (
     <div className="py-16 text-center">
@@ -370,7 +296,7 @@ function EmptyState({ hasQuery }) {
             No encontramos salas con ese criterio
           </p>
           <p className="text-muted-foreground TextRegluar mt-1">
-            Probá con otro nombre de sala o de anfitriona. Si la sala es privada,
+            Probá con otro nombre de sala o de anfitrión. Si la sala es privada,
             entrá con su código.
           </p>
         </>
