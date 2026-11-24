@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Synthos",
+    "slug": "synthos",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -9,13 +9,22 @@
     "ios": {
       "supportsTablet": true
     },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "android": {
+      "package": "com.synthos.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "permissions": [
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,6 +40,15 @@
       ],
       "expo-secure-store",
       "expo-status-bar"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "1f8d2f26-d5d1-44ce-9db0-e7c5b3ab22fe"
+      }
+    },
+    "owner": "lucas_martinez_estudiante",
+    "updates": {
+      "url": "https://u.expo.dev/1f8d2f26-d5d1-44ce-9db0-e7c5b3ab22fe"
+    }
   }
 }
