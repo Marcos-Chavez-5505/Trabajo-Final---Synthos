@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
@@ -13,11 +13,24 @@ import { showActionError } from "../../lib/toastMessages";
 const DEBOUNCE_MS = 300;
 
 export default function RoomsScreen() {
-	const navigation = useNavigation();
 	const [input, setInput] = useState("");
+	const [retryKey, setRetryKey] = useState(0);
+	const retry = useCallback(() => setRetryKey((value) => value + 1), []);
+
+	return (
+		<RoomsContent key={retryKey} input={input} setInput={setInput} retry={retry} />
+	);
+}
+
+function RoomsContent({ input, setInput, retry }) {
+	const navigation = useNavigation();
 	const debounced = useDebounce(input, DEBOUNCE_MS);
 
 	const { isCurrent, rooms, error } = useRoomsList(debounced, "name", "asc");
+
+	useEffect(() => {
+		if (error) showActionError(error, "rooms:load", { retry });
+	}, [error, retry]);
 
 	const { user } = useAuth();
 	const { currentRoom } = useMyRooms();
@@ -87,8 +100,6 @@ export default function RoomsScreen() {
 								autoCapitalize="none"
 							/>
 						</View>
-
-						{error ? <Text style={styles.errorText}>{error}</Text> : null}
 					</>
 				}
 				ListEmptyComponent={

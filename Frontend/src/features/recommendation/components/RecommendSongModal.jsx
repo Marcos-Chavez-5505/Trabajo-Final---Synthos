@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { toastMessages } from "@/lib/toastMessages.js";
 import { useSongSearch } from '@synthos/shared';
 import { useRecommendationContext } from '@synthos/shared';
 import SongSearchStep from './SongSearchStep.jsx';
@@ -17,6 +18,10 @@ export default function RecommendSongModal({ onClose, onSent }) {
 		error: searchError,
 	} = useSongSearch(query);
 	const { send, submitting, sendError, reset } = useRecommendationContext();
+
+	useEffect(() => {
+		if (sendError) toastMessages.recSongError(sendError);
+	}, [sendError]);
 
 	useEffect(() => {
 		reset();
@@ -124,10 +129,6 @@ export default function RecommendSongModal({ onClose, onSent }) {
 						<div className="TextTiny text-muted-foreground mt-1 text-right">
 							{text.length}/{MAX_TEXT}
 						</div>
-
-						{sendError && (
-							<p className="TextTiny mt-2 text-red-500">{sendError}</p>
-						)}
 
 						<footer className="mt-4 flex justify-end gap-2">
 							<button

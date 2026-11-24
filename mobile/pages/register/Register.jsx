@@ -3,6 +3,7 @@ import { Pressable, Text, TextInput, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useAuth } from "@synthos/shared";
 import { useNavigation } from "@react-navigation/native";
+import { showActionError } from "../../lib/toastMessages";
 
 import { REGISTER_STYLES } from "./Register.styles";
 
@@ -58,7 +59,7 @@ function RegisterScreen() {
 		});
 		setSubmitting(false);
 		if (!result.success) {
-			setError(result.message);
+			showActionError(result.message, "register:error");
 		}
 	};
 

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
 	ActivityIndicator,
 	Pressable,
@@ -12,11 +13,23 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader/ScreenHeader";
 import { NotificationIcon } from "../../components/icons";
 import { colors } from "../../theme";
 import { NOTIFICATIONS_STYLES as styles } from "./Notifications.styles";
+import { showActionError } from "../../lib/toastMessages";
 import NotificationRow from "./NotificationRow";
 
 export default function NotificationsScreen() {
-	const { notifications, unreadCount, loading, markAsRead, markAllAsRead } =
-		useNotificationsContext();
+	const {
+		notifications,
+		unreadCount,
+		loading,
+		error,
+		refresh,
+		markAsRead,
+		markAllAsRead,
+	} = useNotificationsContext();
+
+	useEffect(() => {
+		if (error) showActionError(error, "notifications:load", { retry: refresh });
+	}, [error, refresh]);
 
 	const isInitialLoading = loading && notifications.length === 0;
 	const subtitle = isInitialLoading

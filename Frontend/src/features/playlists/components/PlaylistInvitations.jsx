@@ -8,8 +8,8 @@ import {
   subscribeToPlaylists,
 } from '@synthos/shared'
 import Avatar from '@/components/ui/Avatar.jsx'
+import { toastMessages } from '@/lib/toastMessages.js'
 import playlistIcon from '@synthos/shared/assets/icons/playlist.svg'
-import { mapApiError } from '@synthos/shared'
 
 /**
  * Bandeja de invitaciones a playlists colaborativas (TS-13), la tercera sub-pestaña
@@ -23,7 +23,7 @@ export default function PlaylistInvitations() {
   const navigate = useNavigate()
   const userId = user?.id ?? null
 
-  const [response, setResponse] = useState({ key: null, invitations: [], error: null })
+  const [response, setResponse] = useState({ key: null, invitations: [] })
   const [pendingId, setPendingId] = useState(null)
   const [version, setVersion] = useState(0)
 
@@ -34,10 +34,13 @@ export default function PlaylistInvitations() {
 
     listReceivedInvitations(userId)
       .then((invitations) => {
-        if (active) setResponse({ key: userId, invitations, error: null })
+        if (active) setResponse({ key: userId, invitations })
       })
       .catch((cause) => {
-        if (active) setResponse({ key: userId, invitations: [], error: mapApiError(cause) })
+        if (active) {
+          toastMessages.playlistInvitationsError(cause)
+          setResponse({ key: userId, invitations: [] })
+        }
       })
 
     return () => {
@@ -51,13 +54,12 @@ export default function PlaylistInvitations() {
     if (pendingId) return
 
     setPendingId(invitation.playlistId)
-    setResponse((prev) => ({ ...prev, error: null }))
 
     try {
       await acceptPlaylistInvitation(userId, invitation.playlistId)
       navigate(`/playlists/${invitation.playlistId}`)
     } catch (cause) {
-      setResponse((prev) => ({ ...prev, error: mapApiError(cause) }))
+      toastMessages.playlistInvitationAcceptError(cause)
       setPendingId(null)
     }
   }
@@ -66,12 +68,11 @@ export default function PlaylistInvitations() {
     if (pendingId) return
 
     setPendingId(invitation.playlistId)
-    setResponse((prev) => ({ ...prev, error: null }))
 
     try {
       await rejectPlaylistInvitation(userId, invitation.playlistId)
     } catch (cause) {
-      setResponse((prev) => ({ ...prev, error: mapApiError(cause) }))
+      toastMessages.playlistInvitationRejectError(cause)
     } finally {
       setPendingId(null)
     }
@@ -79,16 +80,11 @@ export default function PlaylistInvitations() {
 
   const isCurrent = response.key === userId
   const invitations = isCurrent ? response.invitations : []
-  const error = isCurrent ? response.error : null
 
   if (!isCurrent) {
     return (
       <p className="text-muted-foreground TextRegluar mt-8">Cargando tus invitaciones…</p>
     )
-  }
-
-  if (error) {
-    return <p className="mt-8 rounded px-3 py-2 Salmon TextMedium">{error}</p>
   }
 
   if (invitations.length === 0) {
@@ -105,6 +101,13 @@ export default function PlaylistInvitations() {
           Cuando alguien te invite a una playlist colaborativa, aparece acá para
           aceptarla.
         </p>
+        <button
+          type="button"
+          onClick={() => setVersion((prev) => prev + 1)}
+          className="TextRegluar Volume mt-4 rounded px-4 py-2"
+        >
+          Reintentar
+        </button>
       </div>
     )
   }

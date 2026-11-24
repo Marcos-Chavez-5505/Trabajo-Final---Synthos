@@ -1,12 +1,13 @@
-import { mapApiError } from "@synthos/shared";
+import { mapApiError, TOAST_COPY, TOAST_TITLES } from "@synthos/shared";
 import { toast } from "../components/ui/Toast";
 
 // Catálogo de toasts de acciones. Sumá acá los mensajes nuevos en vez de
 // repetir títulos en cada pantalla. La clave identifica la acción: el `id` del
 // toast es `error:<clave>`, así reintentar la misma acción no apila copias.
 //
-// Los errores de carga que bloquean una pantalla se muestran inline (no acá);
-// los de validación de campos también. Esto es solo para acciones puntuales.
+// Los errores de API van por toast, incluso los de carga: el estado vacío de
+// la región queda neutral y el toast lleva "Reintentar" cuando corresponde.
+// Solo las validaciones de campo siguen inline. Los textos viven en @synthos/shared.
 
 const NETWORK_ERROR =
 	/failed to fetch|network ?error|network request failed|load failed|timeout|timed out/i;
@@ -19,95 +20,121 @@ const GENERIC_FALLBACK = "Intentá de nuevo en un momento.";
 
 const CATALOG = {
 	// Playlists
-	"playlist:load": { title: "No se pudo cargar la playlist" },
-	"playlist:songs:load": { title: "No se pudieron cargar las canciones" },
+	"playlist:load": { title: TOAST_TITLES.playlistLoad },
+	"playlist:songs:load": { title: TOAST_TITLES.playlistSongsLoad },
 	"playlist:create": {
-		title: "No se pudo crear la playlist",
+		title: TOAST_TITLES.playlistCreate,
 		success: "Playlist creada",
 	},
 	"playlist:update": {
-		title: "No se pudo actualizar la playlist",
+		title: TOAST_TITLES.playlistUpdate,
 		success: "Playlist actualizada",
 	},
 	"playlist:delete": {
-		title: "No se pudo eliminar la playlist",
+		title: TOAST_TITLES.playlistDelete,
 		success: "Playlist eliminada",
 	},
 	"playlist:cover:upload": {
-		title: "No se pudo actualizar la portada",
+		title: TOAST_TITLES.playlistCoverUpload,
 		success: "Portada actualizada",
 		loading: "Actualizando portada…",
 	},
 	"playlist:cover:remove": {
-		title: "No se pudo quitar la portada",
+		title: TOAST_TITLES.playlistCoverRemove,
 		success: "Portada quitada",
 		loading: "Quitando portada…",
 	},
 	"playlist:invitations:load": {
-		title: "No se pudieron cargar las invitaciones",
+		title: TOAST_TITLES.playlistInvitationsLoad,
 	},
 	"playlist:invite": {
-		title: "No se pudo enviar la invitación",
+		title: TOAST_TITLES.playlistInvite,
 		success: "Invitación enviada",
 	},
 	"playlist:invitation:accept": {
-		title: "No se pudo aceptar la invitación",
+		title: TOAST_TITLES.playlistInvitationAccept,
 		success: "Te uniste a la playlist",
 	},
 	"playlist:invitation:reject": {
-		title: "No se pudo rechazar la invitación",
+		title: TOAST_TITLES.playlistInvitationReject,
 		success: "Invitación rechazada",
 	},
 	"playlist:member:remove": {
-		title: "No se pudo sacar al participante",
+		title: TOAST_TITLES.playlistMemberRemove,
 		success: "Participante eliminado",
 	},
-	"playlist:order": { title: "No se pudo guardar el orden" },
+	"playlist:order": { title: TOAST_TITLES.playlistOrder },
 	"playlist:song:remove": {
-		title: "No se pudo quitar la canción",
+		title: TOAST_TITLES.songRemove,
 		success: "Canción quitada",
 	},
 	"song:playlist:add": {
-		title: "No se pudo agregar la canción",
+		title: TOAST_TITLES.songPlaylistAdd,
 		success: "Canción agregada",
 	},
 	"song:playlist:remove": {
-		title: "No se pudo quitar la canción",
+		title: TOAST_TITLES.songRemove,
 		success: "Canción quitada",
 	},
-	"favorite:toggle": { title: "No se pudo actualizar el favorito" },
+	"favorite:toggle": { title: TOAST_TITLES.favoriteToggle },
 
 	// Salas
-	"room:join": { title: "No se pudo entrar a la sala" },
+	"room:join": { title: TOAST_TITLES.roomJoin },
 	"room:create": {
-		title: "No se pudo crear la sala",
+		title: TOAST_TITLES.roomCreate,
 		success: "Sala creada",
 	},
-	"room:control": { title: "No se pudo cambiar la reproducción" },
-	"room:vote": { title: "No se pudo registrar tu voto" },
-	"room:leave": { title: "No se pudo salir de la sala" },
+	"room:control": { title: TOAST_TITLES.roomControl },
+	"room:vote": { title: TOAST_TITLES.roomVote },
+	"room:leave": { title: TOAST_TITLES.roomLeave },
 	"room:close": {
-		title: "No se pudo cerrar la sala",
+		title: TOAST_TITLES.roomClose,
 		success: "Sala cerrada",
 	},
-	"room:kick": { title: "No se pudo sacar a la persona" },
+	"room:kick": { title: TOAST_TITLES.roomKick },
 
 	// Perfil
 	"profile:save": {
-		title: "No se pudo guardar el perfil",
+		title: TOAST_TITLES.profileSave,
 		success: "Perfil actualizado",
 	},
 	"profile:picture": {
-		title: "No se pudo subir la foto",
+		title: TOAST_TITLES.profilePicture,
 		success: "Foto actualizada",
 	},
+
+	// Entradas nuevas de la auditoría de errores inline
+	"albums:load": { title: TOAST_TITLES.albumsLoad },
+	"artists:load": { title: TOAST_TITLES.artistsLoad },
+	"popular:load": { title: TOAST_TITLES.popularSongsLoad },
+	"album:load": { title: TOAST_TITLES.albumDetail },
+	"artist:load": { title: TOAST_TITLES.artistDetail },
+	"home:songs:load": { title: TOAST_TITLES.homeSongsLoad },
+	"playlists:load": { title: TOAST_TITLES.playlistsLoad },
+	"room:load": { title: TOAST_TITLES.roomLoad },
+	"room:play-song": { title: TOAST_TITLES.roomPlaySong },
+	"room:rate": { title: TOAST_TITLES.roomRate },
+	"rooms:load": { title: TOAST_TITLES.roomsLoad },
+	"profile:load": { title: TOAST_TITLES.profilePublicLoad },
+	"follow:toggle": { title: TOAST_TITLES.followToggle },
+	"follow:list:load": { title: TOAST_TITLES.followListLoad },
+	"search:songs": { title: TOAST_TITLES.searchSongs },
+	"search:people": { title: TOAST_TITLES.searchPeople },
+	"search:albums": { title: TOAST_TITLES.searchAlbums },
+	"notifications:load": { title: TOAST_TITLES.notificationsLoad },
+	"login:error": { title: TOAST_TITLES.login },
+	"register:error": { title: TOAST_TITLES.register },
 };
 
 function describeError(cause, fallback = GENERIC_FALLBACK) {
+	if (typeof cause === "string") {
+		return NETWORK_ERROR.test(cause) ? TOAST_COPY.networkError : cause;
+	}
+
 	const message = cause?.message ?? "";
 
 	if (NETWORK_ERROR.test(message)) {
-		return "No pudimos conectar con el servidor. Revisá tu conexión e intentá de nuevo.";
+		return TOAST_COPY.networkError;
 	}
 
 	const mapped = mapApiError(cause, fallback);
@@ -150,29 +177,7 @@ export function showSuccess(key) {
  * @param {"inactivity"|"kicked"|"not_member"} [reason]
  */
 export function showRoomAccessLost(reason) {
-	const copy =
-		reason === "inactivity"
-			? {
-					title: "Te sacamos de la sala",
-					description:
-						"La sala quedó inactiva y ya no tenés acceso. Te llevamos al listado de salas.",
-				}
-			: reason === "kicked"
-				? {
-						title: "Te sacaron de la sala",
-						description:
-							"El anfitrión te quitó de esta sala. Te llevamos al listado de salas.",
-					}
-				: reason === "other_room"
-					? {
-							title: "Cambiaste de sala",
-							description:
-								"Tu sesión ya no está en esta sala. Te llevamos al listado de salas.",
-						}
-					: {
-							title: "Ya no tenés acceso a la sala",
-							description: "Te llevamos al listado de salas.",
-						};
+	const copy = TOAST_COPY.roomAccessLost[reason] ?? TOAST_COPY.roomAccessLost.other;
 
 	return toast.info(copy.title, {
 		id: "room:access-lost",

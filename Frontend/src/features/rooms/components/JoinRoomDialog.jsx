@@ -8,7 +8,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { joinRoom } from '@synthos/shared'
-import { mapApiError } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 
 /**
  * Modal "Unirme con código" (TS-14).
@@ -52,7 +52,7 @@ export default function JoinRoomDialog({
       onOpenChange(false)
       navigate(`/salas/${joined.id}`)
     } catch (cause) {
-      setError(mapApiError(cause))
+      toastMessages.roomJoinError(cause)
       setPending(false)
     }
   }

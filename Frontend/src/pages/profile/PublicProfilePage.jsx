@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { toastMessages } from "@/lib/toastMessages.js";
 import Avatar from "@/components/ui/Avatar.jsx";
 import RecommendationsSection from '@/features/recommendation/components/RecommendationSection.jsx';
 import RecommendSongModal from '@/features/recommendation/components/RecommendSongModal.jsx';
@@ -10,6 +11,17 @@ import HostRatingBadge from '@/features/social/components/HostRatingBadge.jsx';
 import { RecommendationProvider } from '@synthos/shared';
 
 export default function PublicProfilePage() {
+  const [attempt, setAttempt] = useState(0);
+
+  return (
+    <PublicProfileContent
+      key={attempt}
+      onRetry={() => setAttempt((value) => value + 1)}
+    />
+  );
+}
+
+function PublicProfileContent({ onRetry }) {
   const { id } = useParams();
   const { user: currentUser } = useAuth();
   const { isCurrent, person, hasError } = useProfilePublic(id);
@@ -18,6 +30,14 @@ export default function PublicProfilePage() {
   const [recToast, setRecToast] = useState(null);
 
   const follow = useFollow(person?.id ?? null);
+
+  useEffect(() => {
+    if (hasError) toastMessages.profilePublicLoadError();
+  }, [hasError]);
+
+  useEffect(() => {
+    if (follow.error) toastMessages.followToggleError(follow.error);
+  }, [follow.error]);
 
   if (!id) {
     return (
@@ -47,14 +67,23 @@ export default function PublicProfilePage() {
     return (
       <div className="px-6 py-4 md:px-10">
         <p className="text-muted-foreground TextRegluar">
-          No pudimos cargar el perfil.
+          No hay un perfil para mostrar.
         </p>
-        <Link
-          to="/buscar?tipo=personas"
-          className="text-accent TextRegluar mt-4 inline-block"
-        >
-          Volver a buscar
-        </Link>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onRetry}
+            className="TextRegluar Volume rounded px-4 py-2"
+          >
+            Reintentar
+          </button>
+          <Link
+            to="/buscar?tipo=personas"
+            className="text-accent TextRegluar inline-block rounded px-4 py-2"
+          >
+            Volver a buscar
+          </Link>
+        </div>
       </div>
     );
   }
@@ -123,12 +152,6 @@ export default function PublicProfilePage() {
               onToggle={follow.toggle}
               pending={follow.pending}
             />
-
-            {follow.error && (
-              <p className="text-muted-foreground TextTiny mt-2">
-                {follow.error}
-              </p>
-            )}
 
             {!isSelf && (
               <div className="mt-4">

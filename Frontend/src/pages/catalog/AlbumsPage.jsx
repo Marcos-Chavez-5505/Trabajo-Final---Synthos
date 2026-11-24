@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { buildPageRange, useAlbums, ALBUM_TYPE_LABELS } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 import MiniMediaCard from '@/components/cards/MiniMediaCard.jsx'
 import albumIcon from '@synthos/shared/assets/icons/album.svg'
 import {
@@ -22,12 +23,24 @@ import {
  * como la búsqueda de canciones, de modo que solo queda la paginación en la URL.
  */
 export default function AlbumsPage() {
+  const [attempt, setAttempt] = useState(0)
+
+  return (
+    <AlbumsPageContent key={attempt} onRetry={() => setAttempt((value) => value + 1)} />
+  )
+}
+
+function AlbumsPageContent({ onRetry }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
   const page = Math.max(Number(searchParams.get('page')) || 1, 1)
 
   const { isCurrent, error, results } = useAlbums(page)
+
+  useEffect(() => {
+    if (error) toastMessages.albumsLoadError(error)
+  }, [error])
 
   // Si la URL pedía una página que ya no existe, se corrige la URL en vez de
   // mostrar un vacío engañoso.
@@ -58,13 +71,8 @@ export default function AlbumsPage() {
         .
       </p>
 
-      {error ? (
-        <div className="py-12 text-center">
-          <p className="text-foreground Header4 mb-1">No pudimos cargar los álbumes</p>
-          <p className="text-muted-foreground TextRegluar">{error}</p>
-        </div>
-      ) : results.items.length === 0 ? (
-        <EmptyState isLoading={!isCurrent} />
+      {results.items.length === 0 ? (
+        <EmptyState isLoading={!isCurrent} onRetry={error ? onRetry : undefined} />
       ) : (
         <>
           <ul className="mt-8 flex flex-wrap gap-x-4 gap-y-6">
@@ -125,7 +133,7 @@ export default function AlbumsPage() {
   )
 }
 
-function EmptyState({ isLoading }) {
+function EmptyState({ isLoading, onRetry }) {
   if (isLoading) {
     return <p className="text-muted-foreground TextRegluar mt-8">Cargando álbumes…</p>
   }
@@ -142,6 +150,15 @@ function EmptyState({ isLoading }) {
       <p className="text-muted-foreground TextRegluar mt-1">
         Cuando se cargue el catálogo, los discos aparecen acá.
       </p>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="TextRegluar Volume mt-6 rounded px-4 py-2"
+        >
+          Reintentar
+        </button>
+      )}
     </div>
   )
 }

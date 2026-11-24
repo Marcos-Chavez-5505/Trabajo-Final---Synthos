@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { useSearchAlbums } from "@synthos/shared";
 import { colors } from "../../theme";
@@ -6,10 +6,22 @@ import AlbumRow from "../../components/cards/AlbumRow/AlbumRow";
 import Pagination from "../../components/ui/Pagination/Pagination";
 import SearchTabs from "./SearchTabs";
 import { SEARCH_TABS } from "./constants";
+import { showActionError } from "../../lib/toastMessages";
 
-export default function SearchAlbums({ query, onChangeTab }) {
+export default function SearchAlbums(props) {
+	const [retryKey, setRetryKey] = useState(0);
+	const retry = useCallback(() => setRetryKey((value) => value + 1), []);
+
+	return <SearchAlbumsContent key={retryKey} {...props} retry={retry} />;
+}
+
+function SearchAlbumsContent({ query, onChangeTab, retry }) {
 	const [page, setPage] = useState(1);
 	const { isLoading, error, results } = useSearchAlbums(query || "", page);
+
+	useEffect(() => {
+		if (error) showActionError(error, "search:albums", { retry });
+	}, [error, retry]);
 
 	const goToPage = (nextPage) => {
 		if (nextPage < 1 || nextPage > results.totalPages) return;
@@ -36,10 +48,6 @@ export default function SearchAlbums({ query, onChangeTab }) {
 					color={colors.textPrimary}
 					style={{ marginTop: 24 }}
 				/>
-			) : error ? (
-				<Text style={{ color: colors.textPrimary, opacity: 0.7 }}>
-					Error al buscar
-				</Text>
 			) : (
 				<ScrollView
 					showsVerticalScrollIndicator={false}

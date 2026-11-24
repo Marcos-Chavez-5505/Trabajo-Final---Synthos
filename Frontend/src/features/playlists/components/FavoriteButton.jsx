@@ -3,6 +3,7 @@ import emptyHeartIcon from '@synthos/shared/assets/icons/empty_heart.svg'
 import fullHeartIcon from '@synthos/shared/assets/icons/full_heart.svg'
 import { useFavorites } from '@synthos/shared'
 import { usePlayer } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip.tsx'
 
 /**
@@ -43,6 +44,8 @@ export default function FavoriteButton({ songId, className = '', tooltip = false
       if (!nowFavorite) {
         removeFromFavoritesQueue(songId)
       }
+    } catch (cause) {
+      toastMessages.apiError('No se pudo actualizar el favorito', cause, 'favorite-toggle-error')
     } finally {
       setPending(false)
     }

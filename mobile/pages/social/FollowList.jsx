@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
@@ -10,6 +11,7 @@ import {
 import UserRow from "../../components/cards/UserRow/UserRow";
 import { FOLLOW_LIST_STYLES as styles } from "./FollowList.styles";
 import { colors } from "../../theme";
+import { showActionError } from "../../lib/toastMessages";
 
 const RELATIONS = ["seguidores", "siguiendo"];
 
@@ -19,7 +21,14 @@ const RELATIONS = ["seguidores", "siguiendo"];
  * Para el perfil propio se puede omitir `userId`; la pantalla resuelve la
  * sesión. Para el perfil público, `ProfilePublic` pasa el id de la persona.
  */
-export default function FollowListScreen({ route }) {
+export default function FollowListScreen(props) {
+	const [retryKey, setRetryKey] = useState(0);
+	const retry = useCallback(() => setRetryKey((value) => value + 1), []);
+
+	return <FollowListContent key={retryKey} {...props} retry={retry} />;
+}
+
+function FollowListContent({ route, retry }) {
 	const navigation = useNavigation();
 	const { user } = useAuth();
 
@@ -36,6 +45,10 @@ export default function FollowListScreen({ route }) {
 		personId,
 		relation,
 	);
+
+	useEffect(() => {
+		if (error) showActionError(error, "follow:list:load", { retry });
+	}, [error, retry]);
 
 	const title = relation === "seguidores" ? "Seguidores" : "Seguidos";
 
@@ -128,8 +141,6 @@ export default function FollowListScreen({ route }) {
 					<View style={styles.state}>
 						<ActivityIndicator color={colors.fucsia} />
 					</View>
-				) : error ? (
-					<Text style={styles.error}>{error}</Text>
 				) : people.length === 0 ? (
 					<View style={styles.state}>
 						<Text style={styles.emptyTitle}>

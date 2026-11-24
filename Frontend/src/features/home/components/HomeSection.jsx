@@ -1,23 +1,11 @@
 export default function HomeSection({
 	title,
 	loading = false,
-	error,
 	items = [],
 	skeletonCount = 12,
 	skeleton,
 	renderItem,
 }) {
-	if (error) {
-		return (
-			<section className="mt-10">
-				<h2 className="Header4 mb-4">{title}</h2>
-				<p className="text-muted-foreground TextRegular">
-					No pudimos cargar {title.toLowerCase()}.
-				</p>
-			</section>
-		);
-	}
-
 	if (!loading && items.length === 0) return null;
 
 	return (
