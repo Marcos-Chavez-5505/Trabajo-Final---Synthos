@@ -1,14 +1,10 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
-import {
-	followUser,
-	mapApiError,
-	unfollowUser,
-	useAuth,
-} from "@synthos/shared";
+import { followUser, unfollowUser, useAuth } from "@synthos/shared";
 import UserRow from "../../components/cards/UserRow/UserRow";
 import FollowButton from "../../components/social/FollowButton/FollowButton";
 import { SEARCH_PERSON_ROW_STYLES as styles } from "./SearchPersonRow.styles";
+import { showActionError } from "../../lib/toastMessages";
 
 /**
  * Resultado de la búsqueda de personas con botón seguir.
@@ -26,13 +22,11 @@ export default function SearchPersonRow({ person, onPress }) {
 		Boolean(person.isFollowing),
 	);
 	const [pending, setPending] = useState(false);
-	const [error, setError] = useState(null);
 
 	const toggle = async () => {
 		if (!canFollow || pending) return;
 
 		setPending(true);
-		setError(null);
 		const previous = following;
 		const optimistic = !previous;
 		setFollowing(optimistic);
@@ -43,7 +37,7 @@ export default function SearchPersonRow({ person, onPress }) {
 			setFollowing(next.isFollowing);
 		} catch (cause) {
 			setFollowing(previous);
-			setError(mapApiError(cause));
+			showActionError(cause, "follow:toggle");
 		} finally {
 			setPending(false);
 		}
@@ -67,11 +61,6 @@ export default function SearchPersonRow({ person, onPress }) {
 							<View style={styles.badge}>
 								<Text style={styles.badgeText}>Te sigue</Text>
 							</View>
-						) : null}
-						{error ? (
-							<Text style={styles.error} numberOfLines={2}>
-								{error}
-							</Text>
 						) : null}
 					</View>
 				) : null

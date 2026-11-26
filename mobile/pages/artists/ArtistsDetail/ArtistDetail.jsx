@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from "react";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -18,8 +19,16 @@ import {
 } from "../../../components/ui/Avatar/Avatar";
 import { EmptyState } from "../../../components/ui/EmptyState/EmptyState";
 import MiniAlbumCard from "../../../components/cards/MiniAlbumCard/MiniAlbumCard";
+import { showActionError } from "../../../lib/toastMessages";
 
 export default function ArtistDetailPage() {
+	const [retryVersion, setRetryVersion] = useState(0);
+	const handleRetry = useCallback(() => setRetryVersion((prev) => prev + 1), []);
+
+	return <ArtistDetailPageContent key={retryVersion} onRetry={handleRetry} />;
+}
+
+function ArtistDetailPageContent({ onRetry }) {
 	const route = useRoute();
 	const navigation = useNavigation();
 	const insets = useSafeAreaInsets();
@@ -27,13 +36,27 @@ export default function ArtistDetailPage() {
 	const { id } = route.params ?? {};
 	const { artist, error } = useArtistDetail(id);
 
+	useEffect(() => {
+		if (error) showActionError(error, "artist:load", { retry: onRetry });
+	}, [error, onRetry]);
+
 	if (error) {
 		return (
 			<View style={[styles.container, { paddingTop: insets.top }]}>
 				<View style={styles.content}>
 					<View style={styles.errorPill}>
-						<Text style={styles.errorText}>{error}</Text>
+						<Text style={styles.errorText}>No hay un artista para mostrar.</Text>
 					</View>
+					<Pressable
+						onPress={onRetry}
+						style={({ pressed }) => [
+							styles.backButton,
+							pressed && styles.pressed,
+						]}
+						accessibilityRole="button"
+					>
+						<Text style={styles.backButtonText}>Reintentar</Text>
+					</Pressable>
 					<Pressable
 						onPress={() => navigation.goBack()}
 						style={({ pressed }) => [

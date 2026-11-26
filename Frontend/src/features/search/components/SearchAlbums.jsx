@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { buildPageRange, useSearchAlbums, ALBUM_TYPE_LABELS } from '@synthos/shared'
 import MiniMediaCard from '@/components/cards/MiniMediaCard.jsx'
+import { toastMessages } from '@/lib/toastMessages.js'
 import SearchTabs from './SearchTabs.jsx'
 import {
   Pagination,
@@ -21,6 +22,10 @@ export default function SearchAlbums() {
   const page = Math.max(Number(searchParams.get('page')) || 1, 1)
 
   const { isLoading, error, results } = useSearchAlbums(query, page)
+
+  useEffect(() => {
+    if (error) toastMessages.searchAlbumsError(error)
+  }, [error])
 
   useEffect(() => {
     if (results.total > 0 && results.page !== page) {
@@ -58,8 +63,15 @@ export default function SearchAlbums() {
         <p className="text-muted-foreground TextRegluar">Buscando…</p>
       ) : error ? (
         <div className="py-12 text-center">
-          <p className="text-foreground Header4 mb-1">No pudimos buscar</p>
-          <p className="text-muted-foreground TextRegluar">{error}</p>
+          <p className="text-foreground Header4 mb-1">Sin resultados por ahora</p>
+          <p className="text-muted-foreground TextRegluar">Probá con otro término o reintentá.</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="TextRegluar Volume mt-3 rounded px-4 py-2"
+          >
+            Reintentar
+          </button>
         </div>
       ) : results.items.length === 0 ? (
         <div className="py-12 text-center">

@@ -14,6 +14,7 @@ import {
 	AvatarFallback,
 	AvatarImage,
 } from "../../components/ui/Avatar/Avatar";
+import { showActionError } from "../../lib/toastMessages";
 
 import { LOGIN_STYLES } from "./Login.styles";
 
@@ -35,7 +36,7 @@ function LoginScreen() {
 		const result = await login(email, password);
 		setSubmitting(false);
 		if (!result.success) {
-			setError(result.message);
+			showActionError(result.message, "login:error");
 			return;
 		}
 		navigation.replace("Main");

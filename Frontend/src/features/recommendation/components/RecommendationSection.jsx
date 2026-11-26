@@ -1,11 +1,17 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import Avatar from "@/components/ui/Avatar.jsx";
+import { toastMessages } from "@/lib/toastMessages.js";
 import { usePlayer } from '@synthos/shared';
 import { useRecommendationContext } from '@synthos/shared';
 
 export default function RecommendationSection({ emptyMessage }) {
 	const { items, loading, error, retry } = useRecommendationContext();
 	const { song: currentSong, isPlaying, playSongs, togglePlay } = usePlayer();
+
+	useEffect(() => {
+		if (error) toastMessages.recommendationsLoadError(error);
+	}, [error]);
 
 	if (loading) {
 		return (
@@ -28,7 +34,9 @@ export default function RecommendationSection({ emptyMessage }) {
 	if (error) {
 		return (
 			<div className="SurfaceLight CardRadius mt-6 p-4">
-				<p className="TextRegluar text-muted-foreground">{error}</p>
+				<p className="TextRegluar text-muted-foreground">
+					Todavía no hay recomendaciones por acá.
+				</p>
 				<button
 					type="button"
 					onClick={retry}

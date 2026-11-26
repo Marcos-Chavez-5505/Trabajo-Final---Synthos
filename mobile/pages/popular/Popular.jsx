@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePopularSongs } from "@synthos/shared";
@@ -7,12 +8,24 @@ import TopBar from "../../components/layout/TopBar/TopBar";
 import SongRow from "../../components/cards/SongRow/SongRow";
 import { HeartIcon } from "../../components/icons";
 import { colors } from "../../theme";
+import { showActionError } from "../../lib/toastMessages";
 import { POPULAR_STYLES as styles } from "./Popular.styles";
 
 export default function PopularScreen() {
+	const [retryVersion, setRetryVersion] = useState(0);
+	const handleRetry = useCallback(() => setRetryVersion((prev) => prev + 1), []);
+
+	return <PopularScreenContent key={retryVersion} onRetry={handleRetry} />;
+}
+
+function PopularScreenContent({ onRetry }) {
 	const insets = useSafeAreaInsets();
 	const { data, error, songs, minimumFavorites, playSongs, addToQueue } =
 		usePopularSongs();
+
+	useEffect(() => {
+		if (error) showActionError(error, "popular:load", { retry: onRetry });
+	}, [error, onRetry]);
 
 	return (
 		<View
@@ -62,7 +75,10 @@ export default function PopularScreen() {
 function PopularEmptyState({ error, isLoading, minimumFavorites }) {
 	if (error) {
 		return (
-			<EmptyState title="No pudimos cargar los populares" message={error} />
+			<EmptyState
+				title="Todavía no hay populares"
+				message="Probá de nuevo en un momento."
+			/>
 		);
 	}
 

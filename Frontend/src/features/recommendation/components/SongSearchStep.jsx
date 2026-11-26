@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import { toastMessages } from "@/lib/toastMessages.js";
+
 export default function SongSearchStep({
 	query,
 	onQueryChange,
@@ -6,6 +9,10 @@ export default function SongSearchStep({
 	error,
 	onPick,
 }) {
+	useEffect(() => {
+		if (error) toastMessages.songSearchError(error);
+	}, [error]);
+
 	return (
 		<div className="mt-4">
 			<input
@@ -22,7 +29,16 @@ export default function SongSearchStep({
 			)}
 
 			{!loading && error && (
-				<p className="TextTiny mt-3 text-red-500">{error}</p>
+				<div className="TextTiny mt-3 text-center">
+					<p className="text-muted-foreground">No hay canciones por ahora.</p>
+					<button
+						type="button"
+						onClick={() => window.location.reload()}
+						className="TextRegluar Volume mt-2 rounded px-4 py-2"
+					>
+						Reintentar
+					</button>
+				</div>
 			)}
 
 			{!loading && !error && query.trim() && items.length === 0 && (

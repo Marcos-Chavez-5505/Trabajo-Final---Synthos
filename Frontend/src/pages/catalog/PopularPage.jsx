@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { usePopularSongs } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 import MediaCard from '@/components/cards/MediaCard.jsx'
 import fullHeartIcon from '@synthos/shared/assets/icons/full_heart.svg'
 
@@ -10,7 +12,19 @@ import fullHeartIcon from '@synthos/shared/assets/icons/full_heart.svg'
  * que la tarjeta sea la misma del resto de la app.
  */
 export default function PopularPage() {
+  const [attempt, setAttempt] = useState(0)
+
+  return (
+    <PopularPageContent key={attempt} onRetry={() => setAttempt((value) => value + 1)} />
+  )
+}
+
+function PopularPageContent({ onRetry }) {
   const { data, error, songs, minimumFavorites, playSongs, addToQueue } = usePopularSongs()
+
+  useEffect(() => {
+    if (error) toastMessages.popularSongsLoadError(error)
+  }, [error])
 
   return (
     <section className="px-6 py-4 md:px-10">
@@ -24,15 +38,13 @@ export default function PopularPage() {
         <p className="text-muted-foreground TextMedium mt-2">{formatWeek(data.week)}</p>
       )}
 
-      {error ? (
-        <div className="py-12 text-center">
-          <p className="text-foreground Header4 mb-1">No pudimos cargar los populares</p>
-          <p className="text-muted-foreground TextRegluar">{error}</p>
-        </div>
-      ) : !data ? (
+      {!data && !error ? (
         <p className="text-muted-foreground TextRegluar mt-8">Cargando populares…</p>
       ) : songs.length === 0 ? (
-        <EmptyState minimumFavorites={minimumFavorites} />
+        <EmptyState
+          minimumFavorites={minimumFavorites}
+          onRetry={error ? onRetry : undefined}
+        />
       ) : (
         <ul className="mt-8 flex flex-wrap gap-x-4 gap-y-6">
           {songs.map((song, index) => (
@@ -55,7 +67,7 @@ export default function PopularPage() {
   )
 }
 
-function EmptyState({ minimumFavorites }) {
+function EmptyState({ minimumFavorites, onRetry }) {
   return (
     <div className="py-16 text-center">
       <img
@@ -69,6 +81,15 @@ function EmptyState({ minimumFavorites }) {
         Una canción entra cuando al menos {minimumFavorites} personas distintas la marcan
         como favorita dentro de la misma semana.
       </p>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="TextRegluar Volume mt-6 rounded px-4 py-2"
+        >
+          Reintentar
+        </button>
+      )}
     </div>
   )
 }

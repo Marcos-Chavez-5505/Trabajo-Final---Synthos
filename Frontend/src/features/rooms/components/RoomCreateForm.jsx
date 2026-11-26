@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { createRoom, listPlaylists, mapApiError, useAuth, useMyRooms } from '@synthos/shared'
+import { createRoom, listPlaylists, useAuth, useMyRooms } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 
 const MAX_NAME = 60
 const MAX_DESCRIPTION = 200
@@ -10,7 +11,8 @@ export default function RoomCreateForm({ onCreated, onCancel }) {
   const { currentRoom, loading: roomsLoading } = useMyRooms()
 
   const [playlists, setPlaylists] = useState(null)
-  const [loadError, setLoadError] = useState('')
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [reloadToken, setReloadToken] = useState(0)
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -24,6 +26,9 @@ export default function RoomCreateForm({ onCreated, onCancel }) {
 
     let active = true
 
+    setLoadFailed(false)
+    setPlaylists(null)
+
     listPlaylists(user.id)
       .then((all) => {
         if (!active) return
@@ -34,13 +39,22 @@ export default function RoomCreateForm({ onCreated, onCancel }) {
         setPlaylistId((current) => current || (usable[0]?.id ?? ''))
       })
       .catch((cause) => {
-        if (active) setLoadError(mapApiError(cause))
+        if (!active) return
+
+        setLoadFailed(true)
+        toastMessages.playlistsLoadError(cause)
       })
 
     return () => {
       active = false
     }
-  }, [user])
+  }, [user, reloadToken])
+
+  function handleRetryLoad() {
+    setLoadFailed(false)
+    setPlaylists(null)
+    setReloadToken((value) => value + 1)
+  }
 
   if (!user) return null
 
@@ -69,8 +83,19 @@ export default function RoomCreateForm({ onCreated, onCancel }) {
     )
   }
 
-  if (loadError) {
-    return <p className="rounded px-3 py-2 Salmon TextMedium">{loadError}</p>
+  if (loadFailed) {
+    return (
+      <div className="rounded-lg p-4 SurfaceLight Elevation1">
+        <p className="text-foreground Header4">No hay playlists por ahora</p>
+        <button
+          type="button"
+          onClick={handleRetryLoad}
+          className="TextRegluar Volume mt-4 rounded px-4 py-2"
+        >
+          Reintentar
+        </button>
+      </div>
+    )
   }
 
   if (playlists === null) {
@@ -110,7 +135,7 @@ export default function RoomCreateForm({ onCreated, onCancel }) {
 
       onCreated(created)
     } catch (cause) {
-      setError(mapApiError(cause))
+      toastMessages.roomCreateError(cause)
       setSaving(false)
     }
   }

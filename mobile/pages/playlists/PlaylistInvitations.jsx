@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	ActivityIndicator,
 	Pressable,
@@ -13,7 +13,6 @@ import {
 	rejectPlaylistInvitation,
 	subscribeToPlaylists,
 	useAuth,
-	mapApiError,
 } from "@synthos/shared";
 import {
 	Avatar,
@@ -43,6 +42,7 @@ export default function PlaylistInvitations() {
 	});
 	const [pendingId, setPendingId] = useState(null);
 	const [version, setVersion] = useState(0);
+	const retryLoad = useCallback(() => setVersion((prev) => prev + 1), []);
 
 	useEffect(() => {
 		if (!userId) return undefined;
@@ -55,7 +55,8 @@ export default function PlaylistInvitations() {
 			})
 			.catch((cause) => {
 				if (active) {
-					setResponse({ key: userId, invitations: [], error: mapApiError(cause) });
+					setResponse({ key: userId, invitations: [], error: true });
+					showActionError(cause, "playlist:invitations:load", { retry: retryLoad });
 				}
 			});
 
@@ -117,9 +118,9 @@ export default function PlaylistInvitations() {
 	if (error) {
 		return (
 			<View style={styles.state}>
-				<Text style={styles.error}>{error}</Text>
+				<Text style={styles.error}>No hay invitaciones por ahora.</Text>
 				<Pressable
-					onPress={() => setVersion((prev) => prev + 1)}
+					onPress={retryLoad}
 					style={styles.retryButton}
 					accessibilityRole="button"
 				>

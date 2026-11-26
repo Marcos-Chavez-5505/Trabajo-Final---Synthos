@@ -1,11 +1,17 @@
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useRegister } from '@synthos/shared'
 import { Button } from '@/components/ui/button.tsx'
 import { Input } from '@/components/ui/input.tsx'
+import { toastMessages } from '@/lib/toastMessages.js'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
   const { formData, error, submitting, handleChange, handleSubmit } = useRegister()
+
+  useEffect(() => {
+    if (error) toastMessages.registerError(error)
+  }, [error])
 
   const onSubmit = async (e) => {
     const result = await handleSubmit(e)
@@ -68,8 +74,6 @@ export default function RegisterPage() {
               placeholder="••••••••"
             />
           </label>
-
-          {error && <p className="rounded px-3 py-2 TextMedium Red">{error}</p>}
 
           <Button
             type="submit"

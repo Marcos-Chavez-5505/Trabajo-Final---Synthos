@@ -20,7 +20,6 @@ import {
 	closeRoom,
 	kickMember,
 	rateHost,
-	mapApiError,
 	useAuth,
 	usePlayer,
 	useRoomPlayback,
@@ -38,7 +37,10 @@ import {
 	HeartOutlineIcon,
 } from "../../components/icons";
 import ProgressBar from "../../components/player/ProgressBar/ProgressBar";
-import { showRoomAccessLost } from "../../lib/toastMessages";
+import {
+	showActionError,
+	showRoomAccessLost,
+} from "../../lib/toastMessages";
 import { ROOM_DETAIL_STYLES as styles } from "./RoomDetail.styles";
 import { colors } from "../../theme";
 
@@ -63,8 +65,8 @@ export default function RoomDetailScreen({ route }) {
 	const [votes, setVotes] = useState({ voters: [], required: 0, hasVoted: false });
 	const [onlineIds, setOnlineIds] = useState(() => new Set());
 	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState("");
-	const [actionError, setActionError] = useState("");
+	const [loadVersion, setLoadVersion] = useState(0);
+	const retryLoad = useCallback(() => setLoadVersion((prev) => prev + 1), []);
 	const [pending, setPending] = useState("");
 	const [loaded, setLoaded] = useState(false);
 	const [rated, setRated] = useState(false);
@@ -113,13 +115,12 @@ export default function RoomDetailScreen({ route }) {
 	useEffect(() => {
 		let active = true;
 		setLoading(true);
-		setError("");
 
 		getRoomById(id)
 			.then((found) => {
 				if (!active) return;
 				if (!found) {
-					setError("La sala no existe.");
+					showActionError({ status: 404 }, "room:load", { retry: retryLoad });
 					setLoading(false);
 					return;
 				}
@@ -134,18 +135,18 @@ export default function RoomDetailScreen({ route }) {
 				// Pérdida de acceso: el guard ya avisó y redirigió.
 				if (reportError(cause)) return;
 
-				setError(mapApiError(cause));
 				setLoading(false);
+				showActionError(cause, "room:load", { retry: retryLoad });
 			});
 
 		return () => {
 			active = false;
 		};
-	}, [id, reportError]);
+	}, [id, reportError, retryLoad, loadVersion]);
 
 	const requestNext = useCallback(() => {
 		controlPlayback(id, "next").catch((cause) =>
-			setActionError(mapApiError(cause)),
+			showActionError(cause, "room:control"),
 		);
 	}, [id]);
 
@@ -262,14 +263,13 @@ export default function RoomDetailScreen({ route }) {
 	}, [id, loaded, viewerId, reportError]);
 
 	const runAction = useCallback(
-		async (name, action) => {
+		async (name, action, toastKey) => {
 			setPending(name);
-			setActionError("");
 			try {
 				await action();
 			} catch (cause) {
 				// Si el 403 es pérdida de acceso, el guard ya avisó y redirigió.
-				if (!reportError(cause)) setActionError(mapApiError(cause));
+				if (!reportError(cause)) showActionError(cause, toastKey);
 			} finally {
 				setPending("");
 			}
@@ -281,7 +281,7 @@ export default function RoomDetailScreen({ route }) {
 		runAction(action, async () => {
 			const result = await controlPlayback(id, action);
 			if (result) syncPlaybackRef.current(result);
-		});
+		}, "room:control");
 	}
 
 	function handlePlaySong(songId) {
@@ -289,21 +289,21 @@ export default function RoomDetailScreen({ route }) {
 		runAction("play-song", async () => {
 			const result = await controlPlayback(id, "play-song", songId);
 			if (result) syncPlaybackRef.current(result);
-		});
+		}, "room:play-song");
 	}
 
 	function handleVoteSkip() {
 		runAction("vote", async () => {
 			const result = await voteSkip(id);
 			setVotes(result.skipVotes);
-		});
+		}, "room:vote");
 	}
 
 	function handleRate(value) {
 		if (!value || value < 1 || value > 5) return;
 		runAction("rate", async () => {
 			setRated(await rateHost(id, value));
-		});
+		}, "room:rate");
 	}
 
 	function handleLeave() {
@@ -321,7 +321,7 @@ export default function RoomDetailScreen({ route }) {
 						runAction("leave", async () => {
 							await leaveRoom(id);
 							navigation.goBack();
-						}),
+						}, "room:leave"),
 				},
 			],
 		);
@@ -340,7 +340,7 @@ export default function RoomDetailScreen({ route }) {
 						runAction("close", async () => {
 							await closeRoom(id);
 							navigation.goBack();
-						}),
+						}, "room:close"),
 				},
 			],
 		);
@@ -356,7 +356,7 @@ export default function RoomDetailScreen({ route }) {
 					text: "Sacar",
 					style: "destructive",
 					onPress: () =>
-						runAction(`kick:${targetId}`, () => kickMember(id, targetId)),
+						runAction(`kick:${targetId}`, () => kickMember(id, targetId), "room:kick"),
 				},
 			],
 		);
@@ -371,7 +371,7 @@ export default function RoomDetailScreen({ route }) {
 		);
 	}
 
-	if (error || !room) {
+	if (!room) {
 		return (
 			<View style={styles.container}>
 				<ScrollView contentContainerStyle={styles.scroll}>
@@ -379,7 +379,10 @@ export default function RoomDetailScreen({ route }) {
 						<Text style={styles.backButtonText}>← Volver</Text>
 					</Pressable>
 					<View style={styles.errorBox}>
-						<Text style={styles.errorText}>{error || "La sala no existe."}</Text>
+						<Text style={styles.errorText}>No hay una sala para mostrar.</Text>
+						<Pressable onPress={retryLoad} style={styles.backButton}>
+							<Text style={styles.backButtonText}>Reintentar</Text>
+						</Pressable>
 					</View>
 				</ScrollView>
 				<StatusBar style="light" />
@@ -413,12 +416,6 @@ export default function RoomDetailScreen({ route }) {
 				<Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
 					<Text style={styles.backButtonText}>← Volver</Text>
 				</Pressable>
-
-				{actionError ? (
-					<View style={styles.errorBox}>
-						<Text style={styles.errorText}>{actionError}</Text>
-					</View>
-				) : null}
 
 				<View style={styles.header}>
 					<View style={styles.headerTop}>

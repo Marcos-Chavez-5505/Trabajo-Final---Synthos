@@ -92,7 +92,6 @@ function NavButton({ direction, disabled, onClick, label }) {
 export default function HomeSection({
 	title,
 	loading = false,
-	error,
 	items = [],
 	skeletonCount = 12,
 	skeleton,
@@ -102,17 +101,6 @@ export default function HomeSection({
 		items.length,
 		loading,
 	);
-
-	if (error) {
-		return (
-			<section className="mt-10">
-				<h2 className="Header4 mb-4">{title}</h2>
-				<p className="text-muted-foreground TextRegular">
-					No pudimos cargar {title.toLowerCase()}.
-				</p>
-			</section>
-		);
-	}
 
 	if (!loading && items.length === 0) return null;
 

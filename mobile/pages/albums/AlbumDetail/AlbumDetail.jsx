@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useAlbumDetail, usePlayer } from "@synthos/shared";
 import {
@@ -17,6 +18,7 @@ import {
 	PlayIcon,
 } from "../../../components/icons";
 import { EmptyState } from "../../../components/ui/EmptyState/EmptyState";
+import { showActionError } from "../../../lib/toastMessages";
 
 export default function AlbumDetailPage() {
 	const route = useRoute();
@@ -26,6 +28,11 @@ export default function AlbumDetailPage() {
 	const { id } = route.params ?? {};
 	const { album, songs, error, loading, resolving, retry } = useAlbumDetail(id);
 	console.log(songs);
+
+	useEffect(() => {
+		if (error) showActionError(error, "album:load", { retry });
+	}, [error, retry]);
+
 	if (loading) {
 		return (
 			<View style={[styles.container, { paddingTop: insets.top }]}>
@@ -42,7 +49,7 @@ export default function AlbumDetailPage() {
 			<View style={[styles.container, { paddingTop: insets.top }]}>
 				<View style={styles.content}>
 					<View style={styles.errorPill}>
-						<Text style={styles.errorText}>{error}</Text>
+						<Text style={styles.errorText}>No hay un álbum para mostrar.</Text>
 					</View>
 					<Pressable
 						onPress={retry}

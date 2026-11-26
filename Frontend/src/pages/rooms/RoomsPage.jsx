@@ -8,6 +8,7 @@ import {
   DEFAULT_ROOM_ORDER,
 } from '@synthos/shared'
 import { useDebounce, useRoomsList, useMyRooms, useAuth } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 import {
   Popover,
   PopoverContent,
@@ -23,11 +24,18 @@ import RoomSortMenu from '@/features/rooms/components/RoomSortMenu.jsx'
 import roomIcon from '@synthos/shared/assets/icons/headphones.svg'
 import searchIcon from '@synthos/shared/assets/icons/search.svg'
 import scanIcon from '@synthos/shared/assets/icons/scan-barcode.svg'
-import { mapApiError } from '@synthos/shared'
 
 const DEBOUNCE_MS = 300
 
 export default function RoomsPage() {
+  const [attempt, setAttempt] = useState(0)
+
+  return (
+    <RoomsPageContent key={attempt} onRetry={() => setAttempt((value) => value + 1)} />
+  )
+}
+
+function RoomsPageContent({ onRetry }) {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -66,6 +74,10 @@ export default function RoomsPage() {
   const { isCurrent, rooms, error } = useRoomsList(query, sort, order)
   const { user } = useAuth()
   const { currentRoom } = useMyRooms()
+
+  useEffect(() => {
+    if (error) toastMessages.roomsLoadError(error)
+  }, [error])
 
   const isCurrentHost = currentRoom
     ? String(currentRoom.hostId) === String(user?.id)
@@ -151,12 +163,13 @@ export default function RoomsPage() {
         <RoomSortMenu sort={sort} order={order} onChange={handleSortChange} />
       </div>
 
-      {error && <p className="mt-6 rounded px-3 py-2 Salmon TextMedium">{error}</p>}
-
       {!isCurrent ? (
         <p className="text-muted-foreground TextRegluar mt-8">Buscando salas…</p>
       ) : rooms.length === 0 ? (
-        <EmptyState hasQuery={Boolean(query.trim())} />
+        <EmptyState
+          hasQuery={Boolean(query.trim())}
+          onRetry={error ? onRetry : undefined}
+        />
       ) : (
         <ul className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {rooms.map((room) => (
@@ -208,20 +221,18 @@ function RoomCardAction({ room, currentRoom, isCurrentHost }) {
 function JoinRoomButton({ room, full, isCurrent, blockedByHost, switching }) {
   const navigate = useNavigate()
   const [pending, setPending] = useState(false)
-  const [error, setError] = useState('')
 
   async function handleJoin() {
     if (pending || full) return
 
     setPending(true)
-    setError('')
 
     try {
       const joined = await joinRoom(room.code)
 
       navigate(`/salas/${joined.id}`)
     } catch (cause) {
-      setError(mapApiError(cause))
+      toastMessages.roomJoinError(cause)
       setPending(false)
     }
   }
@@ -272,16 +283,11 @@ function JoinRoomButton({ room, full, isCurrent, blockedByHost, switching }) {
               ? 'Cambiar de sala'
               : 'Unirme'}
       </button>
-      {error && (
-        <span className="text-muted-foreground TextTiny mt-1 max-w-40 text-right">
-          {error}
-        </span>
-      )}
     </span>
   )
 }
 
-function EmptyState({ hasQuery }) {
+function EmptyState({ hasQuery, onRetry }) {
   return (
     <div className="py-16 text-center">
       <img
@@ -307,6 +313,15 @@ function EmptyState({ hasQuery }) {
             Cuando alguien abra una sala, aparece acá.
           </p>
         </>
+      )}
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="TextRegluar Volume mt-6 rounded px-4 py-2"
+        >
+          Reintentar
+        </button>
       )}
     </div>
   )

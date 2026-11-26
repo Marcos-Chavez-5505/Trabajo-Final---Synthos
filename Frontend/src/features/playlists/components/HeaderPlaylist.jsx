@@ -13,6 +13,10 @@ import userIcon from '@synthos/shared/assets/icons/user.svg'
 import userGroupIcon from '@synthos/shared/assets/icons/user_group.svg'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 
+// El hook de edición comparte `editError` entre la validación del nombre y los
+// errores de API: la validación sigue inline, la API se reporta por toast.
+const EMPTY_NAME_ERROR = 'Ponle un nombre a la playlist.'
+
 /** Header visual reutilizable para playlists y álbumes.
  *  Albums solo consumen los estilos/visuales; la lógica de edición viene
  *  del padre mediante props (que pueden ser undefined).
@@ -86,6 +90,10 @@ export default function HeaderPlaylist({
     initialName: playlist?.name,
     initialDescription: playlist?.description,
   })
+
+  useEffect(() => {
+    if (editError && editError !== EMPTY_NAME_ERROR) toastMessages.playlistUpdateError(editError)
+  }, [editError])
 
   // Cerrar el menú de portada al hacer clic fuera, con Escape o al scrollear.
   useEffect(() => {
@@ -173,7 +181,9 @@ export default function HeaderPlaylist({
         {!isMobile && canDelete && deleteButton('self-center py-2')}
       </div>
 
-      {editError && <p className="Salmon TextMedium mt-2 rounded px-3 py-2">{editError}</p>}
+      {editError === EMPTY_NAME_ERROR && (
+        <p className="Salmon TextMedium mt-2 rounded px-3 py-2">{editError}</p>
+      )}
 
       <div className="mt-2 flex gap-2">
         <button

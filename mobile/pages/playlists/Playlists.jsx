@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	ActivityIndicator,
 	FlatList,
@@ -14,7 +14,7 @@ import PlaylistCard from "../../components/cards/PlaylistCard/PlaylistCard";
 import TopBar from "../../components/layout/TopBar/TopBar";
 import { PlaylistIcon } from "../../components/icons";
 import { colors, spacing } from "../../theme";
-import { showSuccess } from "../../lib/toastMessages";
+import { showActionError, showSuccess } from "../../lib/toastMessages";
 import CreatePlaylistForm from "./CreatePlaylistForm";
 import PlaylistInvitations from "./PlaylistInvitations";
 import { PLAYLISTS_STYLES as styles } from "./Playlists.styles";
@@ -26,6 +26,13 @@ const TABS = [
 ];
 
 export default function PlaylistsScreen() {
+	const [retryVersion, setRetryVersion] = useState(0);
+	const handleRetry = useCallback(() => setRetryVersion((prev) => prev + 1), []);
+
+	return <PlaylistsScreenContent key={retryVersion} onRetry={handleRetry} />;
+}
+
+function PlaylistsScreenContent({ onRetry }) {
 	const navigation = useNavigation();
 	const insets = useSafeAreaInsets();
 	const { playlists, error, loading } = usePlaylistList();
@@ -33,6 +40,10 @@ export default function PlaylistsScreen() {
 	const route = useRoute();
 	const [selectedTab, setSelectedTab] = useState("mis");
 	const tab = route.params?.tab ?? selectedTab;
+
+	useEffect(() => {
+		if (error) showActionError(error, "playlists:load", { retry: onRetry });
+	}, [error, onRetry]);
 
 	function handleTabPress(key) {
 		setSelectedTab(key);
@@ -98,7 +109,6 @@ export default function PlaylistsScreen() {
 					</View>
 				) : null}
 
-				{error ? <Text style={styles.error}>{error}</Text> : null}
 			</View>
 
 			{tab === "invitaciones" ? (
@@ -109,7 +119,7 @@ export default function PlaylistsScreen() {
 					<Text style={styles.message}>Cargando tus playlists…</Text>
 				</View>
 			) : shown.length === 0 ? (
-				<EmptyState tab={tab} />
+				<EmptyState tab={tab} error={Boolean(error)} />
 			) : (
 				<FlatList
 					key={tab}
@@ -138,9 +148,13 @@ export default function PlaylistsScreen() {
 	);
 }
 
-function EmptyState({ tab }) {
-	const copy =
-		tab === "colaborativas"
+function EmptyState({ tab, error }) {
+	const copy = error
+		? {
+				title: "Todavía no hay playlists para mostrar",
+				body: "Probá de nuevo en un momento.",
+			}
+		: tab === "colaborativas"
 			? {
 					title: "No te compartieron ninguna playlist",
 					body: "Cuando alguien te invite a una colaborativa, aparece acá.",

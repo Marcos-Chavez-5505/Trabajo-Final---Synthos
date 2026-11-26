@@ -515,11 +515,15 @@ export default function PlaylistDetailPage() {
   async function handleDelete() {
     setDeleteOpen(false)
 
-    const deleted = await removePlaylist(userId, id)
+    try {
+      const deleted = await removePlaylist(userId, id)
 
-    if (deleted) {
-      clearQueueIfSource(id)
-      navigate('/playlists')
+      if (deleted) {
+        clearQueueIfSource(id)
+        navigate('/playlists')
+      }
+    } catch (cause) {
+      toastMessages.apiError('No se pudo eliminar la playlist', cause, 'playlist-delete-error')
     }
   }
 
@@ -533,8 +537,8 @@ export default function PlaylistDetailPage() {
     await handleInvited(result)
   }
 
-  // Quien llama decide cómo avisar el error: el diálogo lo muestra inline y la
-  // sección de participantes lo pasa a toast.
+  // Quien llama decide cómo avisar el error: el diálogo y la sección de
+  // participantes lo pasan a toast.
   async function handleRemoveMember(memberId) {
     await removePlaylistMember(userId, id, memberId)
     await loadPlaylist()

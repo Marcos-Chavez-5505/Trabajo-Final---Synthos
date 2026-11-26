@@ -31,6 +31,16 @@ export const icons = {
       { d: "M13 10.25C13.7293 10.25 14.4286 10.5399 14.9443 11.0557C15.4601 11.5714 15.75 12.2707 15.75 13C15.75 13.5438 15.5882 14.0751 15.2861 14.5273C14.984 14.9795 14.5552 15.3329 14.0527 15.541C13.5504 15.7491 12.9972 15.8033 12.4639 15.6973C11.9304 15.5912 11.4403 15.3289 11.0557 14.9443C10.6711 14.5597 10.4088 14.0696 10.3027 13.5361C10.1967 13.0028 10.2509 12.4496 10.459 11.9473C10.6671 11.4448 11.0205 11.016 11.4727 10.7139C11.9249 10.4118 12.4562 10.25 13 10.25ZM13.8135 11.0371C13.4252 10.8763 12.9972 10.834 12.585 10.916C12.1729 10.9981 11.7941 11.2 11.4971 11.4971C11.2 11.7941 10.9981 12.1729 10.916 12.585C10.834 12.9972 10.8763 13.4252 11.0371 13.8135C11.1979 14.2015 11.4701 14.5332 11.8193 14.7666C12.1688 15.0001 12.5797 15.125 13 15.125C13.5636 15.125 14.1044 14.9014 14.5029 14.5029C14.9014 14.1044 15.125 13.5636 15.125 13C15.125 12.5797 15.0001 12.1688 14.7666 11.8193C14.5332 11.4701 14.2015 11.1979 13.8135 11.0371Z", stroke: true, strokeWidth: 1 },
     ],
   },
+  "arrow-down-0-1": {
+    viewBox: "0 0 26 26",
+    paths: [
+      { d: "M4 17L8 21L12 17", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+      { d: "M8 21V5", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+      { d: "M18 5C19.1046 5 20 5.89543 20 7V9C20 10.1046 19.1046 11 18 11C16.8954 11 16 10.1046 16 9V7C16 5.89543 16.8954 5 18 5Z", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+      { d: "M18 21V15H16", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+      { d: "M16 21H20", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+    ],
+  },
   "arrow-down-1-0": {
     viewBox: "0 0 26 26",
     paths: [
@@ -45,13 +55,23 @@ export const icons = {
     viewBox: "0 0 26 26",
     paths: [
       { d: "M4 17L8 21L12 17", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+      { d: "M8 21V5", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+      { d: "M21 9H16", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+      { d: "M16 11V7.5C16 6.83696 16.2634 6.20107 16.7322 5.73223C17.2011 5.26339 17.837 5 18.5 5C19.163 5 19.7989 5.26339 20.2678 5.73223C20.7366 6.20107 21 6.83696 21 7.5V11", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+      { d: "M16 15H21L16 21H21", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
+    ],
+  },
+  "arrow-down-z-a": {
+    viewBox: "0 0 26 26",
+    paths: [
+      { d: "M4 17L8 21L12 17", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
       { d: "M8 5V21", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
       { d: "M16 5H21L16 11H21", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
       { d: "M16 21V17.5C16 16.837 16.2634 16.2011 16.7322 15.7322C17.2011 15.2634 17.837 15 18.5 15C19.163 15 19.7989 15.2634 20.2678 15.7322C20.7366 16.2011 21 16.837 21 17.5V21", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
       { d: "M21 19H16", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
     ],
   },
-  "arrow-up-0-1": {
+  "arrow-up-1-0": {
     viewBox: "0 0 26 26",
     paths: [
       { d: "M4 9L8 5L12 9", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
@@ -61,7 +81,7 @@ export const icons = {
       { d: "M18 15C19.1046 15 20 15.8954 20 17V19C20 20.1046 19.1046 21 18 21C16.8954 21 16 20.1046 16 19V17C16 15.8954 16.8954 15 18 15Z", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
     ],
   },
-  "arrow-up-z-a": {
+  "arrow-up-a-z": {
     viewBox: "0 0 26 26",
     paths: [
       { d: "M4 9L8 5L12 9", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },

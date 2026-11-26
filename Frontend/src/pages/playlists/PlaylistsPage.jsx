@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { usePlaylistList, usePlaylistsPage } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 import playlistIcon from '@synthos/shared/assets/icons/playlist.svg'
 import {
   Popover,
@@ -22,10 +24,22 @@ const TABS = [
 ]
 
 export default function PlaylistsPage() {
+  const [attempt, setAttempt] = useState(0)
+
+  return (
+    <PlaylistsPageContent key={attempt} onRetry={() => setAttempt((value) => value + 1)} />
+  )
+}
+
+function PlaylistsPageContent({ onRetry }) {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { playlists, error, loading } = usePlaylistList()
   const { creating, setCreating, handleCreate } = usePlaylistsPage()
+
+  useEffect(() => {
+    if (error) toastMessages.playlistsLoadError(error)
+  }, [error])
 
   const tab = TABS.some((item) => item.key === searchParams.get('tab'))
     ? searchParams.get('tab')
@@ -77,8 +91,6 @@ export default function PlaylistsPage() {
         </Popover>
       </div>
 
-      {error && <p className="mt-6 rounded px-3 py-2 Salmon TextMedium">{error}</p>}
-
       <Tabs value={tab} onValueChange={onTabChange} className="mt-6">
         <div className="flex items-center gap-3 md:gap-4">
           <TabsList aria-label="Secciones de playlists" wrapperClassName="w-auto">
@@ -91,13 +103,28 @@ export default function PlaylistsPage() {
         </div>
 
         <TabsContent value="todos">
-          <PlaylistGrid tab="todos" items={allPlaylists} loading={loading} />
+          <PlaylistGrid
+            tab="todos"
+            items={allPlaylists}
+            loading={loading}
+            onRetry={error ? onRetry : undefined}
+          />
         </TabsContent>
         <TabsContent value="mis">
-          <PlaylistGrid tab="mis" items={mine} loading={loading} />
+          <PlaylistGrid
+            tab="mis"
+            items={mine}
+            loading={loading}
+            onRetry={error ? onRetry : undefined}
+          />
         </TabsContent>
         <TabsContent value="colaborativas">
-          <PlaylistGrid tab="colaborativas" items={collaborative} loading={loading} />
+          <PlaylistGrid
+            tab="colaborativas"
+            items={collaborative}
+            loading={loading}
+            onRetry={error ? onRetry : undefined}
+          />
         </TabsContent>
         <TabsContent value="invitaciones">
           <PlaylistInvitations />
@@ -107,13 +134,13 @@ export default function PlaylistsPage() {
   )
 }
 
-function PlaylistGrid({ tab, items, loading }) {
+function PlaylistGrid({ tab, items, loading, onRetry }) {
   if (loading) {
     return <p className="text-muted-foreground TextRegluar mt-8">Cargando tus playlists…</p>
   }
 
   if (items.length === 0) {
-    return <EmptyState tab={tab} />
+    return <EmptyState tab={tab} onRetry={onRetry} />
   }
 
   return (
@@ -127,7 +154,7 @@ function PlaylistGrid({ tab, items, loading }) {
   )
 }
 
-function EmptyState({ tab }) {
+function EmptyState({ tab, onRetry }) {
   const copy = {
     todos: {
       title: 'Todavía no tenés playlists',
@@ -153,6 +180,15 @@ function EmptyState({ tab }) {
       />
       <p className="text-foreground Header4 mt-4">{copy.title}</p>
       <p className="text-muted-foreground TextRegluar mt-1">{copy.body}</p>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="TextRegluar Volume mt-6 rounded px-4 py-2"
+        >
+          Reintentar
+        </button>
+      )}
     </div>
   )
 }

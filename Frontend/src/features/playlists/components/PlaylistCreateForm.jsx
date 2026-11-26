@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { mapApiError } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 
 /**
  * Formulario de creación de playlist. Se muestra dentro del popover de
@@ -12,7 +12,6 @@ import { mapApiError } from '@synthos/shared'
 export default function PlaylistCreateForm({ onCreate, onCancel }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function handleSubmit(event) {
@@ -20,13 +19,12 @@ export default function PlaylistCreateForm({ onCreate, onCancel }) {
 
     if (saving) return
 
-    setError('')
     setSaving(true)
 
     try {
       await onCreate({ name, description })
     } catch (cause) {
-      setError(mapApiError(cause))
+      toastMessages.playlistCreateError(cause)
     } finally {
       setSaving(false)
     }
@@ -53,8 +51,6 @@ export default function PlaylistCreateForm({ onCreate, onCancel }) {
         maxLength={200}
         className="TextRegluar mt-1 w-full rounded bg-(--ds-surface)/20 px-3 py-2 outline-none ring-0 ring-transparent focus-visible:ring-2 focus-visible:ring-ring resize-none placeholder:opacity-60"
       />
-
-      {error && <p className="rounded px-3 py-2 Salmon TextMedium">{error}</p>}
 
       <div className="flex gap-2">
         <button

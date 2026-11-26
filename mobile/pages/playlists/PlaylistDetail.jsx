@@ -24,7 +24,6 @@ import {
 	getPlaylistById,
 	getSongById,
 	listSentInvitations,
-	mapApiError,
 	removePlaylist,
 	removePlaylistCover,
 	removePlaylistMember,
@@ -120,11 +119,12 @@ export default function PlaylistDetailScreen({ route }) {
 
 		return getPlaylistById(userId, id).then(
 			(loadedPlaylist) => {
-				setLoadError("");
+				setLoadError(false);
 				setResponse({ key: `${userId}:${id}`, playlist: loadedPlaylist });
 			},
 			(cause) => {
-				setLoadError(mapApiError(cause));
+				setLoadError(true);
+				showActionError(cause, "playlist:load", { retry: loadPlaylist });
 			},
 		);
 	}, [userId, id]);
@@ -535,7 +535,7 @@ export default function PlaylistDetailScreen({ route }) {
 				showSuccess("playlist:update");
 			}
 		} catch (cause) {
-			setEditError(mapApiError(cause));
+			showActionError(cause, "playlist:update");
 		} finally {
 			setSavingEdit(false);
 		}
@@ -715,7 +715,7 @@ export default function PlaylistDetailScreen({ route }) {
 	if (loadError) {
 		return (
 			<View style={[styles.centered, { paddingTop: insets.top }]}>
-				<Text style={styles.error}>{loadError}</Text>
+				<Text style={styles.error}>No hay una playlist para mostrar.</Text>
 				<Pressable
 					onPress={() => setLoadVersion((prev) => prev + 1)}
 					style={styles.secondaryButton}

@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { useNotificationsContext } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 import NotificationRow from '@/features/notifications/components/NotificationRow.jsx'
 import notificationIcon from '@synthos/shared/assets/icons/notification.svg'
 
@@ -10,8 +12,19 @@ import notificationIcon from '@synthos/shared/assets/icons/notification.svg'
  * `notification:read`, `notification:read-all` por el socket existente.
  */
 export default function NotificationsPage() {
-	const { notifications, unreadCount, loading, markAsRead, markAllAsRead } =
-		useNotificationsContext()
+	const {
+		notifications,
+		unreadCount,
+		loading,
+		error,
+		refresh,
+		markAsRead,
+		markAllAsRead,
+	} = useNotificationsContext()
+
+	useEffect(() => {
+		if (error) toastMessages.notificationsLoadError(error)
+	}, [error])
 
 	if (loading && notifications.length === 0) {
 		return (
@@ -56,7 +69,7 @@ export default function NotificationsPage() {
 			</div>
 
 			{notifications.length === 0 ? (
-				<EmptyState />
+				<EmptyState onRetry={error ? refresh : undefined} />
 			) : (
 				<ul className="mt-6 flex max-w-3xl flex-col gap-2">
 					{notifications.map((notification) => (
@@ -72,7 +85,7 @@ export default function NotificationsPage() {
 	)
 }
 
-function EmptyState() {
+function EmptyState({ onRetry }) {
 	return (
 		<div className="py-16 text-center">
 			<img
@@ -86,6 +99,15 @@ function EmptyState() {
 				Cuando alguien te siga, te recomiende una canción o te invite a una
 				playlist, va a aparecer acá.
 			</p>
+			{onRetry && (
+				<button
+					type="button"
+					onClick={onRetry}
+					className="TextRegluar Volume mt-6 rounded px-4 py-2"
+				>
+					Reintentar
+				</button>
+			)}
 		</div>
 	)
 }

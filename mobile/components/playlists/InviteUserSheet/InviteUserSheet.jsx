@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { mapApiError, searchUsers, useDebounce } from "@synthos/shared";
 import {
@@ -10,6 +10,7 @@ import MemberRow from "../MemberRow/MemberRow";
 import InviteRow from "../InviteRow/InviteRow";
 import { CloseIcon, GlobeIcon, SearchIcon } from "../../icons";
 import { colors } from "../../../theme";
+import { showActionError } from "../../../lib/toastMessages";
 import { INVITE_USER_SHEET_STYLES as styles } from "./InviteUserSheet.styles";
 
 const DEBOUNCE_MS = 300;
@@ -47,7 +48,8 @@ export default function InviteUserSheet({
 	const [query, setQuery] = useState("");
 	const [response, setResponse] = useState({ key: null, items: [], error: null });
 	const [pendingId, setPendingId] = useState(null);
-	const [submitError, setSubmitError] = useState("");
+	const [searchVersion, setSearchVersion] = useState(0);
+	const retrySearch = useCallback(() => setSearchVersion((prev) => prev + 1), []);
 
 	const trimmedQuery = query.trim();
 	const hasMinChars = trimmedQuery.length >= MIN_QUERY;
@@ -87,12 +89,18 @@ export default function InviteUserSheet({
 			active = false;
 			controller.abort();
 		};
-	}, [open, canSearch, debouncedQuery, requestKey]);
+	}, [open, canSearch, debouncedQuery, requestKey, searchVersion]);
 
 	const isSettled = trimmedQuery === debouncedQuery;
 	const isCurrent = response.key === requestKey;
 	const isLoading = open && hasMinChars && (!isSettled || (canSearch && !isCurrent));
 	const searchError = isSettled && isCurrent ? response.error : null;
+
+	useEffect(() => {
+		if (searchError) {
+			showActionError(searchError, "search:people", { retry: retrySearch });
+		}
+	}, [searchError, retrySearch]);
 
 	const invitationStatusById = useMemo(
 		() => new Map(invitations.map((invitation) => [invitation.receiver.id, invitation.status])),
@@ -111,7 +119,6 @@ export default function InviteUserSheet({
 		setQuery("");
 		setResponse({ key: null, items: [], error: null });
 		setPendingId(null);
-		setSubmitError("");
 		onClose?.();
 	}
 
@@ -123,19 +130,18 @@ export default function InviteUserSheet({
 		if (pendingId || invitationStatusById.has(person.id)) return;
 
 		setPendingId(person.id);
-		setSubmitError("");
 
 		try {
 			await onInvite?.(person);
 		} catch (cause) {
-			setSubmitError(mapApiError(cause));
+			showActionError(cause, "playlist:invite");
 		} finally {
 			setPendingId(null);
 		}
 	}
 
 	const emptyMessage = searchError
-		? searchError
+		? "No hay personas para mostrar por ahora."
 		: isLoading
 			? "Buscando…"
 			: !hasMinChars
@@ -188,8 +194,6 @@ export default function InviteUserSheet({
 				{/* Invitar */}
 				<View style={styles.section}>
 					<Text style={styles.sectionTitle}>{inviteTitle}</Text>
-
-					{submitError ? <Text style={styles.error}>{submitError}</Text> : null}
 
 					<View style={styles.searchWrapper}>
 						<SearchIcon size={18} color={colors.textMuted} />

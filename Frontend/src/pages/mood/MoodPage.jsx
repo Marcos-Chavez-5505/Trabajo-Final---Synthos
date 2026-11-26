@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import cameraIcon from '@synthos/shared/assets/icons/microphone.svg'
 import { mapApiError, useMoodSongs } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 import { MOODS, MOOD_LABELS } from '@/features/mood/lib/moodDetection.js'
 import MoodPicker from '@/features/mood/components/MoodPicker.jsx'
 import MoodResults from '@/features/mood/components/MoodResults.jsx'
@@ -32,6 +33,10 @@ export default function MoodPage() {
   const [notice, setNotice] = useState(null)
 
   const { mood, songs, songsError, loadSongs, setSongs } = useMoodSongs()
+
+  useEffect(() => {
+    if (songsError) toastMessages.moodSongsError(songsError)
+  }, [songsError])
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop())
@@ -204,7 +209,20 @@ export default function MoodPage() {
         </div>
       </div>
 
-      {songsError && <p className="mt-6 Salmon TextMedium">{songsError}</p>}
+      {songsError && (
+        <div className="mt-6">
+          <p className="TextRegluar text-muted-foreground">
+            No hay canciones para este estado.
+          </p>
+          <button
+            type="button"
+            onClick={() => loadSongs(mood)}
+            className="TextRegluar Volume mt-3 rounded px-4 py-2"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
 
       {songs !== null && !songsError && (
         <MoodResults mood={mood} songs={songs} onRescan={() => setSongs(null)} />

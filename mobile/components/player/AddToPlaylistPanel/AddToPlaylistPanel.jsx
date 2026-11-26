@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -20,6 +20,15 @@ import { showActionError } from "../../../lib/toastMessages";
  * "Mis Favoritos" se excluye: se marca con el corazón del reproductor.
  */
 export default function AddToPlaylistPanel({ songId }) {
+	const [retryKey, setRetryKey] = useState(0);
+	const retry = useCallback(() => setRetryKey((value) => value + 1), []);
+
+	return (
+		<AddToPlaylistPanelContent key={retryKey} songId={songId} retry={retry} />
+	);
+}
+
+function AddToPlaylistPanelContent({ songId, retry }) {
 	const { user } = useAuth();
 	const userId = user?.id ?? null;
 	const { playlists: allPlaylists, loading, error, contains, inAnyPlaylist } =
@@ -27,6 +36,10 @@ export default function AddToPlaylistPanel({ songId }) {
 	const [open, setOpen] = useState(false);
 	const [pendingId, setPendingId] = useState(null);
 	const insets = useSafeAreaInsets();
+
+	useEffect(() => {
+		if (error) showActionError(error, "playlists:load", { retry });
+	}, [error, retry]);
 
 	if (!songId) return null;
 
@@ -92,8 +105,6 @@ export default function AddToPlaylistPanel({ songId }) {
 
 						{loading ? (
 							<Text style={styles.message}>Cargando…</Text>
-						) : error ? (
-							<Text style={styles.error}>{error}</Text>
 						) : playlists.length === 0 ? (
 							<Text style={styles.message}>Todavía no tenés playlists.</Text>
 						) : (
