@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useArtistDetail, ALBUM_TYPE_LABELS } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 import Avatar from '@/components/ui/Avatar.jsx'
 import MiniMediaCard from '@/components/cards/MiniMediaCard.jsx'
 import albumIcon from '@synthos/shared/assets/icons/album.svg'
@@ -11,18 +13,39 @@ import albumIcon from '@synthos/shared/assets/icons/album.svg'
  * `/albums/:id`; así el artista no duplica la vista de pistas del álbum.
  */
 export default function ArtistDetailPage() {
+  const [attempt, setAttempt] = useState(0)
+
+  return (
+    <ArtistDetailContent key={attempt} onRetry={() => setAttempt((value) => value + 1)} />
+  )
+}
+
+function ArtistDetailContent({ onRetry }) {
   const { id } = useParams()
   const navigate = useNavigate()
 
   const { artist, error } = useArtistDetail(id)
 
+  useEffect(() => {
+    if (error) toastMessages.artistDetailError(error)
+  }, [error])
+
   if (error) {
     return (
       <section className="px-6 py-4 md:px-10">
-        <p className="mt-8 rounded px-3 py-2 Salmon TextMedium">{error}</p>
-        <Link to="/artistas" className="text-accent mt-6 inline-block rounded px-4 py-2">
-          Volver a artistas
-        </Link>
+        <p className="text-foreground Header4 mt-8">No hay un artista para mostrar</p>
+        <div className="mt-6 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onRetry}
+            className="TextRegluar Volume rounded px-4 py-2"
+          >
+            Reintentar
+          </button>
+          <Link to="/artistas" className="text-accent inline-block rounded px-4 py-2">
+            Volver a artistas
+          </Link>
+        </div>
       </section>
     )
   }

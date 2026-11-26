@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { usePlayer, useSearchSongs } from "@synthos/shared";
 import { colors } from "../../theme";
@@ -6,11 +6,23 @@ import SongRow from "../../components/cards/SongRow/SongRow";
 import Pagination from "../../components/ui/Pagination/Pagination";
 import SearchTabs from "./SearchTabs";
 import { SEARCH_TABS } from "./constants";
+import { showActionError } from "../../lib/toastMessages";
 
-export default function SearchSongs({ query, onChangeTab }) {
+export default function SearchSongs(props) {
+	const [retryKey, setRetryKey] = useState(0);
+	const retry = useCallback(() => setRetryKey((value) => value + 1), []);
+
+	return <SearchSongsContent key={retryKey} {...props} retry={retry} />;
+}
+
+function SearchSongsContent({ query, onChangeTab, retry }) {
 	const { playSongs, addToQueue } = usePlayer();
 	const [page, setPage] = useState(1);
 	const { isLoading, error, results } = useSearchSongs(query || "", page);
+
+	useEffect(() => {
+		if (error) showActionError(error, "search:songs", { retry });
+	}, [error, retry]);
 
 	const goToPage = (nextPage) => {
 		if (nextPage < 1 || nextPage > results.totalPages) return;
@@ -37,10 +49,6 @@ export default function SearchSongs({ query, onChangeTab }) {
 					color={colors.textPrimary}
 					style={{ marginTop: 24 }}
 				/>
-			) : error ? (
-				<Text style={{ color: colors.textPrimary, opacity: 0.7 }}>
-					Error al buscar
-				</Text>
 			) : (
 				<ScrollView
 					showsVerticalScrollIndicator={false}

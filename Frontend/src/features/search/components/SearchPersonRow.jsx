@@ -3,7 +3,7 @@ import UserRow from '@/components/cards/UserRow.jsx'
 import { FollowButton } from '@/features/social'
 import { useAuth } from '@synthos/shared'
 import { followUser, unfollowUser } from '@synthos/shared'
-import { mapApiError } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 
 /**
  * Resultado de la búsqueda de personas con botón seguir (TS-10b).
@@ -27,13 +27,11 @@ export default function SearchPersonRow({ person }) {
 
   const [following, setFollowing] = useState(() => Boolean(person.isFollowing))
   const [pending, setPending] = useState(false)
-  const [error, setError] = useState(null)
 
   const toggle = async () => {
     if (!canFollow || pending) return
 
     setPending(true)
-    setError(null)
     const previous = following
     const optimistic = !previous
     setFollowing(optimistic)
@@ -44,7 +42,7 @@ export default function SearchPersonRow({ person }) {
       setFollowing(next.isFollowing)
     } catch (cause) {
       setFollowing(previous)
-      setError(mapApiError(cause))
+      toastMessages.followToggleError(cause)
     } finally {
       setPending(false)
     }
@@ -68,7 +66,6 @@ export default function SearchPersonRow({ person }) {
             {person.followsMe ? (
               <span className="TextTiny Volume rounded px-2 py-0.5">Te sigue</span>
             ) : null}
-            {error ? <p className="TextTiny text-muted-foreground">{error}</p> : null}
           </div>
         ) : null
       }

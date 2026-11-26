@@ -4,7 +4,7 @@ import { listPlaylists } from '@synthos/shared'
 import { createRoom } from '@synthos/shared'
 import { useAuth } from '@synthos/shared'
 import { useMyRooms } from '@synthos/shared'
-import { mapApiError } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 
 const MAX_NAME = 60
 const MAX_DESCRIPTION = 200
@@ -31,7 +31,8 @@ export default function CreateRoomPage() {
   const { currentRoom, loading: roomsLoading } = useMyRooms()
 
   const [playlists, setPlaylists] = useState(null)
-  const [loadError, setLoadError] = useState('')
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [reloadToken, setReloadToken] = useState(0)
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -45,6 +46,9 @@ export default function CreateRoomPage() {
 
     let active = true
 
+    setLoadFailed(false)
+    setPlaylists(null)
+
     listPlaylists(user.id)
       .then((all) => {
         if (!active) return
@@ -55,13 +59,16 @@ export default function CreateRoomPage() {
         setPlaylistId((current) => current || (usable[0]?.id ?? ''))
       })
       .catch((cause) => {
-        if (active) setLoadError(mapApiError(cause))
+        if (!active) return
+
+        setLoadFailed(true)
+        toastMessages.playlistsLoadError(cause)
       })
 
     return () => {
       active = false
     }
-  }, [user])
+  }, [user, reloadToken])
 
   if (!user) return null
 
@@ -128,9 +135,15 @@ export default function CreateRoomPage() {
 
       navigate(`/salas/${created.id}`)
     } catch (cause) {
-      setError(mapApiError(cause))
+      toastMessages.roomCreateError(cause)
       setSaving(false)
     }
+  }
+
+  function handleRetryLoad() {
+    setLoadFailed(false)
+    setPlaylists(null)
+    setReloadToken((value) => value + 1)
   }
 
   return (
@@ -144,9 +157,18 @@ export default function CreateRoomPage() {
         </div>
       </div>
 
-      {loadError && <p className="mt-6 max-w-md rounded px-3 py-2 Salmon TextMedium">{loadError}</p>}
-
-      {playlists === null || roomsLoading ? (
+      {loadFailed ? (
+        <div className="mt-10 max-w-md rounded-lg p-6 SurfaceLight Elevation1">
+          <p className="text-foreground Header4">No hay playlists por ahora</p>
+          <button
+            type="button"
+            onClick={handleRetryLoad}
+            className="TextRegluar Volume mt-4 rounded px-4 py-2"
+          >
+            Reintentar
+          </button>
+        </div>
+      ) : playlists === null || roomsLoading ? (
         <p className="text-muted-foreground TextRegluar mt-8">Cargando tus playlists…</p>
       ) : nothingToShow ? (
         <NoPlaylistsState />

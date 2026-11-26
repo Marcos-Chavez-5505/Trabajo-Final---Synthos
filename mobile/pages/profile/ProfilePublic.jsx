@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	ActivityIndicator,
 	Pressable,
@@ -18,6 +19,7 @@ import FollowStats from "../../components/social/FollowStats/FollowStats";
 import { PROFILE_STYLES } from "./ProfileView.styles";
 import { PROFILE_PUBLIC_STYLES as styles } from "./ProfilePublic.styles";
 import { colors } from "../../theme";
+import { showActionError } from "../../lib/toastMessages";
 
 /**
  * Perfil público de otra persona.
@@ -25,12 +27,37 @@ import { colors } from "../../theme";
  * Es la pantalla a la que deben apuntar los avatares y nombres de usuario.
  * `Profile` sigue siendo el perfil propio (con edición y cierre de sesión).
  */
-export default function ProfilePublicScreen({ route }) {
+export default function ProfilePublicScreen(props) {
+	const [retryKey, setRetryKey] = useState(0);
+	const retry = useCallback(() => setRetryKey((value) => value + 1), []);
+
+	return <ProfilePublicContent key={retryKey} {...props} retry={retry} />;
+}
+
+function ProfilePublicContent({ route, retry }) {
 	const navigation = useNavigation();
 	const { user } = useAuth();
 	const userId = route.params?.userId;
 	const { isCurrent, person, hasError } = useProfilePublic(userId);
 	const follow = useFollow(person?.id ?? null);
+
+	useEffect(() => {
+		if (hasError) showActionError(null, "profile:load", { retry });
+	}, [hasError, retry]);
+
+	// `useFollow` guarda en `error` tanto fallos de carga del estado como del
+	// toggle: solo mostramos el toast cuando el error viene de un click nuestro.
+	const togglingRef = useRef(false);
+	useEffect(() => {
+		if (!togglingRef.current || follow.pending) return;
+		if (follow.error) showActionError(follow.error, "follow:toggle");
+		togglingRef.current = false;
+	}, [follow.error, follow.pending]);
+
+	const handleToggle = () => {
+		togglingRef.current = true;
+		return follow.toggle();
+	};
 
 	const isSelf =
 		Boolean(person) && String(person.id) === String(user?.id ?? "");
@@ -63,7 +90,7 @@ export default function ProfilePublicScreen({ route }) {
 		return (
 			<View style={PROFILE_STYLES.container}>
 				<Text style={styles.message}>
-					No pudimos cargar el perfil de esta persona.
+					No hay un perfil para mostrar.
 				</Text>
 				<Pressable
 					onPress={() => navigation.goBack()}
@@ -144,16 +171,12 @@ export default function ProfilePublicScreen({ route }) {
 						<FollowButton
 							canFollow={follow.canFollow}
 							isFollowing={follow.isFollowing}
-							onToggle={follow.toggle}
+							onToggle={handleToggle}
 							pending={follow.pending}
 							loading={follow.loading}
 							style={styles.followButton}
 						/>
 					)}
-
-					{follow.error ? (
-						<Text style={styles.error}>{follow.error}</Text>
-					) : null}
 				</View>
 			</ScrollView>
 

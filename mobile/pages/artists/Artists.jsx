@@ -20,14 +20,26 @@ import { EmptyState } from "../../components/ui/EmptyState/EmptyState";
 import Pagination from "../../components/ui/Pagination/Pagination";
 import ArtistCard from "../../components/cards/ArtistCard/ArtistCard";
 import { colors } from "../../theme";
+import { showActionError } from "../../lib/toastMessages";
 import { ARTISTS_PAGE_STYLES as styles } from "./ArtistsPage.styles";
 
 export default function ArtistsPage() {
+	const [retryVersion, setRetryVersion] = useState(0);
+	const handleRetry = useCallback(() => setRetryVersion((prev) => prev + 1), []);
+
+	return <ArtistsPageContent key={retryVersion} onRetry={handleRetry} />;
+}
+
+function ArtistsPageContent({ onRetry }) {
 	const [query, setQuery] = useState("");
 	const [page, setPage] = useState(1);
 	const insets = useSafeAreaInsets();
 
 	const { isCurrent, error, results } = useArtists(query, page);
+
+	useEffect(() => {
+		if (error) showActionError(error, "artists:load", { retry: onRetry });
+	}, [error, onRetry]);
 
 	useEffect(() => {
 		if (results.total > 0 && results.page !== page) {
@@ -119,7 +131,10 @@ export default function ArtistsPage() {
 function ArtistsEmptyState({ error, isLoading, query }) {
 	if (error) {
 		return (
-			<EmptyState title="No pudimos cargar los artistas" message={error} />
+			<EmptyState
+				title="Todavía no hay artistas"
+				message="Probá de nuevo en un momento."
+			/>
 		);
 	}
 

@@ -21,15 +21,27 @@ import { EmptyState } from "../../components/ui/EmptyState/EmptyState";
 import Pagination from "../../components/ui/Pagination/Pagination";
 import AlbumCard from "../../components/cards/AlbumCard/AlbumCard";
 import { colors } from "../../theme";
+import { showActionError } from "../../lib/toastMessages";
 import { ALBUMS_STYLES as styles } from "./Albums.styles";
 
 export default function AlbumsPage() {
+	const [retryVersion, setRetryVersion] = useState(0);
+	const handleRetry = useCallback(() => setRetryVersion((prev) => prev + 1), []);
+
+	return <AlbumsPageContent key={retryVersion} onRetry={handleRetry} />;
+}
+
+function AlbumsPageContent({ onRetry }) {
 	const navigation = useNavigation();
 	const [query, setQuery] = useState("");
 	const [page, setPage] = useState(1);
 	const insets = useSafeAreaInsets();
 
 	const { isCurrent, error, results } = useAlbums(page);
+
+	useEffect(() => {
+		if (error) showActionError(error, "albums:load", { retry: onRetry });
+	}, [error, onRetry]);
 
 	useEffect(() => {
 		if (results.total > 0 && results.page !== page) {
@@ -128,7 +140,12 @@ export default function AlbumsPage() {
 
 function AlbumsEmptyState({ error, isLoading, query }) {
 	if (error) {
-		return <EmptyState title="No pudimos cargar los álbumes" message={error} />;
+		return (
+			<EmptyState
+				title="Todavía no hay álbumes"
+				message="Probá de nuevo en un momento."
+			/>
+		);
 	}
 
 	if (isLoading) {

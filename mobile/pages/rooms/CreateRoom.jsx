@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
-import { useAuth, listPlaylists, createRoom, mapApiError, useMyRooms } from "@synthos/shared";
+import { useAuth, listPlaylists, createRoom, useMyRooms } from "@synthos/shared";
 import { CREATE_ROOM_STYLES as styles } from "./CreateRoom.styles";
 import { showActionError, showSuccess } from "../../lib/toastMessages";
 
@@ -22,7 +22,7 @@ export default function CreateRoomScreen() {
 	const { currentRoom, loading: roomsLoading } = useMyRooms();
 
 	const [playlists, setPlaylists] = useState(null);
-	const [loadError, setLoadError] = useState("");
+	const [loadVersion, setLoadVersion] = useState(0);
 
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
@@ -32,25 +32,32 @@ export default function CreateRoomScreen() {
 	const [saving, setSaving] = useState(false);
 
 	useEffect(() => {
-		if (!user) return;
+		if (!user) return undefined;
 
 		let active = true;
 
-		listPlaylists(user.id)
-			.then((all) => {
+		listPlaylists(user.id).then(
+			(all) => {
 				if (!active) return;
 				const usable = all.filter((p) => p.songIds.length > 0);
 				setPlaylists(usable);
 				setPlaylistId((current) => current || (usable[0]?.id ?? ""));
-			})
-			.catch((cause) => {
-				if (active) setLoadError(mapApiError(cause));
-			});
+			},
+			(cause) => {
+				if (!active) return;
+				// Sin playlists cargadas la pantalla se queda en "cargando":
+				// caer a [] deja ver el estado vacío y el toast lleva el retry.
+				setPlaylists([]);
+				showActionError(cause, "playlists:load", {
+					retry: () => setLoadVersion((value) => value + 1),
+				});
+			},
+		);
 
 		return () => {
 			active = false;
 		};
-	}, [user]);
+	}, [user, loadVersion]);
 
 	if (!user) return null;
 
@@ -137,8 +144,6 @@ export default function CreateRoomScreen() {
 				<Text style={styles.subtitle}>
 					Una sala se escucha en grupo. Elegí de qué playlist arranca.
 				</Text>
-
-				{loadError ? <Text style={styles.error}>{loadError}</Text> : null}
 
 				{nothingToShow ? (
 					<View style={styles.emptyContainer}>

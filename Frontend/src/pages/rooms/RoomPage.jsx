@@ -9,6 +9,7 @@ import {
 	leaveRoom,
 	voteSkip,
 	rateHost,
+	TOAST_COPY,
 } from "@synthos/shared";
 import {
 	connectSocket,
@@ -289,7 +290,7 @@ export default function RoomPage() {
 			title: "¿Salir de la sala?",
 			description: isHost
 				? "Sos la anfitriona: al salir, la sala se cierra para todos."
-				: "Dejás de escuchar con el resto. Podés volver a entrar con el código.",
+				: `Dejás de escuchar con el resto. ${TOAST_COPY.roomLeft[room.isPrivate ? "private" : "public"].description}`,
 			actionLabel: isHost ? "Cerrar y salir" : "Salir",
 			destructive: isHost,
 			onConfirm: () =>
@@ -298,7 +299,7 @@ export default function RoomPage() {
 					async () => {
 						await leaveRoom(id);
 
-						toastMessages.roomLeft(isHost);
+						toastMessages.roomLeft(isHost, room.isPrivate);
 						navigate("/salas", { replace: true });
 					},
 					toastMessages.roomLeaveError,

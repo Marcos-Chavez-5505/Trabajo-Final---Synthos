@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { toastMessages } from '@/lib/toastMessages.js'
 import Avatar from '@/components/ui/Avatar.jsx'
 import UserRow from '@/components/cards/UserRow.jsx'
 import { useAuth, useFollowList } from '@synthos/shared'
@@ -6,6 +8,18 @@ import { useAuth, useFollowList } from '@synthos/shared'
 const TIPOS = ['seguidores', 'siguiendo']
 
 export default function FollowListPage({ relation: requested }) {
+  const [attempt, setAttempt] = useState(0)
+
+  return (
+    <FollowListContent
+      key={attempt}
+      relation={requested}
+      onRetry={() => setAttempt((value) => value + 1)}
+    />
+  )
+}
+
+function FollowListContent({ relation: requested, onRetry }) {
   const { id } = useParams()
   const { user } = useAuth()
 
@@ -14,6 +28,10 @@ export default function FollowListPage({ relation: requested }) {
   const relation = TIPOS.includes(requested) ? requested : 'seguidores'
 
   const { isCurrent, people, person, error } = useFollowList(personId, relation)
+
+  useEffect(() => {
+    if (error) toastMessages.followListLoadError(error)
+  }, [error])
 
   if (!personId) {
     return (
@@ -66,14 +84,21 @@ export default function FollowListPage({ relation: requested }) {
 
       {!isCurrent ? (
         <p className="text-muted-foreground TextRegluar mt-8">Cargando…</p>
-      ) : error ? (
-        <p className="text-muted-foreground TextRegluar mt-8">{error}</p>
       ) : people.length === 0 ? (
         <div className="mt-8">
           <p className="text-foreground Header4 mb-1">
             {isOwn ? 'Todavía no hay nadie' : 'Sin nadie por ahora'}
           </p>
           <p className="text-muted-foreground TextRegluar">{empty}</p>
+          {error && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="TextRegluar Volume mt-4 rounded px-4 py-2"
+            >
+              Reintentar
+            </button>
+          )}
         </div>
       ) : (
         <ul className="mt-8 flex max-w-2xl flex-col gap-3">

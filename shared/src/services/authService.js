@@ -2,6 +2,7 @@
 // `{ success, user }` en register/login (el componente no maneja excepciones de
 // red: se traducen a `success: false` con mensaje).
 import { get, post, setAuthToken, ApiError, getStorage } from './api.js'
+import { mapApiError } from '../utils/mapError.js'
 
 // Guarda el token y el usuario ya mapeado (no la respuesta cruda del backend):
 // así una recarga sin conexión puede reconstruir la sesión sin volver a mapear.
@@ -121,7 +122,7 @@ export async function registerUser({ email, username, password }) {
 
     return { success: true, user }
   } catch (error) {
-    return { success: false, message: error.message }
+    return { success: false, message: mapApiError(error) }
   }
 }
 
@@ -137,7 +138,7 @@ export async function loginUser(email, password) {
 
     return { success: true, user }
   } catch (error) {
-    return { success: false, message: error.message }
+    return { success: false, message: mapApiError(error) }
   }
 }
 

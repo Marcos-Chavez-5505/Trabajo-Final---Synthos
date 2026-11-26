@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
-import { mapApiError, searchUsers, useDebounce } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
+import { searchUsers, useDebounce } from '@synthos/shared'
 import Avatar from '@/components/ui/Avatar.jsx'
 import {
   Dialog,
@@ -48,24 +49,17 @@ function MemberRow({ member, isViewer, canManage, onRemoveMember }) {
   const canRemove = canManage && !isCreator
   const [menuOpen, setMenuOpen] = useState(false)
   const [removing, setRemoving] = useState(false)
-  const [removeError, setRemoveError] = useState('')
-
-  function handleOpenChange(next) {
-    setMenuOpen(next)
-    if (!next) setRemoveError('')
-  }
 
   async function handleRemove() {
     if (removing) return
 
     setRemoving(true)
-    setRemoveError('')
 
     try {
       await onRemoveMember?.(member)
       setMenuOpen(false)
     } catch (cause) {
-      setRemoveError(mapApiError(cause))
+      toastMessages.playlistMemberRemoveError(cause)
     } finally {
       setRemoving(false)
     }
@@ -88,7 +82,7 @@ function MemberRow({ member, isViewer, canManage, onRemoveMember }) {
       </div>
 
       {canRemove ? (
-        <Popover open={menuOpen} onOpenChange={handleOpenChange}>
+        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
           <PopoverTrigger
             render={
               <button
@@ -124,10 +118,6 @@ function MemberRow({ member, isViewer, canManage, onRemoveMember }) {
               />
               {removing ? 'Eliminando…' : 'Eliminar de la playlist'}
             </button>
-
-            {removeError && (
-              <p className="Salmon TextMedium mt-1 rounded px-3 py-2">{removeError}</p>
-            )}
           </PopoverContent>
         </Popover>
       ) : (
@@ -189,8 +179,8 @@ function InviteRow({ id, person, status, active, pending, disabled, onInvite, on
  *
  * Lo abre quien lo usa (hoy, el botón "Invitar" de una playlist). `onSelect`
  * decide qué hacer con la persona elegida; si devuelve una promesa, la fila
- * muestra "Enviando…" y el error de la API aparece sin cerrar el diálogo, para
- * poder invitar a varias personas seguidas.
+ * muestra "Enviando…" y el error de la API se reporta por toast, sin cerrar el
+ * diálogo, para poder invitar a varias personas seguidas.
  *
  * Solo se busca a partir de `MIN_QUERY` letras: con la query vacía
  * `GET /users/search` devuelve el catálogo completo. El debounce y el
@@ -238,7 +228,7 @@ export default function UserSearch({
   const [activeIndex, setActiveIndex] = useState(0)
   const [response, setResponse] = useState({ key: null, items: [], error: null })
   const [pendingId, setPendingId] = useState(null)
-  const [submitError, setSubmitError] = useState('')
+  const [retryToken, setRetryToken] = useState(0)
 
   const trimmedQuery = query.trim()
   const hasMinChars = trimmedQuery.length >= MIN_QUERY
@@ -260,7 +250,7 @@ export default function UserSearch({
       })
       .catch((cause) => {
         if (!active || cause?.name === 'AbortError') return
-        setResponse({ key: requestKey, items: [], error: mapApiError(cause) })
+        setResponse({ key: requestKey, items: [], error: cause })
       })
 
     return () => {
@@ -268,12 +258,22 @@ export default function UserSearch({
       controller.abort()
     }
 
-  }, [open, canSearch, debouncedQuery, requestKey])
+  }, [open, canSearch, debouncedQuery, requestKey, retryToken])
 
   const isSettled = trimmedQuery === debouncedQuery
   const isCurrent = response.key === requestKey
   const isLoading = open && hasMinChars && (!isSettled || (canSearch && !isCurrent))
   const searchError = isSettled && isCurrent ? response.error : null
+
+  useEffect(() => {
+    if (searchError) toastMessages.searchPeopleError(searchError)
+  }, [searchError])
+
+  function handleRetry() {
+    setResponse({ key: null, items: [], error: null })
+    setRetryToken((prev) => prev + 1)
+  }
+
   // La zona de resultados se expande al haber búsqueda y se contrae al vaciarla.
   const expanded = hasMinChars
 
@@ -301,7 +301,6 @@ export default function UserSearch({
 
   function handleOpenChange(next) {
     onOpenChange(next)
-    setSubmitError('')
 
     if (!next) {
       setQuery('')
@@ -315,12 +314,11 @@ export default function UserSearch({
     if (pendingId || invitationStatusById.has(person.id)) return
 
     setPendingId(person.id)
-    setSubmitError('')
 
     try {
       await onSelect(person)
     } catch (cause) {
-      setSubmitError(mapApiError(cause))
+      toastMessages.playlistInviteError(cause)
     } finally {
       setPendingId(null)
     }
@@ -342,7 +340,7 @@ export default function UserSearch({
   }
 
   const emptyMessage = searchError ? (
-    <span className="text-destructive">{searchError}</span>
+    'No hay personas para mostrar por ahora.'
   ) : isLoading ? (
     'Buscando…'
   ) : !hasMinChars ? (
@@ -402,10 +400,6 @@ export default function UserSearch({
           <h3 id={`${listId}-invite`} className="Header4 px-8">
             {inviteTitle}
           </h3>
-
-          {submitError && (
-            <p className="Salmon TextMedium mx-8 mt-2 rounded px-3 py-2">{submitError}</p>
-          )}
 
           <div className="relative mx-8 mt-3">
             <img
@@ -495,12 +489,21 @@ export default function UserSearch({
                   ))}
                 </ul>
               ) : (
-                <p
+                <div
                   id={listId}
-                  className="TextMedium flex h-44 items-center justify-center px-6 text-center text-muted-foreground"
+                  className="TextMedium flex h-44 flex-col items-center justify-center gap-2 px-6 text-center text-muted-foreground"
                 >
-                  {emptyMessage}
-                </p>
+                  <span>{emptyMessage}</span>
+                  {searchError && (
+                    <button
+                      type="button"
+                      onClick={handleRetry}
+                      className="TextRegluar Volume rounded px-4 py-2"
+                    >
+                      Reintentar
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </motion.div>

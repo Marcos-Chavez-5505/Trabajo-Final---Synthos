@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import {
 	AuthProvider,
@@ -8,6 +9,7 @@ import {
 import ComponentTest from "./ComponentTest";
 import { colors, fontSize, fontWeight } from "../../theme";
 import MediaCard from "../../components/cards/MediaCard/MediaCard";
+import { showActionError } from "../../lib/toastMessages";
 
 const dummyMotor = {
 	load: () => {},
@@ -28,6 +30,10 @@ const dummyMotor = {
 function MediaCardTestContent() {
 	const { user, loading: authLoading } = useAuth();
 	const { songs, error, loading: songsLoading } = useHomeSongs();
+
+	useEffect(() => {
+		if (error) showActionError(error, "home:songs:load");
+	}, [error]);
 
 	console.log("[MEDIACARD_TEST]", {
 		authLoading,
@@ -58,7 +64,7 @@ function MediaCardTestContent() {
 
 			{error ? (
 				<Text style={{ color: colors.textPrimary, opacity: 0.7 }}>
-					No pudimos cargar las novedades.
+					No hay novedades por ahora.
 				</Text>
 			) : (
 				<ScrollView

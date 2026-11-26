@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@synthos/shared'
 import {
@@ -8,6 +8,7 @@ import {
 import { useSongPlaylists } from '@synthos/shared'
 import addToPlaylistIcon from '@synthos/shared/assets/icons/add_to_playlist.svg'
 import playlistIcon from '@synthos/shared/assets/icons/playlist.svg'
+import { toastMessages } from '@/lib/toastMessages.js'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -52,6 +53,10 @@ export default function AddToPlaylistPanel({ songId, className = '', tooltip = f
   // acá y no en el reproductor.
   const [open, setOpen] = useState(false)
 
+  useEffect(() => {
+    if (error) toastMessages.playlistsLoadError(error)
+  }, [error])
+
   const playlists = allPlaylists.filter((playlist) => !playlist.isFavorites)
 
   async function handleToggle(playlist) {
@@ -60,12 +65,19 @@ export default function AddToPlaylistPanel({ songId, className = '', tooltip = f
     if (pendingId) return
 
     setPendingId(playlist.id)
+    const removing = contains(playlist)
 
     try {
-      if (contains(playlist)) {
+      if (removing) {
         await removeSongFromPlaylist(userId, playlist.id, songId, { isFavorites: false })
       } else {
         await addSongToPlaylist(userId, playlist.id, songId)
+      }
+    } catch (cause) {
+      if (removing) {
+        toastMessages.songRemoveError(cause)
+      } else {
+        toastMessages.apiError('No se pudo agregar la canción', cause, 'song-add-error')
       }
     } finally {
       setPendingId(null)
@@ -112,7 +124,18 @@ export default function AddToPlaylistPanel({ songId, className = '', tooltip = f
               {loading ? (
                 <p className="text-muted-foreground TextMedium px-2 py-1.5">Cargando…</p>
               ) : error ? (
-                <p className="Salmon TextMedium mx-2 my-1 rounded px-3 py-2">{error}</p>
+                <div className="px-2 py-1.5">
+                  <p className="text-muted-foreground TextMedium">
+                    No hay playlists por ahora.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="TextRegluar Volume mt-1 rounded px-3 py-1"
+                  >
+                    Reintentar
+                  </button>
+                </div>
               ) : playlists.length === 0 ? (
                 <p className="text-muted-foreground TextMedium px-2 py-1.5">
                   Todavía no tenés playlists.{' '}

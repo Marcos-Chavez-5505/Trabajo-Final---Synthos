@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import Avatar from '@/components/ui/Avatar.jsx'
 import { useProfileEdit } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 import { prepareProfileImage, previewUrlFor } from '@/lib/images/prepareImage.js'
 
 const ACCEPT = 'image/jpeg,image/png,image/webp'
@@ -22,6 +23,10 @@ export default function ProfileEdit({ onDone }) {
     avatarSrc: savedAvatarSrc,
     canRemove,
   } = useProfileEdit(onDone)
+
+  useEffect(() => {
+    if (error) toastMessages.profileEditError(error)
+  }, [error])
 
   const preview = useMemo(() => (pending ? previewUrlFor(pending) : null), [pending])
 
@@ -58,9 +63,10 @@ export default function ProfileEdit({ onDone }) {
 
       setPending(prepared)
       setRemoving(false)
-    } catch {
+    } catch (cause) {
       if (pick !== pickRef.current) return
 
+      toastMessages.profileEditError(cause)
       setPending(null)
       setRemoving(false)
     }
@@ -160,8 +166,6 @@ export default function ProfileEdit({ onDone }) {
           rows={3}
           className="w-full rounded px-3 py-2 Volume TextRegluar Placeholder outline-none"
         />
-
-        {error && <p className="rounded px-3 py-2 Salmon TextMedium">{error}</p>}
 
         <div className="flex gap-2">
           <button

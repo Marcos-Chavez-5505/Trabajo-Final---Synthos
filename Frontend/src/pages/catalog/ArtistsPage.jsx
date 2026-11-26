@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { buildPageRange, useArtists } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 import ArtistCard from '@/components/cards/ArtistCard.jsx'
 import microphoneIcon from '@synthos/shared/assets/icons/microphone.svg'
 import searchIcon from '@synthos/shared/assets/icons/search.svg'
@@ -23,12 +24,24 @@ import {
  * detalle, que trae los álbumes del artista.
  */
 export default function ArtistsPage() {
+  const [attempt, setAttempt] = useState(0)
+
+  return (
+    <ArtistsPageContent key={attempt} onRetry={() => setAttempt((value) => value + 1)} />
+  )
+}
+
+function ArtistsPageContent({ onRetry }) {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const query = searchParams.get('q') ?? ''
   const page = Math.max(Number(searchParams.get('page')) || 1, 1)
 
   const { isCurrent, error, results } = useArtists(query, page)
+
+  useEffect(() => {
+    if (error) toastMessages.artistsLoadError(error)
+  }, [error])
 
   // Si la URL pedía una página fuera de rango (el total bajó al buscar), se
   // corrige acá en vez de mostrar un vacío que parezca "no hay artistas".
@@ -90,13 +103,12 @@ export default function ArtistsPage() {
         />
       </div>
 
-      {error ? (
-        <div className="py-12 text-center">
-          <p className="text-foreground Header4 mb-1">No pudimos cargar los artistas</p>
-          <p className="text-muted-foreground TextRegluar">{error}</p>
-        </div>
-      ) : results.items.length === 0 ? (
-        <EmptyState isLoading={!isCurrent} query={query} />
+      {results.items.length === 0 ? (
+        <EmptyState
+          isLoading={!isCurrent}
+          query={query}
+          onRetry={error ? onRetry : undefined}
+        />
       ) : (
         <>
           <ul className="mt-8 flex flex-wrap gap-x-4 gap-y-6">
@@ -151,7 +163,7 @@ export default function ArtistsPage() {
   )
 }
 
-function EmptyState({ isLoading, query }) {
+function EmptyState({ isLoading, query, onRetry }) {
   if (isLoading) {
     return <p className="text-muted-foreground TextRegluar mt-8">Cargando artistas…</p>
   }
@@ -172,6 +184,15 @@ function EmptyState({ isLoading, query }) {
           ? `No encontramos artistas para "${query}". Probá con otro término.`
           : 'Cuando se cargue el catálogo, los artistas aparecen acá.'}
       </p>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="TextRegluar Volume mt-6 rounded px-4 py-2"
+        >
+          Reintentar
+        </button>
+      )}
     </div>
   )
 }

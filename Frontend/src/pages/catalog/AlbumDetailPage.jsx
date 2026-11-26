@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { usePlayer } from '@synthos/shared'
 import { getAlbumById } from '@synthos/shared'
+import { toastMessages } from '@/lib/toastMessages.js'
 import MiniMediaCard from '@/components/cards/MiniMediaCard.jsx'
 import albumIcon from '@synthos/shared/assets/icons/album.svg'
-import { mapApiError } from '@synthos/shared'
 
 const TYPE_LABELS = { single: 'Sencillo', ep: 'EP', album: 'Álbum' }
 
@@ -18,23 +18,29 @@ export default function AlbumDetailPage() {
   const { id } = useParams()
   const { playSongs, addToQueue } = usePlayer()
 
-  const [response, setResponse] = useState({ key: null, album: null, error: null })
+  const [response, setResponse] = useState({ key: null, album: null, error: false })
+  const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
     let active = true
 
+    setResponse({ key: String(id), album: null, error: false })
+
     getAlbumById(id)
       .then((album) => {
-        if (active) setResponse({ key: String(id), album, error: null })
+        if (active) setResponse({ key: String(id), album, error: false })
       })
       .catch((cause) => {
-        if (active) setResponse({ key: String(id), album: null, error: mapApiError(cause) })
+        if (!active) return
+
+        setResponse({ key: String(id), album: null, error: true })
+        toastMessages.albumDetailError(cause)
       })
 
     return () => {
       active = false
     }
-  }, [id])
+  }, [id, reloadToken])
 
   const isCurrent = response.key === String(id)
   const album = isCurrent ? response.album : null
@@ -43,10 +49,19 @@ export default function AlbumDetailPage() {
   if (error) {
     return (
       <section className="px-6 py-4 md:px-10">
-        <p className="mt-8 rounded px-3 py-2 Salmon TextMedium">{error}</p>
-        <Link to="/albums" className="text-accent mt-6 inline-block rounded px-4 py-2">
-          Volver a albums
-        </Link>
+        <p className="text-foreground Header4 mt-8">No hay un álbum para mostrar</p>
+        <div className="mt-6 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setReloadToken((value) => value + 1)}
+            className="TextRegluar Volume rounded px-4 py-2"
+          >
+            Reintentar
+          </button>
+          <Link to="/albums" className="text-accent inline-block rounded px-4 py-2">
+            Volver a albums
+          </Link>
+        </div>
       </section>
     )
   }

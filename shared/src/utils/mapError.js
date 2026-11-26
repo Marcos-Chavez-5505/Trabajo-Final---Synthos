@@ -116,6 +116,9 @@ const BY_STATUS = {
 	403: "No tenés permiso para hacer eso.",
 	404: "No encontramos lo que buscabas.",
 	500: "El servidor tuvo un problema. Probá de nuevo en un momento.",
+	502: "El servidor no está disponible. Probá de nuevo en un momento.",
+	503: "El servidor no está disponible. Probá de nuevo en un momento.",
+	504: "El servidor tardó demasiado en responder. Probá de nuevo.",
 };
 
 /**

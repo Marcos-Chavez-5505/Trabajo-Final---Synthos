@@ -51,6 +51,9 @@ export * from "./utils/formatTime.js";
 export * from "./utils/genreLabels.js";
 export { default as buildPageRange } from "./utils/pageRange.js";
 
+// copy de toasts (datos puros; cada plataforma elige id y cuándo mostrarlos)
+export * from "./toast/catalog.js";
+
 // tokens
 export * from "./tokens/tokens.js";
 
