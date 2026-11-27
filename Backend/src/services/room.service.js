@@ -13,6 +13,9 @@ const LIKE_WILDCARDS = /[\\%_]/g;
 // Tope de avatares que muestra la tarjeta de sala (la anfitriona va aparte).
 const MAX_CARD_MEMBERS = 9;
 
+// Tamaño fijo del listado público de salas.
+const ROOM_PAGE_SIZE = 12;
+
 // Namespace de los advisory locks por usuario que serializan create/join. Dos
 // pedidos simultáneos del mismo usuario (dos pestañas, web + mobile) se
 // resuelven uno después del otro: el segundo ve la membresía del primero y
@@ -162,12 +165,43 @@ async function listRooms({
 	sort = "name",
 	order = "asc",
 	includeMembers = false,
+	page = 1,
 } = {}) {
-	const rows = await prisma.$queryRaw(
-		buildRoomListQuery({ query, sort, order, onlyMine: false }),
-	);
+	const requestedPage = Number.isInteger(page) && page >= 1 ? page : 1;
+	const baseQuery = buildRoomListQuery({
+		query,
+		sort,
+		order,
+		onlyMine: false,
+	});
 
-	return enrichRoomRows(rows, { includeMembers });
+	const [countRows, rows] = await prisma.$transaction([
+		prisma.$queryRaw(
+			Prisma.sql`SELECT COUNT(*)::int AS total FROM (${baseQuery}) AS rooms`,
+		),
+		prisma.$queryRaw(
+			Prisma.sql`${baseQuery} LIMIT ${ROOM_PAGE_SIZE} OFFSET ${(requestedPage - 1) * ROOM_PAGE_SIZE}`,
+		),
+	]);
+
+	const total = countRows[0]?.total ?? 0;
+	const totalPages = Math.max(1, Math.ceil(total / ROOM_PAGE_SIZE));
+	const pageNumber = Math.min(requestedPage, totalPages);
+
+	const pageRows =
+		pageNumber === requestedPage
+			? rows
+			: await prisma.$queryRaw(
+					Prisma.sql`${baseQuery} LIMIT ${ROOM_PAGE_SIZE} OFFSET ${(pageNumber - 1) * ROOM_PAGE_SIZE}`,
+				);
+
+	return {
+		items: await enrichRoomRows(pageRows, { includeMembers }),
+		total,
+		page: pageNumber,
+		pageSize: ROOM_PAGE_SIZE,
+		totalPages,
+	};
 }
 
 async function listMyRooms(userId, { query = "" } = {}) {

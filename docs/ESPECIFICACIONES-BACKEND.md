@@ -579,7 +579,7 @@ campo se ignora y la playlist se actualiza solo con `name`/`description`/`addSon
 
 | Endpoint | Auth | Request | Response |
 |---|---|---|---|
-| `GET /` | opcional | query: `query` (texto libre), `sort` = `name` (default, alias `alphabetical`) \| `rating`, `order` = `asc` (default) \| `desc` | **Array plano** (sin envelope) de salas. Con sesión agrega `members`; sin sesión no |
+| `GET /` | opcional | query: `query` (texto libre), `sort` = `name` (default, alias `alphabetical`) \| `rating`, `order` = `asc` (default) \| `desc`, `page` = entero ≥ 1 (default `1`) | Envelope `{ items, total, page, pageSize, totalPages }`. `pageSize` es fijo: **12**. Con sesión cada ítem agrega `members`; sin sesión no |
 | `GET /mine` | **sí** | query: `query` opcional | La sala activa de la que el usuario es miembro (**0 o 1** por la regla D26), mismas columnas, siempre con `members`. **Incluye las privadas** (a esas se entra con el código) |
 | `POST /` | **sí** | body `{ name, description?, playlistId, isPrivate }` | `201` con la sala: `id`, `code`, `name`, `description`, `isPrivate`, `maxCapacity` (**siempre 10**, lo fija el server), `status`, `hostAvgRating`, `viewerHasRated`, `members[]` (id, username, `pictureUrl`, rol), `playlistSource` con sus `songs` en orden por `position`. `409` `ROOM_ALREADY_IN_ROOM` / `ROOM_ALREADY_HOSTING` si ya está en una sala (D26) |
 | `POST /join` | **sí** | body `{ code }` | `201` si se unió, `200` si ya era miembro. La misma sala que `POST /`. Si el usuario es **invitado** en otra sala, sale de esa y entra (auto-leave); si es **anfitrión**, `409` `ROOM_ALREADY_HOSTING`. Sirve para públicas y privadas: la privada se entra solo con el código (D27) |
@@ -592,7 +592,7 @@ campo se ignora y la playlist se actualiza solo con `name`/`description`/`addSon
 | `POST /:id/skip-votes` | **sí** | — | `201 { status, skipVotes, approved }`. **403 para el anfitrión**; `403` `ROOM_ACCESS_LOST` si no sos miembro |
 | `POST /:id/rating` | **sí** | body `{ rating }` (entero 1–5) | `201 { status, rating }`. Califica al anfitrión (TS-11) |
 
-**Forma de las salas del listado** (columnas explícitas, nunca `room.*`): `id`, `code`,
+**Forma de cada ítem de `items`** (columnas explícitas, nunca `room.*`): `id`, `code`,
 `name`, `description`, `id_playlist_source`, `is_private`, `max_capacity`, `status`,
 `creation_date`, `host_id`, `host_username`, `host_picture_url`, `avg_rating`,
 `ratings_count`, `members_count`, `songs_count`, `is_live`, `genres` y, solo con sesión,
@@ -620,6 +620,10 @@ lo coalescea a `0`.
 **Orden:** `sort=name` ordena por nombre en el sentido de `order`; `sort=rating` ordena por
 `avg_rating DESC` con desempate alfabético. `sort` u `order` inválidos devuelven `400` con
 `INVALID_SORT` / `INVALID_ORDER` (`{ allowed: [...] }`).
+
+**Paginación:** el listado público se devuelve en páginas de **12** salas. `page` fuera de
+rango se acota a la última página y la respuesta informa la página efectiva; `totalPages`
+es al menos `1` (aunque no haya salas).
 
 **Origen de la playlist (D19):** `POST /rooms` acepta **cualquier playlist** a la que el
 usuario tenga acceso, sea personal propia o colaborativa de la que participe: no se valida
@@ -712,10 +716,10 @@ muestre el promedio.
 
 ```bash
 # Sin sesión: no incluye `members` (no se exponen avatares de invitados).
-curl -s "http://localhost:3000/api/rooms?sort=name&order=asc"
+curl -s "http://localhost:3000/api/rooms?sort=name&order=asc&page=1"
 
 # Con sesión: agrega `members` de los presentes.
-curl -s "http://localhost:3000/api/rooms?sort=name&order=asc" \
+curl -s "http://localhost:3000/api/rooms?sort=name&order=asc&page=2" \
   -H "Authorization: Bearer $TOKEN"
 
 # Mis salas (siempre autenticado, incluye privadas y siempre trae `members`).
@@ -723,7 +727,19 @@ curl -s "http://localhost:3000/api/rooms/mine" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-Ítem de ejemplo (con sesión):
+Envelope del listado:
+
+```json
+{
+  "items": [],
+  "total": 25,
+  "page": 1,
+  "pageSize": 12,
+  "totalPages": 3
+}
+```
+
+Ítem de `items` (con sesión):
 
 ```json
 {

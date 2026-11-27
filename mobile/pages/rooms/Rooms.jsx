@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useNavigation } from "@react-navigation/native";
@@ -25,8 +25,16 @@ export default function RoomsScreen() {
 function RoomsContent({ input, setInput, retry }) {
 	const navigation = useNavigation();
 	const debounced = useDebounce(input, DEBOUNCE_MS);
+	const [page, setPage] = useState(1);
+	const listRef = useRef(null);
 
-	const { isCurrent, rooms, error } = useRoomsList(debounced, "name", "asc");
+	const {
+		isCurrent,
+		rooms,
+		page: currentPage,
+		totalPages,
+		error,
+	} = useRoomsList(debounced, "name", "asc", page);
 
 	useEffect(() => {
 		if (error) showActionError(error, "rooms:load", { retry });
@@ -37,6 +45,18 @@ function RoomsContent({ input, setInput, retry }) {
 	const isCurrentHost = currentRoom
 		? String(currentRoom.hostId) === String(user?.id)
 		: false;
+
+	function handleSearchChange(text) {
+		setInput(text);
+		setPage(1);
+	}
+
+	function goToPage(target) {
+		if (target < 1 || target > totalPages) return;
+
+		setPage(target);
+		listRef.current?.scrollToOffset({ offset: 0, animated: true });
+	}
 
 	function renderItem({ item }) {
 		return (
@@ -69,10 +89,46 @@ function RoomsContent({ input, setInput, retry }) {
 			<TopBar style={styles.topBar} />
 
 			<FlatList
+				ref={listRef}
 				data={rooms}
 				keyExtractor={(item) => String(item.id)}
 				renderItem={renderItem}
 				contentContainerStyle={styles.listContainer}
+				ListFooterComponent={
+					totalPages > 1 ? (
+						<View style={styles.pagination}>
+							<Pressable
+								style={[
+									styles.pageButton,
+									currentPage <= 1 && styles.pageButtonDisabled,
+								]}
+								onPress={() => goToPage(currentPage - 1)}
+								disabled={currentPage <= 1}
+								accessibilityRole="button"
+								accessibilityLabel="Ir a la página anterior"
+							>
+								<Text style={styles.pageButtonText}>Anterior</Text>
+							</Pressable>
+
+							<Text style={styles.pageLabel}>
+								Página {currentPage} de {totalPages}
+							</Text>
+
+							<Pressable
+								style={[
+									styles.pageButton,
+									currentPage >= totalPages && styles.pageButtonDisabled,
+								]}
+								onPress={() => goToPage(currentPage + 1)}
+								disabled={currentPage >= totalPages}
+								accessibilityRole="button"
+								accessibilityLabel="Ir a la página siguiente"
+							>
+								<Text style={styles.pageButtonText}>Siguiente</Text>
+							</Pressable>
+						</View>
+					) : null
+				}
 				ListHeaderComponent={
 					<>
 						<View style={styles.header}>
@@ -94,7 +150,7 @@ function RoomsContent({ input, setInput, retry }) {
 							<TextInput
 								style={styles.searchInput}
 								value={input}
-								onChangeText={setInput}
+								onChangeText={handleSearchChange}
 								placeholder="Buscar sala o anfitriona"
 								placeholderTextColor={colors.textMuted}
 								autoCapitalize="none"

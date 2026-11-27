@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Avatar from "@/components/ui/Avatar.jsx";
 import crownIcon from "@synthos/shared/assets/icons/crown.svg";
@@ -9,10 +10,13 @@ import userGroupIcon from "@synthos/shared/assets/icons/user_group.svg";
  * Tarjeta de una sala (v1, rediseño según Objetivo.png).
  *
  * Estructura (ancho):
- *   [LIVE] [géneros]                         [action]
+ *   [LIVE] [géneros | separados | por barra]         [action]
  *   Nombre de la sala
  *   Descripción (2 líneas)
  *   [bandeja de asistentes]            anfitrion + corazones
+ *
+ * Los géneros se separan con "|" y, si no entran en el ancho disponible,
+ * se muestran en un carrusel automático (marquee).
  *
  * Campos opcionales que la tarjeta lee si existen (ver preguntas abiertas):
  *   - room.isLive          boolean (LIVE si true, OFF si false)
@@ -27,6 +31,8 @@ const DEFAULT_CAPACITY = 10;
 const MAX_GUEST_SLOTS = 9;
 const MAX_GENRES = 3;
 const HEARTS = 5;
+const TICKER_SPEED = 30; // px por segundo
+const TICKER_PAUSE = 1500; // ms de espera en cada extremo
 
 export default function RoomCard({ room, action }) {
   const hostId = room.hostId || room.hostUserId || room.ownerId;
@@ -49,7 +55,7 @@ export default function RoomCard({ room, action }) {
           {genres.length > 0 && (
             <span className="Surface TextFucsia TextTiny font-bold flex max-w-full min-w-0 items-center gap-2 rounded-xl px-3 py-1.5 h-8">
               <MaskIcon src={userGroupIcon} className="h-5 w-5 shrink-0" />
-              <span className="truncate">{genres.join(" · ")}</span>
+              <GenresTicker genres={genres} />
             </span>
           )}
         </div>
@@ -88,6 +94,126 @@ export default function RoomCard({ room, action }) {
         )}
       </div>
     </article>
+  );
+}
+
+function GenresList({ genres }) {
+  return (
+    <span className="flex shrink-0 items-center gap-2 whitespace-nowrap">
+      {genres.map((genre, index) => (
+        <span key={`${genre}-${index}`} className="flex items-center gap-2">
+          {index > 0 && (
+            <span aria-hidden="true" className="font-extrabold TextLarge">
+              ·
+            </span>
+          )}
+          <span>{genre}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function GenresTicker({ genres }) {
+  const containerRef = useRef(null);
+  const trackRef = useRef(null);
+  const contentRef = useRef(null);
+  const animationRef = useRef(null);
+  const [overflow, setOverflow] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  // Respeta prefers-reduced-motion: en ese caso se usa scroll horizontal manual.
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  // Detecta si los géneros no entran en el ancho disponible.
+  useEffect(() => {
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!container || !content) return;
+
+    const measure = () => {
+      setOverflow(content.offsetWidth > container.clientWidth + 1);
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [genres]);
+
+  // Anima el carrusel (ida y vuelta) solo cuando hay overflow:
+  // espera al inicio -> avanza hasta el final -> espera -> vuelve suavemente.
+  useEffect(() => {
+    const track = trackRef.current;
+    const container = containerRef.current;
+    const content = contentRef.current;
+    if (!track || !container || !content || !overflow || reducedMotion) return;
+
+    const distance = Math.max(0, content.offsetWidth - container.clientWidth);
+    if (distance === 0) return;
+
+    const travel = (distance / TICKER_SPEED) * 1000;
+    const total = 2 * travel + 2 * TICKER_PAUSE;
+    const a = TICKER_PAUSE / total; // fin de la espera inicial
+    const b = (TICKER_PAUSE + travel) / total; // llegada al final
+    const c = (2 * TICKER_PAUSE + travel) / total; // fin de la espera final
+
+    const animation = track.animate(
+      [
+        { transform: "translateX(0)", offset: 0 },
+        { transform: "translateX(0)", offset: a, easing: "ease-in-out" },
+        { transform: `translateX(-${distance}px)`, offset: b },
+        { transform: `translateX(-${distance}px)`, offset: c, easing: "ease-in-out" },
+        { transform: "translateX(0)", offset: 1 },
+      ],
+      {
+        duration: total,
+        iterations: Infinity,
+        easing: "linear",
+      },
+    );
+    animationRef.current = animation;
+
+    return () => {
+      animation.cancel();
+      animationRef.current = null;
+    };
+  }, [overflow, reducedMotion, genres]);
+
+  const pause = () => animationRef.current?.pause();
+  const play = () => animationRef.current?.play();
+
+  return (
+    <div
+      ref={containerRef}
+      aria-label={genres.join(", ")}
+      title={genres.join(" | ")}
+      onMouseEnter={pause}
+      onMouseLeave={play}
+      onFocus={pause}
+      onBlur={play}
+      className={`min-w-0 ${
+        reducedMotion && overflow
+          ? "overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          : "overflow-hidden"
+      }`}
+    >
+      <div
+        ref={trackRef}
+        className="flex w-max items-center will-change-transform"
+      >
+        <span ref={contentRef} className="flex">
+          <GenresList genres={genres} />
+        </span>
+      </div>
+    </div>
   );
 }
 

@@ -30,17 +30,30 @@ export const DEFAULT_ROOM_ORDER = "asc";
 
 const PLAYBACK_ACTIONS = ["play", "pause", "next", "stop", "play-song"];
 
-export async function searchRooms({ query = "", sort, order, signal } = {}) {
+export async function searchRooms({
+	query = "",
+	sort,
+	order,
+	page = 1,
+	signal,
+} = {}) {
 	const data = await get("/rooms", {
 		params: {
 			query: String(query ?? "").trim(),
 			sort: normaliseSort(sort),
 			order: normaliseOrder(order),
+			page: Math.max(Number(page) || 1, 1),
 		},
 		signal,
 	});
 
-	return (data ?? []).map(toRoom);
+	return {
+		items: (data?.items ?? []).map(toRoom),
+		total: Number(data?.total ?? 0),
+		page: Number(data?.page ?? 1),
+		pageSize: Number(data?.pageSize ?? 12),
+		totalPages: Number(data?.totalPages ?? 1),
+	};
 }
 
 export async function listMyRooms({ signal } = {}) {

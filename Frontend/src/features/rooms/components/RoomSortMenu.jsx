@@ -37,7 +37,7 @@ export default function RoomSortMenu({ sort, order, onChange }) {
           render={
             <button
               type="button"
-              className="Volume TextMedium flex items-center gap-2 rounded px-3 py-2 hover:brightness-110"
+              className="Volume TextRegluar flex h-10 items-center gap-2 rounded-xl px-3 py-2 hover:brightness-110"
               aria-label={`Ordenar por ${label}`}
             />
           }

@@ -109,4 +109,29 @@ export const ROOMS_STYLES = StyleSheet.create({
         fontSize: fontSize.regular,
         fontWeight: fontWeight.medium,
     },
+	pagination: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: spacing.md,
+		paddingVertical: spacing.lg,
+	},
+	pageButton: {
+		backgroundColor: colors.volume,
+		paddingVertical: spacing.sm,
+		paddingHorizontal: spacing.lg,
+		borderRadius: radius.full,
+	},
+	pageButtonDisabled: {
+		opacity: opacity.disabled,
+	},
+	pageButtonText: {
+		...text.button,
+		color: colors.textPrimary,
+	},
+	pageLabel: {
+		color: colors.textMuted,
+		fontSize: fontSize.medium,
+		lineHeight: lineHeight.medium,
+	},
 });
