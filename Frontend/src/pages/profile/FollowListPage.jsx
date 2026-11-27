@@ -4,6 +4,7 @@ import { toastMessages } from '@/lib/toastMessages.js'
 import Avatar from '@/components/ui/Avatar.jsx'
 import UserRow from '@/components/cards/UserRow.jsx'
 import { useAuth, useFollowList } from '@synthos/shared'
+import useBreadcrumbLabel from '@/hooks/useBreadcrumbLabel.js'
 
 const TIPOS = ['seguidores', 'siguiendo']
 
@@ -28,6 +29,13 @@ function FollowListContent({ relation: requested, onRetry }) {
   const relation = TIPOS.includes(requested) ? requested : 'seguidores'
 
   const { isCurrent, people, person, error } = useFollowList(personId, relation)
+
+  // En la lista ajena, la miga del padre `/profile/:id` la publica esta página
+  // con el username que ya carga `useFollowList`.
+  useBreadcrumbLabel(
+    '/profile/:id',
+    isOwn ? null : isCurrent ? (person?.username ?? null) : undefined
+  )
 
   useEffect(() => {
     if (error) toastMessages.followListLoadError(error)

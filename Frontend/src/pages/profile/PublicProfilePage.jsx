@@ -9,6 +9,7 @@ import FollowButton from '@/features/social/components/FollowButton.jsx';
 import FollowStats from '@/features/social/components/FollowStats.jsx';
 import HostRatingBadge from '@/features/social/components/HostRatingBadge.jsx';
 import { RecommendationProvider } from '@synthos/shared';
+import useBreadcrumbLabel from '@/hooks/useBreadcrumbLabel.js';
 
 export default function PublicProfilePage() {
   const [attempt, setAttempt] = useState(0);
@@ -25,6 +26,11 @@ function PublicProfileContent({ onRetry }) {
   const { id } = useParams();
   const { user: currentUser } = useAuth();
   const { isCurrent, person, hasError } = useProfilePublic(id);
+
+  useBreadcrumbLabel(
+    '/profile/:id',
+    !isCurrent ? undefined : (person?.username ?? null)
+  );
 
   const [recOpen, setRecOpen] = useState(false);
   const [recToast, setRecToast] = useState(null);

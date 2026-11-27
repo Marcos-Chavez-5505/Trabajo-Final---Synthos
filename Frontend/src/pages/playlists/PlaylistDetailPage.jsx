@@ -44,6 +44,7 @@ import trashIcon from '@synthos/shared/assets/icons/trash.svg'
 import PlaylistSongRow from '@/features/playlists/components/PlaylistSongRow.jsx'
 import UserSearch from '@/features/search/components/UserSearch.jsx'
 import useBreakpoint from '@/hooks/useBreakpoint.js'
+import useBreadcrumbLabel from '@/hooks/useBreadcrumbLabel.js'
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
 import { animate } from 'framer-motion'
 
@@ -62,6 +63,7 @@ export default function PlaylistDetailPage() {
   const userId = user?.id ?? null
 
   const [playlistResponse, setPlaylistResponse] = useState({ key: null, playlist: null })
+  const [failedKey, setFailedKey] = useState(null)
   const [songById, setSongById] = useState(() => new Map())
   const [removingIds, setRemovingIds] = useState(() => new Set())
   const [hasExitingRow, setHasExitingRow] = useState(false)
@@ -73,12 +75,24 @@ export default function PlaylistDetailPage() {
   const loading = userId !== null && playlistResponse.key !== `${userId}:${id}`
   const isCreator = playlist?.role === 'creator'
 
+  // La miga de la playlist muestra skeleton mientras carga y el `fallback` si
+  // la carga falló o la playlist no existe.
+  useBreadcrumbLabel(
+    '/playlists/:id',
+    loading && failedKey !== `${userId}:${id}`
+      ? undefined
+      : (playlist?.name ?? null)
+  )
+
   const loadPlaylist = useCallback(() => {
     if (!userId) return Promise.resolve()
 
     return getPlaylistById(userId, id).then(
       (loaded) => setPlaylistResponse({ key: `${userId}:${id}`, playlist: loaded }),
-      (cause) => toastMessages.playlistLoadError(cause)
+      (cause) => {
+        setFailedKey(`${userId}:${id}`)
+        toastMessages.playlistLoadError(cause)
+      }
     )
   }, [userId, id])
 

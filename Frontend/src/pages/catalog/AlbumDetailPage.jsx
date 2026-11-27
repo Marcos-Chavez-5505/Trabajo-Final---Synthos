@@ -4,6 +4,7 @@ import { usePlayer } from '@synthos/shared'
 import { getAlbumById } from '@synthos/shared'
 import { toastMessages } from '@/lib/toastMessages.js'
 import MiniMediaCard from '@/components/cards/MiniMediaCard.jsx'
+import useBreadcrumbLabel from '@/hooks/useBreadcrumbLabel.js'
 import albumIcon from '@synthos/shared/assets/icons/album.svg'
 
 const TYPE_LABELS = { single: 'Sencillo', ep: 'EP', album: 'Álbum' }
@@ -45,6 +46,11 @@ export default function AlbumDetailPage() {
   const isCurrent = response.key === String(id)
   const album = isCurrent ? response.album : null
   const error = isCurrent ? response.error : null
+
+  useBreadcrumbLabel(
+    '/albums/:id',
+    isCurrent ? (album?.name ?? null) : undefined
+  )
 
   if (error) {
     return (
