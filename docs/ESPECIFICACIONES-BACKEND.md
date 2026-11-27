@@ -80,7 +80,7 @@ GET /api/songs/search?query=<texto>&type=<songs|albums>&page=<n>&pageSize=<n>
 | `query` | string | `''` | Ausente o vacío = catálogo completo, no error |
 | `type` | string | `songs` | `songs` o `albums`. Cualquier otro valor: `400 SEARCH_TYPE_INVALID` |
 | `page` | int ≥ 1 | `1` | 1-based |
-| `pageSize` | int ≥ 1 | `10` | El frontend manda `10`; tope duro de `50` |
+| `pageSize` | int ≥ 1 | `10` | El frontend manda `20` (`SEARCH_PAGE_SIZE`); tope duro de `50` |
 
 **Response 200**
 
@@ -229,8 +229,9 @@ const SONG_INCLUDE = {
 
 Antes `songGenres: true` devolvía solo las filas de unión (`{ idSong, idGenre }`) y el nombre del
 género no viajaba, así que las cards de `/home` y `/buscar` salían con la etiqueta vacía. Con el
-include anidado, `songsService.toSong()` toma `songGenres[].genre.name` y la pantalla muestra la
-etiqueta.
+include anidado, `songsService.toSong()` toma **todos** los `songGenres[].genre.name` en el orden
+recibido: los deja en `song.genres` y los une con `" · "` en `song.genre` para la etiqueta de las
+cards.
 
 Esto también cierra el desajuste del filtro por género, que siempre buscó sobre `genre.name` pero sin
 exponer ese dato en las respuestas.

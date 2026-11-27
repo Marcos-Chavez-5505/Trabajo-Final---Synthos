@@ -14,7 +14,7 @@ const SONGS_PATH = "/songs";
 
 // Tamaño de página para búsquedas. Con backend real pasa a ser el `pageSize` de
 // la query, que es lo que el endpoint espera.
-export const SEARCH_PAGE_SIZE = 4;
+export const SEARCH_PAGE_SIZE = 20;
 
 /**
  * Convierte una canción del backend a la forma que usa la app.
@@ -25,9 +25,9 @@ export const SEARCH_PAGE_SIZE = 4;
  *   las cards y el reproductor.
  * - `coverUrl`, `duration` y `releaseDate` tienen el mismo nombre, pero `duration`
  *   puede venir `null` y el reproductor lo usa como número.
- * - `genre` se arma con el primer nombre de `songGenres[].genre.name`. El backend
- *   anida la entidad en el include, así que hay nombre; si una canción no tuviera
- *   género queda en `null` y la card muestra la etiqueta vacía.
+ * - `genres` conserva todos los nombres de `songGenres[].genre.name` en el orden
+ *   que vienen; `genre` los une con " · " para la etiqueta de las cards. Si una
+ *   canción no tiene género, `genres` es `[]` y `genre` es `null`.
  * - `album` viene anidado (`{ id, name }`) y la app lo usa como string suelto, igual
  *   que `artist`: `PlayerBar` lo lee como `alt` de la carátula y la búsqueda ya
  *   filtra por nombre de álbum. El detalle de un álbum no lo incluye (allí la
@@ -38,15 +38,17 @@ export const SEARCH_PAGE_SIZE = 4;
 export function toSong(raw) {
 	if (!raw) return null;
 
-	const genre =
-		raw.songGenres?.find((entry) => entry.genre?.name)?.genre.name ?? null;
+	const genres = (raw.songGenres ?? [])
+		.map((entry) => entry.genre?.name)
+		.filter(Boolean);
 
 	return {
 		id: raw.id,
 		title: raw.title,
 		artist: raw.artist?.name ?? null,
 		album: raw.album?.name ?? null,
-		genre,
+		genre: genres.length ? genres.join(" · ") : null,
+		genres,
 		duration: raw.duration ?? 0,
 		audioUrl: raw.url,
 		coverUrl: raw.coverUrl ?? null,
