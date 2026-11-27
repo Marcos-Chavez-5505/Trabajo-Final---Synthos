@@ -10,8 +10,8 @@ import {
 export const HOME_PILLS_STYLES = StyleSheet.create({
 	content: {
 		alignItems: "center",
+		flexDirection: "row",
 		gap: spacing.sm,
-		paddingRight: spacing.sm,
 	},
 	pill: {
 		backgroundColor: colors.surfaceLight,
