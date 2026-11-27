@@ -149,7 +149,7 @@ roomInactivityJob.startRoomInactivityJob({
 	intervalMs: Number(process.env.ROOM_INACTIVITY_JOB_INTERVAL_MS) || undefined,
 });
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, "0.0.0.0", () => {
 	console.log(`Servidor ejecutándose en puerto ${PORT}`);
 });
 
