@@ -1,4 +1,4 @@
-import { listPopularSongs } from "@synthos/shared"
+import { listSongs } from "@synthos/shared"
 
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
@@ -45,15 +45,15 @@ export function ToastExampleAdd() {
 export function ToastExamplePromise() {
   const run = () => {
     void toast
-      .promise(listPopularSongs(), {
+      .promise(listSongs(), {
         loading: {
           type: "loading",
-          title: "Cargando populares…",
+          title: "Cargando canciones…",
           description: "Consultando la API.",
         },
         success: (songs) => ({
           type: "success",
-          title: "Populares cargadas",
+          title: "Canciones cargadas",
           description: `${songs.length} canciones recibidas.`,
         }),
         error: (error) => ({
@@ -82,7 +82,7 @@ export function ToastExampleUpdate() {
     })
 
     try {
-      const songs = await listPopularSongs()
+      const songs = await listSongs()
       toast.update(id, {
         type: "success",
         title: "Sincronizado",

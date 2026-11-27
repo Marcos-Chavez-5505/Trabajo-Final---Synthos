@@ -6,7 +6,6 @@ import CollabPlaylists from '@/features/playlists/components/CollabPlaylists.jsx
 import MyRooms from '@/features/rooms/components/MyRooms.jsx'
 import ProfileSummary from '@/features/profile/components/ProfileSummary.jsx'
 import albumIcon from '@synthos/shared/assets/icons/album.svg'
-import flameIcon from '@synthos/shared/assets/icons/flame.svg'
 import houseIcon from '@synthos/shared/assets/icons/house.svg'
 import listMusicIcon from '@synthos/shared/assets/icons/list_music.svg'
 import microphoneIcon from '@synthos/shared/assets/icons/microphone.svg'
@@ -30,7 +29,6 @@ import {
 
 const NAV_ITEMS = [
   { label: 'Home', to: '/home', src: houseIcon },
-  { label: 'Populares', to: '/populares', src: flameIcon },
   { label: 'Salas', to: '/salas', src: roomIcon },
   { label: 'Perfil', to: '/perfil', src: userIcon },
 ]

@@ -25,7 +25,8 @@ presence.configurePresence({
 // Estado en vivo de las salas (playback + anfitriona presente) y tiempos del
 // job de inactividad. Vacío = default documentado en .env.example.
 roomLive.configureRoomLive({
-	hostOfflinePauseMs: Number(process.env.ROOM_HOST_OFFLINE_PAUSE_MS) || undefined,
+	hostOfflinePauseMs:
+		Number(process.env.ROOM_HOST_OFFLINE_PAUSE_MS) || undefined,
 	inactiveExpelMs: Number(process.env.ROOM_INACTIVE_EXPEL_MS) || undefined,
 });
 
@@ -101,10 +102,7 @@ io.on("connection", (socket) => {
 			if (!role) {
 				// Mismo contrato que el 403 HTTP (`ROOM_ACCESS_LOST` + motivo):
 				// el cliente lo usa para salir de la sala sin reintentar.
-				const reason = await roomService.getRoomAccessLostReason(
-					id,
-					userId,
-				);
+				const reason = await roomService.getRoomAccessLostReason(id, userId);
 
 				return socket.emit("error", {
 					roomId: id,
@@ -135,7 +133,9 @@ io.on("connection", (socket) => {
 	});
 
 	socket.on("disconnect", () => {
-		console.log(`[Socket] Usuario ${userId} desconectado (socket ${socket.id})`);
+		console.log(
+			`[Socket] Usuario ${userId} desconectado (socket ${socket.id})`,
+		);
 		presence.removeAllPresence(io, socket);
 	});
 });

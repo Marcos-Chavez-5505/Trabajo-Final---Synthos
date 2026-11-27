@@ -14,19 +14,6 @@ const SONG_INCLUDE = {
 
 const VALID_EXPRESSIONS = ["neutral", "happy", "sad", "angry"];
 const RECOMMENDATIONS_LIMIT = 20;
-const MIN_WEEKLY_FAVORITES = 3;
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
-function currentWeekRange(now = new Date()) {
-	const from = new Date(
-		Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-	);
-	const daysSinceMonday = (from.getUTCDay() + 6) % 7;
-
-	from.setUTCDate(from.getUTCDate() - daysSinceMonday);
-
-	return { from, to: new Date(from.getTime() + WEEK_MS) };
-}
 
 async function searchSongs(query, pagination = {}) {
 	const term = typeof query === "string" ? query.trim() : "";
@@ -80,45 +67,6 @@ async function getSongById(songId) {
 	return song;
 }
 
-async function getWeeklyPopular() {
-	const { from, to } = currentWeekRange();
-
-	const rows = await prisma.$queryRaw`
-		SELECT f.id_song AS "idSong", COUNT(DISTINCT f.id_user)::int AS "favoriteCount"
-		FROM favorite f
-		WHERE f.marked_date >= ${from} AND f.marked_date < ${to}
-		GROUP BY f.id_song
-		HAVING COUNT(DISTINCT f.id_user) >= ${MIN_WEEKLY_FAVORITES}
-		ORDER BY "favoriteCount" DESC, f.id_song ASC
-	`;
-
-	const ids = rows.map((row) => row.idSong);
-
-	if (ids.length === 0) {
-		return {
-			week: { from, to },
-			minimumFavorites: MIN_WEEKLY_FAVORITES,
-			songs: [],
-		};
-	}
-
-	const songs = await prisma.song.findMany({
-		where: { id: { in: ids } },
-		include: SONG_INCLUDE,
-	});
-	const byId = new Map(songs.map((song) => [song.id, song]));
-
-	return {
-		week: { from, to },
-		minimumFavorites: MIN_WEEKLY_FAVORITES,
-		songs: rows.flatMap((row) => {
-			const song = byId.get(row.idSong);
-
-			return song ? [{ ...song, favoriteCount: row.favoriteCount }] : [];
-		}),
-	};
-}
-
 async function getRecommendationsByExpression(expression) {
 	if (!VALID_EXPRESSIONS.includes(expression)) {
 		throw httpError(
@@ -151,7 +99,6 @@ async function getRecommendationsByExpression(expression) {
 module.exports = {
 	getSongs,
 	getSongById,
-	getWeeklyPopular,
 	searchSongs,
 	getRecommendationsByExpression,
 };

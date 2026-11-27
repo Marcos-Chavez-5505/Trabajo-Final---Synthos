@@ -46,7 +46,7 @@ export default function BottomTabBar({ state, descriptors, navigation }) {
 				return;
 			}
 
-			// Desde cualquier otro origen (otro tab, SearchHome, Populares,
+			// Desde cualquier otro origen (otro tab, SearchHome,
 			// detalles...) se vuelve a la búsqueda global. `navigate` sin params
 			// limpia el `screen` que dejaron las pills; el popToTop apunta al
 			// stack anidado (misma acción que popToTopOnBlur).

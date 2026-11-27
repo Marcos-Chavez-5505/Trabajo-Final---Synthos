@@ -48,7 +48,6 @@ export const TOAST_TITLES = {
 	moodSongs: "No se pudieron buscar las canciones",
 	notificationsLoad: "No se pudieron cargar las notificaciones",
 	playlistsLoad: "No se pudieron cargar las playlists",
-	popularSongsLoad: "No se pudieron cargar los populares",
 	profileEdit: "No se pudo guardar el perfil",
 	profilePublicLoad: "No se pudo cargar el perfil",
 	recommendationsLoad: "No se pudieron cargar las recomendaciones",

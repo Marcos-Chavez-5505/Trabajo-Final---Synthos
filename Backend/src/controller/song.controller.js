@@ -68,20 +68,9 @@ async function getRecommendations(req, res, next) {
 	}
 }
 
-async function getWeeklyPopular(req, res, next) {
-	try {
-		const result = await songService.getWeeklyPopular();
-
-		return res.status(200).json({ status: "success", ...result });
-	} catch (error) {
-		next(error);
-	}
-}
-
 module.exports = {
 	getSongs,
 	getSongById,
-	getWeeklyPopular,
 	searchSongs,
 	getRecommendations,
 };
