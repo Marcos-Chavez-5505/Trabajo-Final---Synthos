@@ -11,6 +11,7 @@ export default function GeneralRow({
 	title,
 	subtitle,
 	label,
+	labelContent = null,
 	action = null,
 	onPress,
 	accessibilityLabel,
@@ -34,11 +35,12 @@ export default function GeneralRow({
 							{subtitle}
 						</Text>
 					) : null}
-					{label ? (
-						<Text style={styles.label} numberOfLines={1}>
-							{label}
-						</Text>
-					) : null}
+					{labelContent ??
+						(label ? (
+							<Text style={styles.label} numberOfLines={1}>
+								{label}
+							</Text>
+						) : null)}
 				</View>
 			</Pressable>
 
