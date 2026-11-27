@@ -256,10 +256,12 @@ Guards: `RequireAuth` (si `loading` â†’ `LoadingScreen`; si no hay user â�
 
 `AppLayout` (shell de desktop):
 
-- **Desktop**: `SidebarProvider` (shadcn) + `Sidebar` (colapsable a íconos; header logo, nav Home/Salas/**Ánimo**/Perfil, "Mi Colección" Playlists/Albums/Artistas, "Mis Salas" ← `features/rooms/components/MyRooms.jsx` (las salas del usuario, con las que administra marcadas), "Mis Playlists" ← `features/playlists/components/MisPlaylists.jsx` y "Playlists Colaborativas" ← `features/playlists/components/CollabPlaylists.jsx`, footer `features/profile/components/ProfileSummary.jsx`) + `TopBar` + contenido + `PlayerBar`. `AppLayout` monta `SidebarAutoCollapse`, que colapsa/expande el sidebar al cruzar los 1280px sin pisar el trigger manual; el `SidebarTrigger` del `TopBar` (shadcn) es el botón que lo abre/cierra a mano.
+- **Desktop**: `SidebarProvider` (shadcn) + `Sidebar` (colapsable a íconos; header logo, nav Home/Salas/**Ánimo**/Perfil, "Mi Colección" Playlists/Albums/Artistas, "Mis Salas" ← `features/rooms/components/MyRooms.jsx` (las salas del usuario, con las que administra marcadas), "Mis Playlists" ← `features/playlists/components/MisPlaylists.jsx` y "Playlists Colaborativas" ← `features/playlists/components/CollabPlaylists.jsx`, footer `features/profile/components/ProfileSummary.jsx`) + `TopBar` + franja de breadcrumbs (`AppBreadcrumbs`) + contenido + `PlayerBar`. `AppLayout` monta `SidebarAutoCollapse`, que colapsa/expande el sidebar al cruzar los 1280px sin pisar el trigger manual; el `SidebarTrigger` del `TopBar` (shadcn) es el botón que lo abre/cierra a mano.
 - **Mobile**: **ya no hay.** Era contenido + `MiniPlayerBar` + `BottomNav`; se desarmó, ver `PENDIENTES.md` §8.
 
 `TopBar`: input controlado por la URL que navega a `/buscar?q=…`; las flechas back/forward están `hidden` (sin handler). `HomePage` renderiza `HomeDesktop`.
+
+`AppBreadcrumbs`: franja bajo el `TopBar`, oculta en `/home` o fuera del mapa de `lib/breadcrumbs.js`. La jerarquía es de ubicación, no de historial; las páginas de detalle publican su label ya cargado con `useBreadcrumbLabel` (skeleton mientras carga, `fallback` si falla).
 
 ### 4.7 Design system
 

@@ -77,7 +77,7 @@ src/
   main.jsx            AuthProvider > PlayerProvider > NotificationsProvider > BrowserRouter > App
   app/
     App.jsx           Sólo delega en AppRoutes y monta usePlayerWebEffects
-    layout/           AppLayout, Sidebar, SidebarAutoCollapse, TopBar, BottomNav
+    layout/           AppLayout, Sidebar, SidebarAutoCollapse, TopBar, BottomNav, BreadcrumbProvider, AppBreadcrumbs
   routes/             AppRoutes + guardas RequireAuth (sesión obligatoria) y PublicOnly (sin sesión)
   pages/              Una página por ruta, sufijo *Page
     landing/ auth/ home/ profile/ playlists/ rooms/ catalog/ search/ notifications/ mood/
@@ -91,8 +91,8 @@ src/
     motion/           combobox, SidebarAnimatedGroup
     ui/               Componentes shadcn/base-ui + Avatar y LoadingScreen propios
     animate-ui/
-  hooks/              Sólo transversales: useBreakpoint, use-mobile
-  lib/                audioMotor, utils.ts, toastMessages
+  hooks/              Sólo transversales: useBreakpoint, use-mobile, useBreadcrumbLabel, breadcrumbLabelsContext
+  lib/                audioMotor, utils.ts, toastMessages, breadcrumbs
     images/           prepareImage (recorte/compresión de imágenes)
     motion/           sidebar.js, drag.js
   styles/             tokens.css (única fuente de valores), utilities.css, base.css
@@ -149,6 +149,7 @@ La app web sólo monta los providers en `main.jsx` y aporta los adaptadores de p
 |---|---|
 | `useBreakpoint` | `'mobile'` \| `'desktop'` con 768px (coincide con `md:` de Tailwind) |
 | `use-mobile` | Primitiva de shadcn para el sidebar (mismo breakpoint) |
+| `useBreadcrumbLabel` | Publica el label de una miga dinámica desde la página que ya cargó el dato |
 
 Los hooks de negocio viven en `shared/src/hooks/` (globales) o en
 `shared/src/features/<dominio>/` (de feature): `useAuth`, `usePlayer`, `useFavorites`, `useDebounce`,
@@ -199,15 +200,21 @@ Las páginas del catálogo están en `pages/catalog/`: `AlbumsPage`, `AlbumDetai
 Presentación pura. `components/` no importa de `features/` ni de `app/`:
 
 - `ui/`: shadcn sobre `@base-ui/react` (Button, Input, Sidebar, Sheet, Tooltip, Pagination, Skeleton,
-  Separator) más `Avatar` y `LoadingScreen` propios.
+  Separator, Breadcrumb) más `Avatar` y `LoadingScreen` propios.
 - `cards/`: `MediaCard`, `MiniMediaCard`, `RoomCard`, `UserRow`, `ArtistCard`.
 - `actions/`: `QueueActionButton` y `AddToQueueButton`.
 - `motion/`: primitivas de animación y `SidebarAnimatedGroup`.
 - `animate-ui/`: primitivas de toasts.
 
-`app/layout/AppLayout.jsx` compone el shell actual: `Sidebar` + `TopBar` + contenido + `PlayerBar`,
+`app/layout/AppLayout.jsx` compone el shell actual: `Sidebar` + `TopBar` + franja de breadcrumbs + contenido + `PlayerBar`,
 más el overlay del reproductor expandido. `BottomNav` queda para la fase mobile. Los componentes del
 player consumen el mismo `PlayerContext` global de `shared/`.
+
+Los breadcrumbs de la shell los arma `app/layout/AppBreadcrumbs.jsx`: `lib/breadcrumbs.js` mapea
+patrón de ruta → migas (sin data router, por eso no hay `useMatches()`), y las páginas de detalle
+publican su label ya cargado con `hooks/useBreadcrumbLabel.js` en el contexto de
+`app/layout/BreadcrumbProvider.jsx`. Las primitivas presentacionales viven en
+`components/ui/breadcrumb.tsx`.
 
 ### 3.7 Estilos
 
