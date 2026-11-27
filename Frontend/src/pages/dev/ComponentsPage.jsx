@@ -17,6 +17,11 @@ import {
   PopoverExampleForm,
   PopoverExampleInfo,
 } from '@/pages/dev/examples/popover-examples'
+import {
+  BreadcrumbExampleBasic,
+  BreadcrumbExampleLoading,
+  BreadcrumbExampleLongLabel,
+} from '@/pages/dev/examples/breadcrumb-examples'
 
 export default function ComponentsPage() {
   return (
@@ -65,6 +70,18 @@ export default function ComponentsPage() {
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
         <PopoverExampleInfo />
         <PopoverExampleForm />
+      </div>
+
+      <h2 className="Header4">Componentes — Breadcrumb</h2>
+      <p className="TextRegluar text-muted-foreground">
+        Primitivas adaptadas de shadcn (base-nova): chevron propio, colores del
+        design system y enlaces con el patrón `render` de Base UI. Ejemplos con
+        página actual, label cargando y label largo truncado.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <BreadcrumbExampleBasic />
+        <BreadcrumbExampleLoading />
+        <BreadcrumbExampleLongLabel />
       </div>
     </div>
   )
