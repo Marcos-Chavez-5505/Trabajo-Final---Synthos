@@ -8,6 +8,8 @@ import ActionControls from '@/features/player/components/ActionControls.jsx'
 import ProgressBar from '@/features/player/components/ProgressBar.jsx'
 import UpNext from '@/features/player/components/UpNext.jsx'
 import SidebarAutoCollapse, { SIDEBAR_AUTO_COLLAPSE_QUERY } from './SidebarAutoCollapse.jsx'
+import BreadcrumbProvider from './BreadcrumbProvider.jsx'
+import AppBreadcrumbs from './AppBreadcrumbs.jsx'
 import { SidebarProvider } from '@/components/ui/sidebar.tsx'
 
 /**
@@ -63,16 +65,21 @@ export default function AppLayout({ children }) {
         <Sidebar />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <main className="min-h-0 flex-1 overflow-y-auto">
-            {/* Sticky dentro del scroller: el contenido puede pasar por debajo
-                y el degradé tapa el corte de los fondos que sangran hacia
-                arriba (PlaylistDetail usa --cover-url para eso). */}
-            {/* El degradé se extiende 2rem por debajo del header con un
-                pseudo-elemento: así la parte oscura baja más sin empujar el
-                contenido (el header mantiene su altura). */}
-            <div className="before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:-z-10 before:h-[calc(100%+2rem)] before:bg-linear-to-b before:from-surface before:via-surface/90 before:to-transparent sticky top-0 z-20">
-              <TopBar />
-            </div>
-            {children}
+            {/* Los breadcrumbs viven en la shell: el provider cubre también
+                `/profile/:id`, que usa AppLayout sin RequireAuth. */}
+            <BreadcrumbProvider>
+              {/* Sticky dentro del scroller: el contenido puede pasar por debajo
+                  y el degradé tapa el corte de los fondos que sangran hacia
+                  arriba (PlaylistDetail usa --cover-url para eso). */}
+              {/* El degradé se extiende 2rem por debajo del header con un
+                  pseudo-elemento: así la parte oscura baja más sin empujar el
+                  contenido (el header mantiene su altura). */}
+              <div className="before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:-z-10 before:h-[calc(100%+2rem)] before:bg-linear-to-b before:from-surface before:via-surface/90 before:to-transparent sticky top-0 z-20">
+                <TopBar />
+              </div>
+              <AppBreadcrumbs />
+              {children}
+            </BreadcrumbProvider>
           </main>
           {/* Dentro de la columna de contenido: el sidebar-gap (shadcn) reserva el
               ancho con transition-[width], así que el reproductor se adapta a su
