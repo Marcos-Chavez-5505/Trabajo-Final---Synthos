@@ -116,7 +116,7 @@ function MemberRow({ member, isViewer, canManage, onRemoveMember }) {
                 className="size-5 shrink-0 bg-destructive"
                 style={TRASH_ICON_MASK}
               />
-              {removing ? 'Eliminando…' : 'Eliminar de la playlist'}
+              {removing ? 'Expulsando…' : 'Expulsar de la playlist'}
             </button>
           </PopoverContent>
         </Popover>

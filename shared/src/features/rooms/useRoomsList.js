@@ -22,9 +22,17 @@ import {
  * como mejora futura); al reconectar se vuelve a pedir el listado para no
  * perderse eventos.
  */
-export default function useRoomsList(query, sort, order) {
-  const key = `${query}|${sort}|${order}`
-  const [response, setResponse] = useState({ key: null, rooms: [], error: null })
+export default function useRoomsList(query, sort, order, page = 1) {
+  const key = `${query}|${sort}|${order}|${page}`
+  const [response, setResponse] = useState({
+    key: null,
+    rooms: [],
+    page: 1,
+    pageSize: 12,
+    total: 0,
+    totalPages: 1,
+    error: null,
+  })
   const [reloadToken, setReloadToken] = useState(0)
   const keyRef = useRef(key)
 
@@ -33,18 +41,37 @@ export default function useRoomsList(query, sort, order) {
   useEffect(() => {
     let active = true
 
-    searchRooms({ query, sort, order })
-      .then((rooms) => {
-        if (active) setResponse({ key, rooms, error: null })
+    searchRooms({ query, sort, order, page })
+      .then((data) => {
+        if (!active) return
+
+        setResponse({
+          key,
+          rooms: data.items,
+          page: data.page,
+          pageSize: data.pageSize,
+          total: data.total,
+          totalPages: data.totalPages,
+          error: null,
+        })
       })
       .catch((cause) => {
-        if (active) setResponse({ key, rooms: [], error: mapApiError(cause) })
+        if (!active) return
+
+        setResponse((current) => ({
+          ...current,
+          key,
+          rooms: [],
+          total: 0,
+          totalPages: 1,
+          error: mapApiError(cause),
+        }))
       })
 
     return () => {
       active = false
     }
-  }, [query, sort, order, key, reloadToken])
+  }, [query, sort, order, page, key, reloadToken])
 
   useEffect(() => {
     // Sin sesión no hay socket: el listado funciona como antes, sin tiempo real.
@@ -88,8 +115,14 @@ export default function useRoomsList(query, sort, order) {
   }, [])
 
   const isCurrent = response.key === key
-  const rooms = isCurrent ? response.rooms : []
-  const error = isCurrent ? response.error : null
 
-  return { isCurrent, rooms, error }
+  return {
+    isCurrent,
+    rooms: response.rooms,
+    page: response.page,
+    pageSize: response.pageSize,
+    total: response.total,
+    totalPages: response.totalPages,
+    error: isCurrent ? response.error : null,
+  }
 }

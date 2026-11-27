@@ -183,7 +183,7 @@ Las pantallas ya no viven en `features/`: cada ruta tiene su archivo en `pages/`
 | `home/` | `HomeDesktop`, `HomeSection` |
 | `player/` | `PlayerBar`, `ExpandedPlayer`, `PlayerControls`, `ProgressBar`, `TransportControls`, `ActionControls`, `UpNext`, `Parts` + `usePlayerWebEffects` |
 | `playlists/` | `PlaylistTile`, `PlaylistSongRow`, `PlaylistCreateForm`, `PlaylistInvitations`, `HeaderPlaylist`, `MisPlaylists`, `CollabPlaylists`, `FavoriteButton`, `AddToPlaylistPanel`; `index.js` público |
-| `rooms/` | `JoinRoomDialog`, `MyRooms`, `RoomSidebarList` + `lib/roomNotice.js` |
+| `rooms/` | `JoinRoomForm`, `MyRooms`, `RoomSidebarList` + `lib/roomNotice.js` |
 | `search/` | `SearchSongs`, `SearchAlbums`, `SearchPeople`, `SearchTabs`, `SearchPersonRow`, `UserSearch`, `RecentSearchesCombobox` + `useRecentSearches` |
 | `social/` | `FollowButton`, `FollowStats`, `HostRatingBadge`; `index.js` público |
 | `profile/` | `ProfileEdit`, `ProfileSummary` |

@@ -117,15 +117,15 @@ export default function AddToPlaylistPanel({ songId, className = '', tooltip = f
         <DropdownMenuPositioner side="top" align="end">
           <DropdownMenuPopup>
             <DropdownMenuGroup>
-              <DropdownMenuGroupLabel className="TextMedium">
+              <DropdownMenuGroupLabel className="TextRegular">
                 Agregar a playlist
               </DropdownMenuGroupLabel>
 
               {loading ? (
-                <p className="text-muted-foreground TextMedium px-2 py-1.5">Cargando…</p>
+                <p className="text-muted-foreground TextRegular px-2 py-1.5">Cargando…</p>
               ) : error ? (
                 <div className="px-2 py-1.5">
-                  <p className="text-muted-foreground TextMedium">
+                  <p className="text-muted-foreground TextRegular">
                     No hay playlists por ahora.
                   </p>
                   <button
@@ -137,15 +137,11 @@ export default function AddToPlaylistPanel({ songId, className = '', tooltip = f
                   </button>
                 </div>
               ) : playlists.length === 0 ? (
-                <p className="text-muted-foreground TextMedium px-2 py-1.5">
-                  Todavía no tenés playlists.{' '}
-                  {/* El reproductor sobrevive a la navegación: sin cerrar el menú al
-                      cambiar de ruta, "Creá una" lo deja flotando arriba de la
-                      biblioteca. */}
+                <p className="text-muted-foreground TextRegular px-2 py-1.5">
+                  Todavía no tienes una playlist.{' '}
                   <Link to="/playlists" onClick={() => setOpen(false)} className="text-accent">
-                    Creá una
+                    Crea una
                   </Link>
-                  .
                 </p>
               ) : (
                 playlists.map((playlist) => {

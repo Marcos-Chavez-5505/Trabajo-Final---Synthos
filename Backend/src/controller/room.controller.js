@@ -4,6 +4,7 @@ const {
 	validateOrderType,
 	getId,
 } = require("../utils/validation");
+const { parsePagination } = require("../utils/pagination");
 const roomState = require("../realtime/roomState");
 const roomLive = require("../realtime/roomLive");
 const roomCards = require("../realtime/roomCards");
@@ -14,11 +15,13 @@ async function getSortedRoom(req, res, next) {
 		const order = validateOrderType(req.query.order || "asc");
 		const query =
 			typeof req.query.query === "string" ? req.query.query.trim() : "";
+		const { page } = parsePagination({ page: req.query.page });
 
 		const result = await roomService.listRooms({
 			query,
 			sort,
 			order,
+			page,
 			// Los avatares de los presentes solo se devuelven con sesión.
 			includeMembers: Boolean(req.user),
 		});

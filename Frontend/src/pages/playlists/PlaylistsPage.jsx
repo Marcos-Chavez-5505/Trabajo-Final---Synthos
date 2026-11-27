@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { usePlaylistList, usePlaylistsPage } from '@synthos/shared'
 import { toastMessages } from '@/lib/toastMessages.js'
 import playlistIcon from '@synthos/shared/assets/icons/playlist.svg'
-import closeIcon from '@synthos/shared/assets/icons/close.svg'
 import {
   Popover,
   PopoverContent,
@@ -12,6 +11,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import CreateButton from '@/components/actions/CreateButton.jsx'
 import PlaylistCreateForm from '@/features/playlists/components/PlaylistCreateForm.jsx'
 import PlaylistInvitations from '@/features/playlists/components/PlaylistInvitations.jsx'
 import PlaylistTile from '@/features/playlists/components/PlaylistTile.jsx'
@@ -70,21 +70,14 @@ function PlaylistsPageContent({ onRetry }) {
         <Popover open={creating} onOpenChange={setCreating}>
           <PopoverTrigger
             render={
-              <button
-                type="button"
+              <CreateButton
+                active={creating}
                 aria-label={creating ? 'Cancelar creación de playlist' : 'Crear playlist'}
-                className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-accent pr-4 pl-3 text-lighter transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              />
+              >
+                Crear
+              </CreateButton>
             }
-          >
-            <span
-              aria-hidden="true"
-              className={`Header3 font-light leading-none transition-transform duration-200 ${creating ? '' : 'rotate-45'}`}
-            >
-              <img src={closeIcon} alt="" aria-hidden="true" className="h-5 w-5" />
-            </span>
-            <span className="TextLarge">Crear</span>
-          </PopoverTrigger>
+          />
 
           <PopoverContent align="end" className="w-80">
             <PopoverHeader>

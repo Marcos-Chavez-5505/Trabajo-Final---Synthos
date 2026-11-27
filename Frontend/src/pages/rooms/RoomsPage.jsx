@@ -1,33 +1,47 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  DropdownMenu,
-  DropdownMenuItem,
-  DropdownMenuPopup,
-  DropdownMenuPositioner,
-  DropdownMenuPortal,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu.tsx'
-import {
   joinRoom,
   ROOM_SORTS,
   DEFAULT_ROOM_SORT,
   ROOM_ORDERS,
   DEFAULT_ROOM_ORDER,
 } from '@synthos/shared'
-import { useDebounce, useRoomsList, useMyRooms, useAuth } from '@synthos/shared'
+import {
+  useDebounce,
+  useRoomsList,
+  useMyRooms,
+  useAuth,
+  buildPageRange,
+} from '@synthos/shared'
 import { toastMessages } from '@/lib/toastMessages.js'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
+import {
+  Popover,
+  PopoverContent,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import CreateButton from '@/components/actions/CreateButton.jsx'
 import RoomCard from '@/components/cards/RoomCard.jsx'
-import JoinRoomDialog from '@/features/rooms/components/JoinRoomDialog.jsx'
+import JoinRoomForm from '@/features/rooms/components/JoinRoomForm.jsx'
+import RoomCreateForm from '@/features/rooms/components/RoomCreateForm.jsx'
+import RoomSortMenu from '@/features/rooms/components/RoomSortMenu.jsx'
 import roomIcon from '@synthos/shared/assets/icons/headphones.svg'
 import searchIcon from '@synthos/shared/assets/icons/search.svg'
-import threeDotsIcon from '@synthos/shared/assets/icons/three_dots.svg'
+import scanIcon from '@synthos/shared/assets/icons/scan-barcode.svg'
 
 const DEBOUNCE_MS = 300
 
-/**
- * `/salas`: listado de salas con buscador y filtros (TS-16 + TS-17).
- */
 export default function RoomsPage() {
   const [attempt, setAttempt] = useState(0)
 
@@ -37,14 +51,17 @@ export default function RoomsPage() {
 }
 
 function RoomsPageContent({ onRetry }) {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const query = searchParams.get('q') ?? ''
   const sort = readSort(searchParams.get('sort'))
   const order = readOrder(searchParams.get('order'))
+  const page = Math.max(Number(searchParams.get('page')) || 1, 1)
 
   const [input, setInput] = useState(query)
-  const [joinOpen, setJoinOpen] = useState(false)
+  const [joining, setJoining] = useState(false)
+  const [creating, setCreating] = useState(false)
 
   const debounced = useDebounce(input, DEBOUNCE_MS)
 
@@ -64,19 +81,44 @@ function RoomsPageContent({ onRetry }) {
         if (next) params.set('q', next)
         else params.delete('q')
 
+        params.delete('page')
+
         return params
       },
       { replace: true },
     )
   }, [debounced, query, setSearchParams])
 
-  const { isCurrent, rooms, error } = useRoomsList(query, sort, order)
+  const { isCurrent, rooms, page: currentPage, totalPages, error } = useRoomsList(
+    query,
+    sort,
+    order,
+    page,
+  )
   const { user } = useAuth()
   const { currentRoom } = useMyRooms()
 
   useEffect(() => {
     if (error) toastMessages.roomsLoadError(error)
   }, [error])
+
+  // El service acota la página a un rango válido. Si la URL pedía una que ya no
+  // existe, se corrige en la URL en vez de mostrar una página engañosa.
+  useEffect(() => {
+    if (!isCurrent || error || page <= totalPages) return
+
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+
+        if (totalPages > 1) params.set('page', String(totalPages))
+        else params.delete('page')
+
+        return params
+      },
+      { replace: true },
+    )
+  }, [error, isCurrent, page, totalPages, setSearchParams])
 
   const isCurrentHost = currentRoom
     ? String(currentRoom.hostId) === String(user?.id)
@@ -95,63 +137,109 @@ function RoomsPageContent({ onRetry }) {
     })
   }
 
-  function handleSort(criterio) {
-    patchParams({ sort: criterio === DEFAULT_ROOM_SORT ? null : criterio })
+  function handleSortChange({ sort: nextSort, order: nextOrder }) {
+    patchParams({
+      sort: nextSort === DEFAULT_ROOM_SORT ? null : nextSort,
+      order: nextOrder === DEFAULT_ROOM_ORDER ? null : nextOrder,
+      page: null,
+    })
   }
 
-  function handleOrder(sentido) {
-    patchParams({ order: sentido === DEFAULT_ROOM_ORDER ? null : sentido })
+  function pageHref(target) {
+    const params = new URLSearchParams(searchParams)
+
+    if (target > 1) params.set('page', String(target))
+    else params.delete('page')
+
+    return `?${params.toString()}`
   }
 
   return (
     <section className="px-6 py-4 md:px-10">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-foreground Header3">Salas</h1>
-          <p className="text-muted-foreground TextMedium mt-1">
-            Salas de escucha compartida. Buscá por nombre de sala o por el nombre
-            de quien la anfitriona.
-          </p>
-        </div>
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-foreground Header3">Salas</h1>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            to="/salas/crear"
-            className="rounded px-4 py-2 Fucsia Button hover:brightness-110"
-          >
-            Crear sala
-          </Link>
-          <button
-            type="button"
-            onClick={() => setJoinOpen(true)}
-            className="rounded px-4 py-2 Volume Button hover:brightness-110"
-          >
-            Unirme con código
-          </button>
-          <RoomSortMenu
-            sort={sort}
-            order={order}
-            onSort={handleSort}
-            onOrder={handleOrder}
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <Popover open={joining} onOpenChange={setJoining}>
+            <PopoverTrigger
+              render={
+                <button
+                  type="button"
+                  className="Volume TextRegluar flex items-center gap-2 rounded-lg px-3 py-2 hover:brightness-110"
+                >
+                  <img src={scanIcon} alt="" aria-hidden="true" className="h-4 w-4" />
+                  Unirme con código
+                </button>
+              }
+            />
+
+            <PopoverContent
+              align="end"
+              className="w-80 max-h-(--available-height) overflow-y-auto"
+            >
+              <PopoverHeader>
+                <PopoverTitle className="text-muted-foreground">
+                  Unirme con código
+                </PopoverTitle>
+              </PopoverHeader>
+              <JoinRoomForm
+                currentRoom={currentRoom}
+                isCurrentHost={isCurrentHost}
+                onJoined={(room) => {
+                  setJoining(false)
+                  navigate(`/salas/${room.id}`)
+                }}
+                onCancel={() => setJoining(false)}
+              />
+            </PopoverContent>
+          </Popover>
+          <Popover open={creating} onOpenChange={setCreating}>
+            <PopoverTrigger
+              render={
+                <CreateButton
+                  active={creating}
+                  aria-label={creating ? 'Cancelar creación de sala' : 'Crear sala'}
+                >
+                  Crear sala
+                </CreateButton>
+              }
+            />
+
+            <PopoverContent
+              align="end"
+              className="w-80 max-h-(--available-height) overflow-y-auto"
+            >
+              <PopoverHeader>
+                <PopoverTitle className="text-muted-foreground">Nueva sala</PopoverTitle>
+              </PopoverHeader>
+              <RoomCreateForm
+                onCreated={(room) => navigate(`/salas/${room.id}`)}
+                onCancel={() => setCreating(false)}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
       </header>
 
-      <div className="mt-6 max-w-md" role="search">
-        <div className="Volume flex items-center gap-2 rounded-full px-4 py-2">
-          <img src={searchIcon} alt="" aria-hidden="true" className="h-4 w-4 shrink-0" />
-          <input
-            type="search"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="Buscar sala o anfitriona"
-            aria-label="Buscar sala por nombre o por anfitriona"
-            className="text-foreground TextRegluar placeholder-muted-foreground/60 w-full bg-transparent outline-none"
-          />
+      <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="w-full max-w-md flex-1 basis-72" role="search">
+          <div className="Volume flex items-center gap-2 rounded-full px-4 py-2">
+            <img src={searchIcon} alt="" aria-hidden="true" className="h-4 w-4 shrink-0" />
+            <input
+              type="search"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder="Buscar sala o anfitriona"
+              aria-label="Buscar sala por nombre o por anfitriona"
+              className="text-foreground TextRegluar placeholder-muted-foreground/60 w-full bg-transparent outline-none"
+            />
+          </div>
         </div>
+
+        <RoomSortMenu sort={sort} order={order} onChange={handleSortChange} />
       </div>
 
-      {!isCurrent ? (
+      {!isCurrent && rooms.length === 0 ? (
         <p className="text-muted-foreground TextRegluar mt-8">Buscando salas…</p>
       ) : rooms.length === 0 ? (
         <EmptyState
@@ -159,30 +247,75 @@ function RoomsPageContent({ onRetry }) {
           onRetry={error ? onRetry : undefined}
         />
       ) : (
-        <ul className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {rooms.map((room) => (
-            <li key={room.id}>
-              <RoomCard
-                room={room}
-                action={
-                  <RoomCardAction
-                    room={room}
-                    currentRoom={currentRoom}
-                    isCurrentHost={isCurrentHost}
-                  />
-                }
-              />
-            </li>
-          ))}
-        </ul>
-      )}
+        <>
+          <ul
+            aria-busy={!isCurrent}
+            className={`mt-8 grid grid-cols-1 gap-4 transition-opacity md:grid-cols-2 xl:grid-cols-3 ${
+              isCurrent ? '' : 'opacity-60'
+            }`}
+          >
+            {rooms.map((room) => (
+              <li key={room.id}>
+                <RoomCard
+                  room={room}
+                  action={
+                    <RoomCardAction
+                      room={room}
+                      currentRoom={currentRoom}
+                      isCurrentHost={isCurrentHost}
+                    />
+                  }
+                />
+              </li>
+            ))}
+          </ul>
 
-      <JoinRoomDialog
-        open={joinOpen}
-        onOpenChange={setJoinOpen}
-        currentRoom={currentRoom}
-        isCurrentHost={isCurrentHost}
-      />
+          {totalPages > 1 && (
+            <Pagination className="mt-10">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    render={<Link to={pageHref(currentPage - 1)} />}
+                    aria-disabled={currentPage <= 1}
+                    className={
+                      currentPage <= 1 ? 'pointer-events-none opacity-50' : undefined
+                    }
+                  />
+                </PaginationItem>
+
+                {buildPageRange(currentPage, totalPages).map((entry, index) =>
+                  entry === null ? (
+                    <PaginationItem key={`gap-${index}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={entry}>
+                      <PaginationLink
+                        isActive={entry === currentPage}
+                        render={<Link to={pageHref(entry)} />}
+                      >
+                        {entry}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
+
+                <PaginationItem>
+                  <PaginationNext
+                    render={<Link to={pageHref(currentPage + 1)} />}
+                    aria-disabled={currentPage >= totalPages}
+                    className={
+                      currentPage >= totalPages
+                        ? 'pointer-events-none opacity-50'
+                        : undefined
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </>
+      )}
     </section>
   )
 }
@@ -275,59 +408,6 @@ function JoinRoomButton({ room, full, isCurrent, blockedByHost, switching }) {
   )
 }
 
-function RoomSortMenu({ sort, order, onSort, onOrder }) {
-  const active = ROOM_SORTS.find((c) => c.value === sort) ?? ROOM_SORTS[0]
-  const sentido = ROOM_ORDERS.find((o) => o.value === order) ?? ROOM_ORDERS[0]
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            className="Volume Button CardRadius flex items-center gap-2 rounded px-4 py-2"
-            aria-label={`Ordenar por ${active.label}, ${sentido.label}`}
-          />
-        }
-      >
-        <img src={threeDotsIcon} alt="" aria-hidden="true" className="h-4 w-4" />
-        {active.label} · {sentido.label}
-      </DropdownMenuTrigger>
-
-      <DropdownMenuPortal>
-        <DropdownMenuPositioner side="bottom" align="end">
-          <DropdownMenuPopup>
-            {ROOM_SORTS.map((criterio) => (
-              <DropdownMenuItem
-                key={criterio.value}
-                nativeButton
-                label={`Ordenar por ${criterio.label}`}
-                onClick={() => onSort(criterio.value)}
-                className={
-                  criterio.value === sort ? 'bg-sidebar-accent TextMedium' : undefined
-                }
-              >
-                {criterio.label}
-              </DropdownMenuItem>
-            ))}
-
-            <DropdownMenuItem
-              nativeButton
-              label={
-                order === 'asc' ? 'Cambiar a orden descendente' : 'Cambiar a orden ascendente'
-              }
-              onClick={() => onOrder(order === 'asc' ? 'desc' : 'asc')}
-              className="border-t border-sidebar-border"
-            >
-              {order === 'asc' ? 'Orden descendente' : 'Orden ascendente'}
-            </DropdownMenuItem>
-          </DropdownMenuPopup>
-        </DropdownMenuPositioner>
-      </DropdownMenuPortal>
-    </DropdownMenu>
-  )
-}
-
 function EmptyState({ hasQuery, onRetry }) {
   return (
     <div className="py-16 text-center">
@@ -343,7 +423,7 @@ function EmptyState({ hasQuery, onRetry }) {
             No encontramos salas con ese criterio
           </p>
           <p className="text-muted-foreground TextRegluar mt-1">
-            Probá con otro nombre de sala o de anfitriona. Si la sala es privada,
+            Probá con otro nombre de sala o de anfitrión. Si la sala es privada,
             entrá con su código.
           </p>
         </>
