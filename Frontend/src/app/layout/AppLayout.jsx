@@ -74,10 +74,13 @@ export default function AppLayout({ children }) {
               {/* El degradé se extiende 2rem por debajo del header con un
                   pseudo-elemento: así la parte oscura baja más sin empujar el
                   contenido (el header mantiene su altura). */}
+              {/* Los breadcrumbs van dentro del header sticky para que el
+                  pseudo-elemento del degradé (-z-10) quede detrás y no los
+                  atenúe; también quedan visibles al scrollear. */}
               <div className="before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:-z-10 before:h-[calc(100%+2rem)] before:bg-linear-to-b before:from-surface before:via-surface/90 before:to-transparent sticky top-0 z-20">
                 <TopBar />
+                <AppBreadcrumbs />
               </div>
-              <AppBreadcrumbs />
               {children}
             </BreadcrumbProvider>
           </main>
