@@ -192,7 +192,7 @@ Las pantallas ya no viven en `features/`: cada ruta tiene su archivo en `pages/`
 | `mood/` | `MoodPicker`, `MoodResults` + `lib/moodDetection.js` |
 
 Las páginas del catálogo están en `pages/catalog/`: `AlbumsPage`, `AlbumDetailPage`,
-`ArtistsPage`, `ArtistDetailPage` y `PopularPage`.
+`ArtistsPage` y `ArtistDetailPage`.
 
 ### 3.6 `components/`
 
@@ -305,7 +305,7 @@ Todo bajo `/api` (`Backend/src/app.js`). El contrato completo â€”requests, 
 | Salud | `GET /health` | â€” | ESPECIFICACIONES Â§6 |
 | Auth | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout` | `logout` | Â§6 |
 | Usuarios y follow | `GET /users/search`, `GET\|PATCH /users/me`, `GET /users/:id`, `GET /users/:id/followers\|following`, `POST\|DELETE /users/:id/follow` | `me`, follow | Â§7 |
-| Canciones | `GET /songs`, `GET /songs/search`, `GET /songs/recommendations`, `GET /songs/popular`, `GET /songs/:id` | â€” | Â§1â€“Â§5 |
+| Canciones | `GET /songs`, `GET /songs/search`, `GET /songs/recommendations`, `GET /songs/:id` | â€” | Â§1â€“Â§5 |
 | Ãlbumes y artistas | `GET /albums/:id`, `GET /artists`, `GET /artists/:id` | â€” | Â§2.4â€“Â§2.5 |
 | Favoritos | `GET /favorites`, `GET /favorites/songs/ids`, `POST /favorites/songs`, `DELETE /favorites/songs/:songId`, `PUT /favorites/order` | todas | Â§8 |
 | Playlists | `GET /playlists`, `GET\|PUT\|DELETE /playlists/:id`, `POST /playlists`, `POST\|DELETE /playlists/:id/songs`, `PUT /playlists/:id/songs/order` | todas | Â§9 |
@@ -350,7 +350,7 @@ El resto es pÃºblico. Errores: siempre `{ status: "error", message, code? }` (
   `favorite.service.js`. `Frontend/src/mocks/` ya no existe.
 - **Vistas de una sola página**: `/artistas` tiene catálogo y detalle (`pages/catalog/ArtistsPage` y
   `ArtistDetailPage`), `/albums` tiene grilla y detalle (`pages/catalog/AlbumsPage` y
-  `AlbumDetailPage`) y `/populares` tiene ranking semanal (`pages/catalog/PopularPage`). El chat de
+  `AlbumDetailPage`). El chat de
   salas todavía no existe.
 
 ---

@@ -106,7 +106,6 @@ const CATALOG = {
 	// Entradas nuevas de la auditoría de errores inline
 	"albums:load": { title: TOAST_TITLES.albumsLoad },
 	"artists:load": { title: TOAST_TITLES.artistsLoad },
-	"popular:load": { title: TOAST_TITLES.popularSongsLoad },
 	"album:load": { title: TOAST_TITLES.albumDetail },
 	"artist:load": { title: TOAST_TITLES.artistDetail },
 	"home:songs:load": { title: TOAST_TITLES.homeSongsLoad },

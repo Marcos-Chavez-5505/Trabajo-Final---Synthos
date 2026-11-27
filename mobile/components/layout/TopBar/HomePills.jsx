@@ -6,7 +6,6 @@ import { HOME_PILLS_STYLES as styles } from "./HomePills.styles";
 const PILLS = [
 	{ label: "Álbumes", screen: "Albums" },
 	{ label: "Artistas", screen: "Artists" },
-	{ label: "Populares", screen: "Popular" },
 ];
 
 export default function HomePills() {

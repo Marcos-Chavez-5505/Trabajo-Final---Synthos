@@ -152,10 +152,6 @@ export const toastMessages = {
     showApiError(TOAST_TITLES.artistsLoad, cause, "artists-load-error")
   },
 
-  popularSongsLoadError(cause) {
-    showApiError(TOAST_TITLES.popularSongsLoad, cause, "popular-songs-load-error")
-  },
-
   albumDetailError(cause) {
     showApiError(TOAST_TITLES.albumDetail, cause, "album-detail-error")
   },

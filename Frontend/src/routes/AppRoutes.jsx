@@ -19,7 +19,6 @@ import AlbumsPage from '@/pages/catalog/AlbumsPage.jsx'
 import AlbumDetailPage from '@/pages/catalog/AlbumDetailPage.jsx'
 import ArtistsPage from '@/pages/catalog/ArtistsPage.jsx'
 import ArtistDetailPage from '@/pages/catalog/ArtistDetailPage.jsx'
-import PopularPage from '@/pages/catalog/PopularPage.jsx'
 import NotificationsPage from '@/pages/notifications/NotificationsPage.jsx'
 import PublicOnly from './PublicOnly.jsx'
 import RequireAuth from './RequireAuth.jsx'
@@ -58,10 +57,6 @@ export default function AppRoutes() {
       <Route
         path="/perfil"
         element={<Protected><ProfilePage /></Protected>}
-      />
-      <Route
-        path="/populares"
-        element={<Protected><PopularPage /></Protected>}
       />
       <Route
         path="/notificaciones"

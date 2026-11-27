@@ -61,7 +61,6 @@ export * from "./tokens/tokens.js";
 export * from "./icons/icons.js";
 
 // feature hooks
-export { default as usePopularSongs } from "./features/popular/usePopularSongs.js";
 export { default as useHomeSongs } from "./features/home/useHomeSongs.js";
 export { default as useNewArtists } from "./features/home/useHomeArtists.jsx";
 export { default as useLatestAlbums } from "./features/home/useHomeAlbums.jsx";
