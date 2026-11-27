@@ -135,6 +135,12 @@ export const icons = {
       { d: "M4.33333 13.5833L10.1667 19.4167L21.6667 7.33334", stroke: true, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
     ],
   },
+  "chevron_right": {
+    viewBox: "0 0 15 15",
+    paths: [
+      { d: "M5.625 3.75L9.375 7.5L5.625 11.25", stroke: true, strokeWidth: 1.5, strokeLinecap: "round", strokeLinejoin: "round" },
+    ],
+  },
   "close": {
     viewBox: "0 0 26 26",
     paths: [
