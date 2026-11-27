@@ -304,4 +304,43 @@ export const ROOM_DETAIL_STYLES = StyleSheet.create({
     },
     onlineDotActive: { backgroundColor: colors.green ?? "#22c55e" },
     onlineDotInactive: { backgroundColor: colors.textMuted },
+    	playlistRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.md,
+		paddingVertical: spacing.sm,
+		paddingHorizontal: spacing.xs,
+		borderBottomWidth: 1,
+		borderBottomColor: colors.border,
+		borderRadius: 6,
+	},
+	playlistRowCurrent: {
+		backgroundColor: colors.fucsia,
+	},
+	playlistRowReadOnly: {
+		opacity: 0.7,
+	},
+	playlistIndex: {
+		color: colors.textMuted,
+		fontSize: fontSize.tiny,
+		width: 24,
+		textAlign: "right",
+	},
+	playlistTextWrap: {
+		flex: 1,
+		minWidth: 0,
+	},
+	playlistTitle: {
+		color: colors.textPrimary,
+		fontSize: fontSize.regular,
+		fontWeight: fontWeight.medium,
+	},
+	playlistTitleCurrent: {
+		color: colors.textPrimary,
+	},
+	playlistArtist: {
+		color: colors.textMuted,
+		fontSize: fontSize.tiny,
+		marginTop: 2,
+	},
 });
