@@ -23,6 +23,7 @@ import { usePlayerTime } from "@synthos/shared";
 import { useRoomPlayback } from "@synthos/shared";
 import { useRoomAccessGuard } from "@synthos/shared";
 import Avatar from "@/components/ui/Avatar.jsx";
+import useBreadcrumbLabel from "@/hooks/useBreadcrumbLabel.js";
 import ProgressBar from '@/features/player/components/ProgressBar.jsx';
 import {
 	AlertDialog,
@@ -85,6 +86,11 @@ export default function RoomPage() {
 		room?.members.find((member) => member.userId === viewerId) ?? null;
 	const isHost = membership?.role === "host";
 	const host = room?.members.find((member) => member.role === "host") ?? null;
+
+	useBreadcrumbLabel(
+		"/salas/:id",
+		loading ? undefined : (room?.name ?? null)
+	);
 
 	const syncPlaybackRef = useRef(null);
 

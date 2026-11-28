@@ -4,6 +4,7 @@ import { useArtistDetail, ALBUM_TYPE_LABELS } from '@synthos/shared'
 import { toastMessages } from '@/lib/toastMessages.js'
 import Avatar from '@/components/ui/Avatar.jsx'
 import MiniMediaCard from '@/components/cards/MiniMediaCard.jsx'
+import useBreadcrumbLabel from '@/hooks/useBreadcrumbLabel.js'
 import albumIcon from '@synthos/shared/assets/icons/album.svg'
 
 /**
@@ -25,6 +26,11 @@ function ArtistDetailContent({ onRetry }) {
   const navigate = useNavigate()
 
   const { artist, error } = useArtistDetail(id)
+
+  useBreadcrumbLabel(
+    '/artistas/:id',
+    artist ? artist.name : error ? null : undefined
+  )
 
   useEffect(() => {
     if (error) toastMessages.artistDetailError(error)

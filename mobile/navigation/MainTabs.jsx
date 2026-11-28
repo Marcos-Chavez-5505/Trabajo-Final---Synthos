@@ -26,7 +26,7 @@ export default function MainTabs() {
 				<Tab.Screen
 					name="Home"
 					component={HomeScreen}
-					options={{ tabBarLabel: "Inicio", tabBarIcon: HomeIcon }}
+					options={{ tabBarLabel: "Home", tabBarIcon: HomeIcon }}
 				/>
 				<Tab.Screen
 					name="Rooms"

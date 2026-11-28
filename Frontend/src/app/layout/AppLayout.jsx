@@ -8,30 +8,19 @@ import ActionControls from '@/features/player/components/ActionControls.jsx'
 import ProgressBar from '@/features/player/components/ProgressBar.jsx'
 import UpNext from '@/features/player/components/UpNext.jsx'
 import SidebarAutoCollapse, { SIDEBAR_AUTO_COLLAPSE_QUERY } from './SidebarAutoCollapse.jsx'
+import BreadcrumbProvider from './BreadcrumbProvider.jsx'
+import AppBreadcrumbs from './AppBreadcrumbs.jsx'
 import { SidebarProvider } from '@/components/ui/sidebar.tsx'
 
-/**
- * `defaultOpen` calculado con el MISMO query que el auto-colapso: si la
- * ventana arranca bajo el umbral, el sidebar nace colapsado sin parpadeo.
- * Protegido para renders sin `window` (SSR/prerender).
- */
 function getDefaultSidebarOpen() {
   if (typeof window === 'undefined' || !window.matchMedia) return true
   return !window.matchMedia(SIDEBAR_AUTO_COLLAPSE_QUERY).matches
 }
 
-/**
- * Layout raíz, solo desktop: Sidebar (shadcn/ui) + TopBar + contenido + PlayerBar.
- * Sin lógica de negocio: solo composición visual. El mobile se rehará aparte
- * (ver `docs/PENDIENTES.md` §8).
- */
 export default function AppLayout({ children }) {
   const { song, isPlaying, seek, isExpanded, expandedOrigin, collapse } = usePlayer()
   const { currentTime, duration } = usePlayerTime()
 
-  // Overlay de reproducción expandida: se monta UNA vez en el layout raíz y lee
-  // el estado global (PlayerContext), así sobrevive a la navegación. Los
-  // controles entran por slots para reutilizar los componentes reales del player.
   const expandedPlayer = (
     <ExpandedPlayer
       open={isExpanded}
@@ -56,27 +45,22 @@ export default function AppLayout({ children }) {
       defaultOpen={getDefaultSidebarOpen()}
       className="Surface relative h-dvh min-h-0 overflow-hidden"
     >
-      {/* Colapsa/expande el sidebar solo al cruzar el umbral de 1280px.
-          El trigger y Ctrl+B siguen mandando sobre el estado manual. */}
       <SidebarAutoCollapse />
       <div className="isolate flex min-h-0 min-w-0 flex-1">
         <Sidebar />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <main className="min-h-0 flex-1 overflow-y-auto">
-            {/* Sticky dentro del scroller: el contenido puede pasar por debajo
-                y el degradé tapa el corte de los fondos que sangran hacia
-                arriba (PlaylistDetail usa --cover-url para eso). */}
-            {/* El degradé se extiende 2rem por debajo del header con un
-                pseudo-elemento: así la parte oscura baja más sin empujar el
-                contenido (el header mantiene su altura). */}
-            <div className="before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:-z-10 before:h-[calc(100%+2rem)] before:bg-linear-to-b before:from-surface before:via-surface/90 before:to-transparent sticky top-0 z-20">
-              <TopBar />
-            </div>
-            {children}
+            <BreadcrumbProvider>
+              <div className="pointer-events-none sticky top-0 z-10 h-0">
+                <div className="absolute inset-x-0 top-0 h-[calc(var(--ds-height-button)+2*var(--ds-space-lg)+2rem)] bg-linear-to-b from-surface via-surface/90 to-transparent" />
+              </div>
+              <div className="pointer-events-none sticky top-0 z-20">
+                <TopBar />
+              </div>
+              <AppBreadcrumbs />
+              {children}
+            </BreadcrumbProvider>
           </main>
-          {/* Dentro de la columna de contenido: el sidebar-gap (shadcn) reserva el
-              ancho con transition-[width], así que el reproductor se adapta a su
-              lado derecho y se ensancha al contraerse el sidebar. */}
           <PlayerBar />
           {expandedPlayer}
         </div>

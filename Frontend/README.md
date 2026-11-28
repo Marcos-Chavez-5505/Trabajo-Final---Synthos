@@ -17,7 +17,7 @@ src/
 ├── main.jsx
 ├── app/              # shell de la app (compone features)
 │   ├── App.jsx
-│   └── layout/       # AppLayout, Sidebar, BottomNav, TopBar, SidebarAutoCollapse
+│   └── layout/       # AppLayout, Sidebar, BottomNav, TopBar, SidebarAutoCollapse, BreadcrumbProvider, AppBreadcrumbs
 ├── routes/           # AppRoutes, RequireAuth, PublicOnly
 ├── pages/            # una página por ruta, sufijo *Page
 │   ├── landing/ auth/ home/ profile/ playlists/ rooms/ catalog/ search/ notifications/ mood/
@@ -34,13 +34,13 @@ src/
 │   ├── recommendation/ # components/
 │   └── mood/         # components/, lib/
 ├── components/       # UI transversal (no importa features/)
-│   ├── ui/           # botón, input, avatar, badge, primitivas
+│   ├── ui/           # botón, input, avatar, badge, breadcrumb, primitivas
 │   ├── cards/        # MediaCard, MiniMediaCard, RoomCard — reutilizar en todo grid
 │   ├── actions/      # QueueActionButton, AddToQueueButton
 │   ├── motion/       # combobox, SidebarAnimatedGroup
 │   └── animate-ui/
-├── hooks/            # solo hooks transversales (useBreakpoint, use-mobile)
-├── lib/              # audioMotor, utils, toastMessages
+├── hooks/            # solo hooks transversales (useBreakpoint, use-mobile, useBreadcrumbLabel)
+├── lib/              # audioMotor, utils, toastMessages, breadcrumbs
 │   ├── images/       # prepareImage
 │   └── motion/       # sidebar.js, drag.js
 ├── styles/           # design system (única fuente de verdad)
