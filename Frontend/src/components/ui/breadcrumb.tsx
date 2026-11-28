@@ -3,15 +3,6 @@ import { useRender } from "@base-ui/react/use-render"
 import { cn } from "@/lib/utils"
 import chevronRight from "@synthos/shared/assets/icons/chevron_right.svg"
 
-/**
- * Primitivas de breadcrumb adaptadas del registry de shadcn (style base-nova) al
- * proyecto: chevron propio en vez de lucide, colores del puente semántico de
- * `index.css` y foco con el token `ring`.
- *
- * No conoce el router: `BreadcrumbLink` conserva el patrón `render` de Base UI
- * para que quien lo use enchufe un <Link> de React Router.
- */
-
 function Breadcrumb({ className, ...props }: React.ComponentProps<"nav">) {
   return (
     <nav
@@ -75,7 +66,7 @@ function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
       data-slot="breadcrumb-page"
       aria-current="page"
       className={cn(
-        "text-foreground [font-weight:var(--ds-weight-medium)]",
+        "text-foreground font-(--ds-weight-medium)",
         className
       )}
       {...props}
@@ -97,8 +88,6 @@ function BreadcrumbSeparator({
       {...props}
     >
       {children ?? (
-        // `img` no se puede recolorear: el ícono se atenúa con opacidad para
-        // que no compita con los enlaces.
         <img
           src={chevronRight}
           alt=""

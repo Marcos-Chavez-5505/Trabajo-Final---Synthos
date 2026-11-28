@@ -34,7 +34,7 @@ export default function AppBreadcrumbs() {
   if (migas.length < 2) return null
 
   return (
-    <Breadcrumb className="min-w-0 px-6 pb-2 md:px-10">
+    <Breadcrumb className="relative z-[15] min-w-0 px-6 py-2 pb-2 md:px-10">
       <BreadcrumbList className="TextMedium">
         {migas.map((miga, index) => {
           const esUltima = index === migas.length - 1

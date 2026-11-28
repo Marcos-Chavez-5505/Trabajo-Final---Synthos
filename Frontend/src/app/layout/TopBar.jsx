@@ -18,16 +18,16 @@ export default function TopBar() {
   }
 
   return (
-    <header className="flex min-w-0 items-center gap-3 px-3 py-4">
+    <header className="relative flex min-w-0 items-center gap-3 px-3 py-4">
 
-      <SidebarTrigger className="-ml-1" />
+      <SidebarTrigger className="pointer-events-auto relative z-40 -ml-1" />
 
-      <div className="hidden gap-2">
+      <div className="pointer-events-auto relative z-40 hidden gap-2">
         <button type="button" className="rounded-full Volume px-2 py-1 Button">←</button>
         <button type="button" className="rounded-full Volume px-2 py-1 Button">→</button>
       </div>
 
-      <div className="flex min-w-0 flex-1 items-center gap-2">
+      <div className="relative z-40 flex min-w-0 flex-1 items-center gap-2">
         <div role="search" className="w-full min-w-0 max-w-72">
           <RecentSearchesCombobox
             userId={user?.id}
@@ -50,7 +50,7 @@ export default function TopBar() {
         to="/notificaciones"
         aria-label={unreadCount > 0 ? `Notificaciones, ${unreadCount} sin leer` : 'Notificaciones'}
         title="Notificaciones"
-        className="SurfaceLight relative ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="pointer-events-auto SurfaceLight relative z-40 ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <img src={notificationIcon} alt="" aria-hidden="true" className="h-5 w-5" />
         {unreadCount > 0 && (

@@ -10,7 +10,7 @@ import { generatePath, matchPath } from 'react-router-dom'
  * se muestra `fallback`.
  */
 export const RUTAS_BREADCRUMB = [
-  { path: '/home', label: 'Inicio' },
+  { path: '/home', label: 'Home' },
   { path: '/perfil', parent: '/home', label: 'Mi perfil' },
   { path: '/perfil/seguidores', parent: '/perfil', label: 'Seguidores' },
   { path: '/perfil/siguiendo', parent: '/perfil', label: 'Siguiendo' },
